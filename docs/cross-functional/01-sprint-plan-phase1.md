@@ -1062,6 +1062,52 @@ Run this checklist at the end of every sprint:
 
 ---
 
+## Critical Path Diagram
+
+The critical path identifies the longest chain of dependent tasks that determines the minimum project duration. Any delay on the critical path delays the entire MVP.
+
+```
+CRITICAL PATH (longest dependency chain):
+═══════════════════════════════════════════════════════════════════════════
+
+Week 1      Week 2      Week 3      Week 4      Week 5      Week 6      Week 7      Week 8
+────────────────────────────────────────────────────────────────────────────────────────────
+S1-01       S1-04       S2-01       S2-02       S3-01       S3-02       S4-01       S4-09
+Turborepo ─▶ Drizzle  ─▶ Agent   ─▶ Key     ─▶ Guardrail─▶ Claude   ─▶ Problem ─▶ FE Board
+init         schema      register    verify      architect   classifier   CRUD        + E2E
+(6h)         (10h)       (8h)        (6h)        (8h)        (10h)       (10h)       (10h+10h)
+                │                                    │
+                ▼                                    ▼
+             S1-05                                S3-04
+             Migrations ─────────────────────────▶ Pipeline ──▶ S3-08 ──▶ S4-13
+             (4h)                                  (10h)       Admin Q    FE Admin
+                                                                (5h)      (8h)
+
+TOTAL CRITICAL PATH: 78 hours across 8 weeks
+BUFFER: ~162 hours of team capacity beyond critical path
+```
+
+**Critical path risks and mitigations:**
+
+| Critical Node | Risk | Impact If Delayed | Mitigation |
+|---------------|------|:-----------------:|------------|
+| S1-04 Drizzle schema | Learning curve | Blocks all API work | Pair programming, use Drizzle examples |
+| S3-02 Claude classifier | API latency > 3s | Blocks content pipeline | Lighter prompt fallback, async-only mode |
+| S4-01 Problem CRUD | Depends on guardrails | Blocks all frontend | Start with mock guardrails in Sprint 3 |
+| S4-09 FE Problem Board | Largest frontend task | Blocks E2E tests | Start component work in Sprint 2-3 spare capacity |
+
+**Near-critical paths** (< 8 hours of slack):
+1. Redis → BullMQ → Guardrail Pipeline (parallel to classifier path, merges at S3-04)
+2. Design tokens → Next.js → FE components → FE pages (parallel to backend, merges at Sprint 4)
+
+> **Red Team Schedule Integration**: Monthly red team sessions (see Risk Register Section 4.1) are scheduled for the first week of each month. During Phase 1, this means:
+> - **M1 (Week 1-4)**: Red team session at start of Sprint 2 — focus: prompt injection basics. Informs guardrail prompt template design (S3-03).
+> - **M2 (Week 5-8)**: Red team session at start of Sprint 4 — focus: semantic evasion. Results feed directly into classifier accuracy testing and few-shot example refinement.
+>
+> See `docs/cross-functional/02-risk-register.md` Section 4 for the full 12-month red team schedule.
+
+---
+
 ## Appendix A: Task Dependency Graph
 
 ```

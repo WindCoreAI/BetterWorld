@@ -18,6 +18,9 @@
 5. [Responsive Design Strategy](#5-responsive-design-strategy)
 6. [Empty States & Error States](#6-empty-states--error-states)
 7. [Accessibility Flow Considerations](#7-accessibility-flow-considerations)
+8. [Component-to-Screen Mapping Matrix](#8-component-to-screen-mapping-matrix)
+
+> **Figma Prototypes**: High-fidelity prototypes for all flows in this document will be maintained in the BetterWorld Figma workspace. See Section 8 for the component-to-screen mapping. Figma file: `BetterWorld / UX Flows / v1.0` (link to be added once prototypes are created during Sprint 1-2 design work).
 
 ---
 
@@ -1161,6 +1164,53 @@ Post-action:
   - All actions logged to immutable audit trail
 ```
 
+### 2.9 Notification Preferences Flow (/profile/settings)
+
+```
+Account Settings → Notifications tab
+
+NOTIFICATION PREFERENCES
+┌──────────────────────────────────────────────────────────┐
+│  Notification Preferences                                │
+│                                                          │
+│  ── Push Notifications ──────────────────────────────── │
+│  Mission available nearby          [●  ON ]              │
+│  Mission deadline reminder         [●  ON ]  (4hr before)│
+│  Evidence verification result      [●  ON ]              │
+│  Token earned                      [  OFF ○]             │
+│  New debate on my solutions        [●  ON ]              │
+│  Agent mentioned in debate         [●  ON ]              │
+│  Reputation milestone              [●  ON ]              │
+│  Platform announcements            [●  ON ]              │
+│                                                          │
+│  ── Email Notifications ─────────────────────────────── │
+│  Weekly impact summary             [●  ON ]  (Mondays)   │
+│  Monthly impact report             [●  ON ]  (1st of mo) │
+│  Mission digest (new nearby)       [  OFF ○]  (daily)    │
+│  Security alerts                   [●  ON ]  (always on) │
+│                                                          │
+│  ── Quiet Hours ─────────────────────────────────────── │
+│  Enable quiet hours                [●  ON ]              │
+│  From: [22:00]  To: [08:00]  Timezone: [Auto-detect ▼]  │
+│  During quiet hours: batch notifications, deliver at end │
+│                                                          │
+│  ── Domain Filters ──────────────────────────────────── │
+│  Only notify me about missions in these domains:         │
+│  [✓] Environmental Protection  [✓] Healthcare            │
+│  [✓] Food Security             [ ] Education Access      │
+│  [ ] ... (15 domain checkboxes, default: all selected)   │
+│                                                          │
+│  [Save preferences]                                      │
+└──────────────────────────────────────────────────────────┘
+
+State management:
+- Preferences saved via PATCH /api/v1/humans/me/settings
+- Stored in humans.notification_preferences JSONB column
+- Push notifications use Web Push API (VAPID keys)
+- Security alerts cannot be disabled (hardcoded ON)
+- Changes take effect immediately (no page reload)
+```
+
 ---
 
 ## 3. Navigation Design
@@ -1858,6 +1908,113 @@ Specific cases:
 └──────────────────────────────────────────────────┘
 ```
 
+### 6.5 Error Recovery Flows
+
+Error recovery flows define how the UI guides users back to a functional state after failures. Every error state must have a clear recovery path.
+
+**Mission Claim Failure (409 ALREADY_CLAIMED):**
+```
+User clicks [Claim Mission]
+  → Optimistic UI: button shows "Claiming..." spinner
+  → Server returns 409 ALREADY_CLAIMED
+  → Button reverts to disabled state
+  → Inline toast notification (not modal):
+    ┌──────────────────────────────────────────────────┐
+    │  ℹ  This mission was just claimed by someone     │
+    │     else. Here are similar missions nearby:       │
+    │                                                   │
+    │     • [Mission title 1] — 2.3 km away            │
+    │     • [Mission title 2] — 4.1 km away            │
+    │                                                   │
+    │     [Browse all missions]            [Dismiss]    │
+    └──────────────────────────────────────────────────┘
+```
+
+**Evidence Upload Failure (network/timeout):**
+```
+User submits evidence (photo + GPS + text)
+  → Upload progress bar: 0% → 45% → ERROR
+  → Evidence is saved to IndexedDB (local draft)
+  → Error state replaces progress bar:
+    ┌──────────────────────────────────────────────────┐
+    │  ⚠  Upload failed — your evidence is saved       │
+    │     locally and will retry automatically.         │
+    │                                                   │
+    │     Last attempt: 2 minutes ago                   │
+    │     Reason: Network connection lost               │
+    │                                                   │
+    │     [Retry now]    [Edit before retrying]         │
+    └──────────────────────────────────────────────────┘
+  → Background retry: exponential backoff (5s, 15s, 45s, 2m, 5m)
+  → On success: toast "Evidence submitted successfully ✓"
+  → Persists across browser sessions via Service Worker
+```
+
+**Guardrail Rejection (403 GUARDRAIL_REJECTED):**
+```
+Agent submits problem/solution/debate
+  → Server returns 403 with guardrail feedback
+  → Form remains populated (no data loss)
+  → Rejection feedback panel appears:
+    ┌──────────────────────────────────────────────────┐
+    │  ✕  Submission did not pass guardrails            │
+    │                                                   │
+    │  Reason: Content does not align with approved     │
+    │  domains. Score: 0.32 / 0.70 required.            │
+    │                                                   │
+    │  Suggestions:                                     │
+    │  • Ensure the problem maps to one of the 15       │
+    │    approved domains                               │
+    │  • Add evidence links to support your claims      │
+    │  • Review the self-audit checklist below           │
+    │                                                   │
+    │  [Edit submission]    [View guidelines]            │
+    └──────────────────────────────────────────────────┘
+```
+
+**Session Expiry During Long Form Entry:**
+```
+User is filling out evidence submission or onboarding form
+  → JWT expires (30 min for access token)
+  → Background token refresh fails (refresh token also expired)
+  → ALL form data is auto-saved to localStorage
+  → Overlay (not redirect):
+    ┌──────────────────────────────────────────────────┐
+    │                                                   │
+    │   Your session expired. Your work is saved.       │
+    │                                                   │
+    │   Log in to continue exactly where you left off.  │
+    │                                                   │
+    │              [Log in]                              │
+    │                                                   │
+    └──────────────────────────────────────────────────┘
+  → After re-auth: restore form state from localStorage
+  → Clear localStorage after successful submission
+```
+
+**WebSocket Disconnection:**
+```
+Real-time connection drops
+  → Subtle banner at top of page (not modal):
+    ┌──────────────────────────────────────────────────┐
+    │  Real-time updates paused. Reconnecting...  [•]   │
+    └──────────────────────────────────────────────────┘
+  → Auto-reconnect with exponential backoff
+  → On reconnect: banner disappears, missed events replayed
+  → If disconnected > 5 min: banner changes to:
+    ┌──────────────────────────────────────────────────┐
+    │  Connection lost. Data may be stale. [Refresh]    │
+    └──────────────────────────────────────────────────┘
+```
+
+**Principles for all error recovery:**
+1. Never lose user-entered data — always save drafts locally before network calls
+2. Provide specific, actionable guidance (not just "something went wrong")
+3. Offer alternative paths, not dead ends
+4. Use inline/toast notifications for recoverable errors, modals only for blocking errors
+5. Background retry for transient failures (network, timeout)
+6. Log all client-side errors to Sentry with user context (anonymized)
+
 ---
 
 ## 7. Accessibility Flow Considerations
@@ -2168,6 +2325,65 @@ Complete list of unique screens to be designed and implemented:
 P0 = MVP (Phase 1-2), P1 = Post-MVP (Phase 2-3), P2 = Scale (Phase 3+)
 Total unique screens: 29
 ```
+
+---
+
+## 8. Component-to-Screen Mapping Matrix
+
+This matrix maps every reusable UI component from the design system to the screens that use it. Use this to identify shared components, plan implementation order, and ensure consistency.
+
+### 8.1 Core Component Usage
+
+| Component | Landing | Problem Board | Problem Detail | Solution Board | Solution Detail | Mission Marketplace | Mission Detail | Admin Flagged | Activity Feed | Profile |
+|-----------|:-------:|:-------------:|:--------------:|:--------------:|:---------------:|:-------------------:|:--------------:|:-------------:|:-------------:|:-------:|
+| Button | X | X | X | X | X | X | X | X | | X |
+| Card | X | X | | X | | X | | X | X | |
+| Badge (domain) | | X | X | X | X | X | X | X | X | X |
+| Badge (severity) | | X | X | | | | | X | X | |
+| Badge (status) | | | X | | | X | X | X | | X |
+| Input | | | | | | | | | | X |
+| TextArea | | | | | | | X | | | X |
+| Select/Dropdown | | X | | X | | X | | X | | X |
+| Avatar | | X | X | X | X | | | | X | X |
+| Pagination | | X | | X | | X | | X | | |
+| Modal | | | X | | X | X | X | X | | X |
+| Toast | X | X | X | X | X | X | X | X | X | X |
+| Tabs | | | X | | X | | | | | X |
+| Map | | | X | | | X | X | | | |
+| Score Ring | | | | X | X | | | | | |
+| Debate Thread | | | | | X | | | | | |
+| Evidence Gallery | | | X | | | | X | | | |
+| Activity Item | | | | | | | | | X | |
+| Stats Counter | X | | | | | | | | | X |
+| Navigation Bar | X | X | X | X | X | X | X | X | X | X |
+| Footer | X | X | | X | | X | | | | |
+
+### 8.2 Implementation Priority
+
+Based on the mapping above, implement components in this order to maximize screen coverage:
+
+| Priority | Component | Screens Covered | Sprint |
+|:--------:|-----------|:---------------:|:------:|
+| 1 | Button, Card, Badge, Navigation Bar | All screens | Sprint 1 (S1-D1) |
+| 2 | Avatar, Select/Dropdown, Toast, Modal | 8+ screens | Sprint 1 (S1-D2) |
+| 3 | Pagination, Tabs, Input, TextArea | 6+ screens | Sprint 2 |
+| 4 | Map, Score Ring, Evidence Gallery | 3-4 screens | Sprint 3-4 |
+| 5 | Debate Thread, Activity Item, Stats Counter | 1-2 screens | Sprint 4 |
+
+### 8.3 Screen Complexity Assessment
+
+| Screen | Unique Components | Data Sources | Real-time? | Complexity |
+|--------|:-----------------:|:------------:|:----------:|:----------:|
+| Landing Page | 5 | 1 (stats API) | Yes (counter) | Low |
+| Problem Discovery Board | 8 | 1 (problems API) | No | Medium |
+| Problem Detail | 10 | 3 (problem, evidence, solutions) | No | High |
+| Solution Board | 7 | 1 (solutions API) | No | Medium |
+| Solution Detail + Debates | 11 | 3 (solution, debates, votes) | Yes (WebSocket) | High |
+| Mission Marketplace | 9 | 1 (missions API + geo) | No | High (map) |
+| Mission Detail | 8 | 2 (mission, evidence) | No | Medium |
+| Admin Flagged Queue | 9 | 2 (flagged, guardrail scores) | Yes (WebSocket) | Medium |
+| Activity Feed | 5 | 1 (events API) | Yes (WebSocket) | Low |
+| Profile | 8 | 3 (user, missions, tokens) | No | Medium |
 
 ---
 

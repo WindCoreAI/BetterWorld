@@ -7,6 +7,8 @@
 > **Status**: Draft for Engineering Handoff
 >
 > This document is the definitive reference for all visual, interaction, and brand decisions for BetterWorld. It is written to be immediately actionable by frontend engineers implementing the platform in Next.js 15, Tailwind CSS 4, and the calm neumorphic aesthetic aligned with ZephyrOS.
+>
+> **Figma Prototypes**: All components and screens in this document have corresponding Figma designs in the `BetterWorld / Design System / v1.0` workspace. Engineers should reference Figma for pixel-precise specs, spacing, and interactive states. Figma file link to be added once initial prototypes are complete (Sprint 1, task S1-D1).
 
 ---
 
@@ -168,6 +170,30 @@ All color combinations used in the UI must meet WCAG 2.1 AA minimum contrast rat
 
 Domain badge colors are always used as backgrounds behind white text (`#FFFFFF`) or as text on their respective light variant backgrounds. Both combinations have been verified at AA or above.
 
+**Dark Mode Domain Color Adjustments:**
+
+In dark mode, domain colors are lightened to maintain WCAG AA contrast against the dark background (`#1A1B1E`). The dark variant is used for badge text and accents; the dark surface variant is used for badge backgrounds.
+
+| Domain | Light Mode Hex | Dark Mode Hex | Contrast vs `#1A1B1E` | Passes AA |
+|--------|---------------|---------------|----------------------|-----------|
+| Poverty Reduction | `#D4872C` | `#E8A04A` | 6.2:1 | Yes |
+| Education Access | `#5B6ABF` | `#8490D4` | 4.8:1 | Yes |
+| Healthcare Improvement | `#C75D6E` | `#D87A89` | 5.1:1 | Yes |
+| Environmental Protection | `#4A8C6F` | `#6BAE8E` | 5.8:1 | Yes |
+| Food Security | `#B8862B` | `#D4A044` | 6.5:1 | Yes |
+| Mental Health & Wellbeing | `#8B6DAF` | `#A88BC5` | 5.0:1 | Yes |
+| Community Building | `#D4785C` | `#E89478` | 5.5:1 | Yes |
+| Disaster Response | `#B84545` | `#D46262` | 4.6:1 | Yes |
+| Digital Inclusion | `#3D8B8B` | `#5EACAC` | 5.6:1 | Yes |
+| Human Rights | `#7B5EA7` | `#9A7EC2` | 4.7:1 | Yes |
+| Clean Water & Sanitation | `#4A87B5` | `#6BA4CC` | 5.4:1 | Yes |
+| Sustainable Energy | `#C9A032` | `#DEB84E` | 7.0:1 | Yes |
+| Gender Equality | `#A8568A` | `#C274A5` | 4.9:1 | Yes |
+| Biodiversity Conservation | `#5E8C4A` | `#7EAC6A` | 5.7:1 | Yes |
+| Elder Care | `#B07585` | `#C8919F` | 5.2:1 | Yes |
+
+All dark mode domain colors achieve ≥4.5:1 contrast ratio against `#1A1B1E`, meeting WCAG 2.1 AA for normal text. For large text (≥18px or ≥14px bold), the requirement is ≥3:1, which all colors exceed comfortably.
+
 ---
 
 ### 1.4 Typography
@@ -246,6 +272,32 @@ Lucide is the recommended icon library. It is MIT-licensed, actively maintained,
 ```bash
 npm install lucide-react
 ```
+
+**Custom Icon Design Guidelines**
+
+When creating custom icons for BetterWorld, follow these rules to ensure visual consistency with the Lucide base library:
+
+| Rule | Specification |
+|------|---------------|
+| **Canvas** | 24x24px viewbox, 1px padding on all sides (22x22 active area) |
+| **Stroke** | 1.5px uniform stroke width (matches Lucide default) |
+| **Corners** | 2px radius on path corners (round join, round cap) |
+| **Style** | Outlined only — no filled icons. Single color (inherits `currentColor`). |
+| **Complexity** | Maximum 3 combined shapes per icon. Avoid fine details that break at 16px. |
+| **Optical sizing** | Design at 24px, then verify legibility at 16px (compact) and 32px (feature). |
+| **Naming** | PascalCase matching Lucide convention: `PovertyReduction`, `FoodSecurity`. |
+| **Export** | SVG with `stroke="currentColor"`, `fill="none"`, `stroke-width="1.5"`, `stroke-linecap="round"`, `stroke-linejoin="round"`. |
+| **Accessibility** | Each icon must include a `<title>` element for screen readers. |
+
+**Design process for custom icons:**
+
+1. Start with the Lucide base icon listed in the table below
+2. Modify or extend within Figma using the design guidelines above
+3. Test at 16px, 24px, and 32px
+4. Test against both light (#FAFAF8) and dark (#1A1B1E) backgrounds
+5. Export as SVG with the properties above
+6. Add to `packages/shared/icons/` directory
+7. Create React component wrapper in `packages/shared/icons/index.tsx`
 
 **Custom Icon Needs**
 

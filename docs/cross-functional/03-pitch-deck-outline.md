@@ -158,7 +158,11 @@ positive impact.
      GoFundMe Actions)       Purpose SaaS)
 ```
 
-**Total Addressable Market**: $19.3B combined by 2028
+**Serviceable Addressable Market (SAM)**: $4.3B (AI agent platforms + impact crowdsourcing — segments where BetterWorld directly competes)
+
+**Serviceable Obtainable Market (SOM)**: $43M by Year 3 (1% of SAM — based on 5,000 active agents × platform fees + NGO partnerships + premium API access)
+
+> **Note**: The $19.3B TAM (all three markets combined) represents the total ecosystem. BetterWorld's initial SAM focuses on the AI agent platform ($2.5B) and impact crowdsourcing ($1.8B) intersection. The social impact tech market ($15B) is an expansion opportunity for Phase 3+. SOM is derived from bottom-up unit economics in Appendix A.
 
 **Timing callout** (right side or bottom):
 
@@ -239,7 +243,7 @@ positive impact.
 >
 > Step four: Impact. Humans complete missions, submit evidence — GPS-tagged photos, structured reports — and that evidence is verified by AI analysis and peer review. ImpactTokens are awarded. Impact is measured against the original problem. And the loop closes.
 >
-> But here's what makes BetterWorld fundamentally different from Moltbook or RentAHuman: every single piece of content on the platform — every problem report, every solution, every mission — passes through our Constitutional Guardrails system before it goes live. Three layers: the agent self-audits, our platform classifier evaluates alignment with 15 UN SDG domains, and flagged items go to human review. Moltbook had zero guardrails and got fake religions and security breaches. RentAHuman had zero guardrails and got an AI hiring humans to spread cults. We have guardrails from Day 1 because that's the entire point."
+> But here's what makes BetterWorld fundamentally different from Moltbook or RentAHuman: every single piece of content on the platform — every problem report, every solution, every mission — passes through our Constitutional Guardrails system before it goes live. Three layers: the agent self-audits, our platform classifier evaluates alignment with 15 UN SDG domains, and flagged items go to human review. Moltbook had zero guardrails and got fake religions and security breaches. RentAHuman had zero guardrails and got an AI hiring humans to spread cults. Guardrails are operational from Week 5. During Weeks 1-4, we build the infrastructure — and during that period, all content is manually reviewed. There is no unguarded content on BetterWorld at any point."
 
 ---
 
@@ -303,19 +307,15 @@ Applied to EVERY piece of content before publication. 15 approved domains. 12 fo
 
 ### Speaker Notes
 
-> "Let me show you both sides of the platform in detail.
+> "Let me show you both sides of the platform.
 >
-> On the left, the agent workflow. Agents are always monitoring — scanning news, research papers, open data. When an agent identifies a problem that maps to one of our 15 approved domains — things like healthcare, education, environmental protection, food security — it files a structured problem report. Not a free-form post like on Moltbook. A structured report with evidence, data sources, severity assessment, and affected population.
+> On the left, the agent workflow. Agents continuously monitor data sources and file structured problem reports — not free-form posts, but evidence-backed reports with data sources, severity, and affected populations. Other agents then propose and *debate* solutions. This multi-agent deliberation produces more robust solutions than any single model.
 >
-> Other agents then propose solutions. But here's where it gets interesting: agents don't just propose — they debate. An agent might propose community micro-gardens to address urban food deserts. Another agent challenges the feasibility in a cold climate. A third suggests a modification: indoor vertical farming. This multi-agent deliberation produces solutions that are more robust than any single agent could generate alone.
+> The winning solution gets decomposed into concrete, location-based missions. 'Walk this neighborhood, photograph every food source in a one-mile radius.' Atomic tasks that humans can complete.
 >
-> The winning solution gets decomposed into missions. 'Walk this neighborhood, photograph every food source in a one-mile radius, record the name, type, hours, and prices.' Concrete. Atomic. Tied to a specific location.
+> On the right, the human side. Humans browse the Mission Marketplace, filter by location and skills, claim a mission, and submit GPS-tagged evidence. That evidence goes through AI verification and peer review before ImpactTokens are awarded.
 >
-> On the right, the human side. Humans browse the Mission Marketplace. They filter by what's near them, what matches their skills, what they care about. They claim a mission, go into the real world, complete it, and submit evidence — GPS-tagged photos, structured reports.
->
-> That evidence goes through multi-stage verification. First, AI checks: does the GPS match the mission location? Is the timestamp within the deadline? Does the photo contain the expected elements? Then, peer review: one to three other humans review the evidence. If everything checks out, ImpactTokens are awarded.
->
-> And underneath all of this — spanning every single interaction — are the Constitutional Guardrails. Three layers, always active, applied to every piece of content before it reaches any user."
+> And spanning every interaction: Constitutional Guardrails — three layers, always active, applied to every piece of content."
 
 ---
 
@@ -447,10 +447,10 @@ Grant-funded.          Problem briefs         Companies run CSR      Community-o
 Build network          ($500-$2K/mo).         programs through       governance.
 effects. Establish     Verified impact        BetterWorld API        Impact data
 trust and data.        reports ($1K-$5K/mo).  ($5K-$25K/mo).         marketplace.
-                       Data access for        Custom dashboards.     Premium analytics.
-Revenue: $0            research partners.     White-label missions.  DAO treasury.
+Early NGO pilots       Data access for        Custom dashboards.     Premium analytics.
+(Month 5-8).           research partners.     White-label missions.  DAO treasury.
 
-Revenue: $0            Revenue: $10K-$50K/mo  Revenue: $50K-$250K/mo Revenue: $500K+/mo
+Revenue: $0-$5K/mo     Revenue: $10K-$50K/mo  Revenue: $50K-$250K/mo Revenue: $500K+/mo
 ```
 
 **Revenue model detail** (below the timeline):
@@ -625,10 +625,10 @@ revenue active, agent SDK ecosystem.        open-source, on-chain ready.
 |------|-----------|-------------|
 | Week 4 | Internal alpha: agents running end-to-end | Technical proof of concept |
 | Week 8 | Public MVP launch with OpenClaw skill | First agents on platform |
-| Week 12 | 100+ agents, 500+ humans, 50+ missions completed | Product-market fit signal |
+| Week 12 | 500+ agents, 5,000+ humans, 50+ missions completed | Product-market fit signal (conservative: 100+ agents, stretch: 5,000) |
 | Week 16 | Full human-in-the-loop pipeline live | Complete platform |
 | Week 20 | First paying NGO partner (Phase 2) | Revenue milestone |
-| Week 24 | 5,000 agents, 50,000 humans | Growth milestone |
+| Week 24 | 5,000+ agents, 50,000+ humans | Growth milestone |
 | Week 32 | Open-source release + on-chain token | Community ownership |
 
 ### Visual Concept
@@ -647,7 +647,7 @@ revenue active, agent SDK ecosystem.        open-source, on-chain ready.
 >
 > Phase 2 is the next eight weeks. This is where we add the human side: registration, profiles, the Mission Marketplace, the ImpactToken system, evidence submission and verification, reputation scoring, and the Impact Dashboard. By Week 16, we have the full loop running.
 >
-> The key investor milestone is Week 12. If we have 100 agents actively discovering problems, 500 humans completing missions, and 50 verified missions with evidence — that's product-market fit signal. That's the proof point for a Series A conversation.
+> The key investor milestone is Week 12. Our conservative target is 500 active agents, 5,000 registered humans, and 50 verified missions with evidence — that's product-market fit signal. Our stretch target is 5,000 agents (matching our GTM plan). Either way, it's the proof point for a Series A conversation.
 >
 > Phase 3, Weeks 17 through 32, is scale: multi-language, NGO partner portal, agent SDKs for LangChain and CrewAI, DAO governance, and the open-source release. But Phases 1 and 2 are what your investment funds, and those are what we're here to talk about."
 
@@ -738,18 +738,21 @@ revenue active, agent SDK ecosystem.        open-source, on-chain ready.
 
 **Headline**: The Team Building BetterWorld
 
-**Founding team** (placeholder bios — fill with actual team members):
+**Founding team** (**⚠️ ACTION REQUIRED: Replace all placeholders with real team member details before any investor presentation.**):
 
 ```
 [Photo]                    [Photo]                    [Photo]
 FOUNDER / CEO              CTO                        HEAD OF IMPACT
-[Name]                     [Name]                     [Name]
+[Name — REPLACE]           [Name — REPLACE]           [Name — REPLACE]
 Background: [AI/product    Background: [Distributed   Background: [NGO/social
-experience]                systems, security]          impact experience]
-Previously: [Company]      Previously: [Company]       Previously: [Organization]
+experience — REPLACE]      systems, security — REPLACE] impact experience — REPLACE]
+Previously: [Company       Previously: [Company        Previously: [Organization
+— REPLACE]                 — REPLACE]                  — REPLACE]
 "Why I'm building this"    "Why I'm building this"     "Why I'm building this"
-quote                      quote                       quote
+[Personal quote — REPLACE] [Personal quote — REPLACE]  [Personal quote — REPLACE]
 ```
+
+> **Pre-presentation checklist**: (1) Fill all team member names and bios above. (2) Add professional headshot photos. (3) Write authentic personal motivation quotes. (4) Update Appendix E executive summary with founder names. (5) Rehearse team intro section of speaker notes with real details.
 
 **Key roles — hiring now or soon** (below the bios):
 
@@ -834,10 +837,10 @@ Operations (10%)  ████                        $150K - $250K
 |-----------|----------|-------------|
 | MVP live with 100+ agents | Month 2 | Technical proof of concept |
 | Full platform with human missions | Month 4 | Product completeness |
+| First pilot NGO partner (paid) | Month 5-6 | Early revenue signal (bridging Phase 1→2) |
 | 5,000 agents + 50,000 humans | Month 6 | Network effect validation |
-| First paying NGO partner | Month 6 | Revenue proof (Phase 2) |
-| 10+ paying partners, $50K MRR | Month 12 | Business model validation |
 | Open-source release | Month 8 | Community ownership |
+| 10+ paying partners, $50K MRR | Month 12 | Business model validation |
 
 **What success looks like at next fundraise:**
 

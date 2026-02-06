@@ -1261,7 +1261,84 @@ async function buildDecompositionContext(
 }
 ```
 
-### 4.4 Dependency Graph Generation
+### 4.4 Mission Difficulty Scoring Formula
+
+While Claude Sonnet assigns an initial difficulty estimate during decomposition, we validate and adjust it using a deterministic formula based on mission attributes. This prevents inconsistent difficulty assignments across different decomposition runs.
+
+```typescript
+// packages/guardrails/src/difficulty.ts
+
+type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
+
+interface DifficultyFactors {
+  estimated_duration_minutes: number;    // from decomposition
+  required_skills_count: number;         // number of skills needed
+  is_remote: boolean;                    // remote vs. physical
+  requires_equipment: boolean;           // camera, tools, etc.
+  safety_risk_level: number;             // 0-3 scale from safety classifier
+  evidence_complexity: number;           // number of evidence types required
+}
+
+function computeDifficulty(factors: DifficultyFactors): {
+  difficulty: Difficulty;
+  score: number;           // 0-100 continuous score
+  token_reward: number;    // suggested token reward
+} {
+  let score = 0;
+
+  // Duration factor (0-30 points)
+  score += Math.min(30, factors.estimated_duration_minutes / 8);
+
+  // Skill requirement factor (0-25 points)
+  score += Math.min(25, factors.required_skills_count * 8);
+
+  // Physical presence factor (0-15 points)
+  score += factors.is_remote ? 0 : 15;
+
+  // Equipment factor (0-10 points)
+  score += factors.requires_equipment ? 10 : 0;
+
+  // Safety complexity (0-10 points)
+  score += Math.min(10, factors.safety_risk_level * 3.3);
+
+  // Evidence complexity (0-10 points)
+  score += Math.min(10, factors.evidence_complexity * 3.3);
+
+  // Map score to difficulty tier and token reward
+  const difficulty: Difficulty =
+    score < 20 ? 'easy' :
+    score < 45 ? 'medium' :
+    score < 70 ? 'hard' : 'expert';
+
+  const TOKEN_REWARDS: Record<Difficulty, [number, number]> = {
+    easy:   [10, 25],
+    medium: [25, 50],
+    hard:   [50, 100],
+    expert: [100, 200],
+  };
+
+  const [minReward, maxReward] = TOKEN_REWARDS[difficulty];
+  const tierProgress = difficulty === 'easy' ? score / 20 :
+    difficulty === 'medium' ? (score - 20) / 25 :
+    difficulty === 'hard' ? (score - 45) / 25 : (score - 70) / 30;
+  const token_reward = Math.round(minReward + tierProgress * (maxReward - minReward));
+
+  return { difficulty, score: Math.round(score), token_reward };
+}
+```
+
+**Difficulty tier reference:**
+
+| Tier | Score Range | Duration | Skills | Token Range | Example |
+|------|-----------|----------|--------|------------|---------|
+| Easy | 0-19 | <1 hour | 0-1 | 10-25 IT | "Photograph the park entrance sign" |
+| Medium | 20-44 | 1-2 hours | 1-2 | 25-50 IT | "Interview 5 shop owners about waste" |
+| Hard | 45-69 | 2-4 hours | 2-3 | 50-100 IT | "Map accessibility at 10 bus stops with photos" |
+| Expert | 70-100 | 3-4 hours | 3+ | 100-200 IT | "Conduct water quality testing at 5 locations" |
+
+The decomposition engine's initial difficulty assignment is overridden by this formula if the computed difficulty differs by more than one tier.
+
+### 4.5 Dependency Graph Generation
 
 The decomposition output includes task dependencies. We validate that these form a valid DAG (Directed Acyclic Graph):
 
@@ -2016,6 +2093,7 @@ Agent reputation is built over time based on the quality of their contributions.
 interface ReputationEvent {
   event_type: string;
   score_delta: number;
+  created_at: Date;
 }
 
 const REPUTATION_EVENTS: Record<string, number> = {
@@ -2038,24 +2116,35 @@ const REPUTATION_EVENTS: Record<string, number> = {
 
 function computeAgentReputation(
   events: ReputationEvent[],
-  currentScore: number
+  currentScore: number,
+  lastActivityAt: Date
 ): number {
-  let score = currentScore;
+  // 1. Apply time-decay toward baseline (50) for inactivity
+  const daysSinceActivity = (Date.now() - lastActivityAt.getTime()) / (1000 * 60 * 60 * 24);
+  const DECAY_RATE = 0.07;        // ~0.5 points per week
+  const BASELINE = 50;
+  let score = BASELINE + (currentScore - BASELINE) * Math.exp(-DECAY_RATE * daysSinceActivity);
 
+  // 2. Apply time-weighted event deltas (recent events matter more)
+  const HALF_LIFE_DAYS = 90;      // Events lose half their weight after 90 days
   for (const event of events) {
-    score += event.score_delta;
+    const eventAgeDays = (Date.now() - event.created_at.getTime()) / (1000 * 60 * 60 * 24);
+    const timeWeight = Math.pow(0.5, eventAgeDays / HALF_LIFE_DAYS);
+    score += event.score_delta * timeWeight;
   }
 
-  // Clamp to [0, 100] range
+  // 3. Clamp to [0, 100] range
   score = Math.max(0, Math.min(100, score));
-
-  // Apply time decay: reputation slowly decays toward 50 if no recent activity
-  // This prevents inactive agents from hoarding reputation
-  // Decay rate: 0.5 points per week of inactivity
-  // (Applied separately in a cron job, not in this function)
 
   return Math.round(score * 100) / 100;
 }
+
+// Algorithm explanation:
+// - Exponential time-decay toward baseline 50 prevents reputation hoarding
+// - Event half-life of 90 days means recent contributions matter ~4x more than 6-month-old ones
+// - This prevents agents from "coasting" on early high-quality work
+// - The decay + half-life parameters can be tuned based on observed platform dynamics
+// - Inspired by: Stack Overflow reputation decay, Reddit's hot ranking, ELO decay in chess systems
 
 // Reputation tiers and their effects:
 // 0-20:   Restricted - all submissions require human review (Layer C)

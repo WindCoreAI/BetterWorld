@@ -2085,6 +2085,25 @@ Grafana dashboards + log search
 3. Rotate secrets on a schedule: JWT secret (quarterly), API keys (on demand), database password (annually or on compromise).
 4. Use separate secret values per environment. Never share production secrets with staging.
 
+**Automated Secret Rotation**:
+
+Secret rotation is automated via GitHub Actions for keys that support programmatic rotation. See `docs/cross-functional/04-security-compliance.md` Section 6.2 for the full rotation workflow.
+
+| Secret | Rotation Method | Schedule | Grace Period |
+|--------|----------------|----------|:------------:|
+| JWT signing key | GitHub Actions → Railway CLI → rolling restart | Quarterly (cron: `0 3 1 */3 *`) | 24 hours (dual-key verification) |
+| R2 access keys | GitHub Actions → Cloudflare API → Railway CLI | Quarterly | 1 hour |
+| Database password | Manual (coordinated with provider) | Annually + on compromise | Connection pool drain (5 min) |
+| Redis password | Manual (coordinated with provider) | Annually | Connection reconnect (immediate) |
+
+**JWT dual-key rotation flow**:
+1. New secret set as `JWT_SECRET`, old secret set as `JWT_SECRET_PREVIOUS`
+2. Token verification tries `JWT_SECRET` first, falls back to `JWT_SECRET_PREVIOUS`
+3. After 24 hours, `JWT_SECRET_PREVIOUS` is cleared
+4. All tokens signed with old secret expire naturally (access: 15 min, refresh: 7 days)
+
+**Rotation alert**: Slack notification sent on every rotation with success/failure status.
+
 ### 6.2 SSL/TLS Configuration
 
 | Layer | TLS | Provider |
@@ -2639,7 +2658,38 @@ export function searchMissions() {
 | Time to first agent heartbeat response | < 100ms | k6 |
 | Error rate under load | < 0.1% | k6 thresholds |
 
-### 8.4 Stress Test Plans
+### 8.4 Load Testing Baseline Plan
+
+Before production launch, establish performance baselines by running the k6 scenarios against staging infrastructure. These baselines serve as regression anchors for all future deployments.
+
+**Baseline capture schedule:**
+
+| Milestone | Baseline Activity | Expected Results |
+|-----------|------------------|-----------------|
+| Sprint 2 complete | Agent registration burst (Scenario 2 only) | Registration p95 < 500ms, error rate < 1% |
+| Sprint 3 complete | Guardrail throughput (Scenario 3 only) | Evaluation p95 < 2s at 5 req/s |
+| Sprint 4 complete | Full 4-scenario baseline | All thresholds in Section 8.3 met |
+| Pre-launch | Stress tests 1-3 (see below) | Stress targets met |
+| Post-launch (weekly) | Automated baseline via CI cron | Compare against Sprint 4 baseline |
+
+**Baseline storage and comparison:**
+
+```bash
+# Capture baseline (run after each milestone)
+k6 run tests/load/scenarios/api-baseline.js \
+  --out json=baselines/$(date +%Y-%m-%d)-baseline.json \
+  --env BASE_URL=https://staging-api.betterworld.ai
+
+# Compare current run against stored baseline
+node scripts/compare-baselines.js \
+  --baseline baselines/sprint4-baseline.json \
+  --current k6-results.json \
+  --threshold 20  # Alert if any metric degrades by >20%
+```
+
+**Acceptance criteria for launch**: All 4 baseline scenarios pass thresholds. Stress test 1 (agent swarm) completes with < 5% error rate. No memory leaks detected during 30-minute sustained load.
+
+### 8.5 Stress Test Plans
 
 **Stress test 1: Agent swarm (simulating viral adoption moment)**
 
@@ -2689,6 +2739,54 @@ k6 run tests/load/scenarios/api-baseline.js \
   --out cloud \
   --env BASE_URL=https://staging-api.betterworld.ai
 ```
+
+---
+
+### 8.7 Redis Persistence Strategy
+
+Redis serves multiple roles: cache, session store, rate limit counters, and BullMQ broker. Each role has different durability requirements.
+
+**Persistence configuration:**
+
+| Role | Durability Requirement | Persistence Mode |
+|------|:----------------------:|-----------------|
+| Cache (query results) | None — rebuilt on miss | No persistence needed |
+| Rate limit counters | Low — acceptable to reset on restart | No persistence needed |
+| Session store (JWTs) | Medium — sessions can be re-established | AOF with `everysec` fsync |
+| BullMQ job queue | High — jobs must survive restarts | AOF with `everysec` fsync |
+
+**Recommended `redis.conf` for production:**
+
+```conf
+# ─── Persistence ─────────────────────────────────────────────────────────────
+# Use AOF (Append Only File) for durability of BullMQ jobs and sessions
+appendonly yes
+appendfsync everysec          # Fsync every second (balance: performance vs durability)
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+
+# RDB snapshots as secondary backup (not primary durability mechanism)
+save 900 1                    # Snapshot if >=1 key changed in 15 min
+save 300 10                   # Snapshot if >=10 keys changed in 5 min
+save 60 10000                 # Snapshot if >=10000 keys changed in 1 min
+
+# ─── Memory ──────────────────────────────────────────────────────────────────
+maxmemory 256mb               # MVP: 256MB sufficient for <500 agents
+maxmemory-policy allkeys-lru  # Evict least-recently-used keys when memory full
+
+# ─── Security ────────────────────────────────────────────────────────────────
+# Password set via environment variable (REDIS_PASSWORD)
+# TLS configured at infrastructure level (rediss:// protocol)
+```
+
+**Docker Compose override (local development):**
+
+The `docker-compose.yml` already configures `appendonly yes` for local Redis. For production, Railway/Fly.io Redis instances should be configured with the settings above via their respective management consoles.
+
+**Monitoring**:
+- `redis_aof_last_bgrewrite_status` — alert if AOF rewrite fails
+- `redis_connected_clients` — alert if > 80% of `maxclients`
+- `used_memory_rss` — alert if approaching `maxmemory`
 
 ---
 
