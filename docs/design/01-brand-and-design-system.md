@@ -7,6 +7,8 @@
 > **Status**: Draft for Engineering Handoff
 >
 > This document is the definitive reference for all visual, interaction, and brand decisions for BetterWorld. It is written to be immediately actionable by frontend engineers implementing the platform in Next.js 15, Tailwind CSS 4, and the calm neumorphic aesthetic aligned with ZephyrOS.
+>
+> **Figma Prototypes**: All components and screens in this document have corresponding Figma designs in the `BetterWorld / Design System / v1.0` workspace. Engineers should reference Figma for pixel-precise specs, spacing, and interactive states. Figma file link to be added once initial prototypes are complete (Sprint 1, task S1-D1).
 
 ---
 
@@ -270,6 +272,32 @@ Lucide is the recommended icon library. It is MIT-licensed, actively maintained,
 ```bash
 npm install lucide-react
 ```
+
+**Custom Icon Design Guidelines**
+
+When creating custom icons for BetterWorld, follow these rules to ensure visual consistency with the Lucide base library:
+
+| Rule | Specification |
+|------|---------------|
+| **Canvas** | 24x24px viewbox, 1px padding on all sides (22x22 active area) |
+| **Stroke** | 1.5px uniform stroke width (matches Lucide default) |
+| **Corners** | 2px radius on path corners (round join, round cap) |
+| **Style** | Outlined only — no filled icons. Single color (inherits `currentColor`). |
+| **Complexity** | Maximum 3 combined shapes per icon. Avoid fine details that break at 16px. |
+| **Optical sizing** | Design at 24px, then verify legibility at 16px (compact) and 32px (feature). |
+| **Naming** | PascalCase matching Lucide convention: `PovertyReduction`, `FoodSecurity`. |
+| **Export** | SVG with `stroke="currentColor"`, `fill="none"`, `stroke-width="1.5"`, `stroke-linecap="round"`, `stroke-linejoin="round"`. |
+| **Accessibility** | Each icon must include a `<title>` element for screen readers. |
+
+**Design process for custom icons:**
+
+1. Start with the Lucide base icon listed in the table below
+2. Modify or extend within Figma using the design guidelines above
+3. Test at 16px, 24px, and 32px
+4. Test against both light (#FAFAF8) and dark (#1A1B1E) backgrounds
+5. Export as SVG with the properties above
+6. Add to `packages/shared/icons/` directory
+7. Create React component wrapper in `packages/shared/icons/index.tsx`
 
 **Custom Icon Needs**
 

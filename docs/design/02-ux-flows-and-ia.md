@@ -18,6 +18,9 @@
 5. [Responsive Design Strategy](#5-responsive-design-strategy)
 6. [Empty States & Error States](#6-empty-states--error-states)
 7. [Accessibility Flow Considerations](#7-accessibility-flow-considerations)
+8. [Component-to-Screen Mapping Matrix](#8-component-to-screen-mapping-matrix)
+
+> **Figma Prototypes**: High-fidelity prototypes for all flows in this document will be maintained in the BetterWorld Figma workspace. See Section 8 for the component-to-screen mapping. Figma file: `BetterWorld / UX Flows / v1.0` (link to be added once prototypes are created during Sprint 1-2 design work).
 
 ---
 
@@ -2322,6 +2325,65 @@ Complete list of unique screens to be designed and implemented:
 P0 = MVP (Phase 1-2), P1 = Post-MVP (Phase 2-3), P2 = Scale (Phase 3+)
 Total unique screens: 29
 ```
+
+---
+
+## 8. Component-to-Screen Mapping Matrix
+
+This matrix maps every reusable UI component from the design system to the screens that use it. Use this to identify shared components, plan implementation order, and ensure consistency.
+
+### 8.1 Core Component Usage
+
+| Component | Landing | Problem Board | Problem Detail | Solution Board | Solution Detail | Mission Marketplace | Mission Detail | Admin Flagged | Activity Feed | Profile |
+|-----------|:-------:|:-------------:|:--------------:|:--------------:|:---------------:|:-------------------:|:--------------:|:-------------:|:-------------:|:-------:|
+| Button | X | X | X | X | X | X | X | X | | X |
+| Card | X | X | | X | | X | | X | X | |
+| Badge (domain) | | X | X | X | X | X | X | X | X | X |
+| Badge (severity) | | X | X | | | | | X | X | |
+| Badge (status) | | | X | | | X | X | X | | X |
+| Input | | | | | | | | | | X |
+| TextArea | | | | | | | X | | | X |
+| Select/Dropdown | | X | | X | | X | | X | | X |
+| Avatar | | X | X | X | X | | | | X | X |
+| Pagination | | X | | X | | X | | X | | |
+| Modal | | | X | | X | X | X | X | | X |
+| Toast | X | X | X | X | X | X | X | X | X | X |
+| Tabs | | | X | | X | | | | | X |
+| Map | | | X | | | X | X | | | |
+| Score Ring | | | | X | X | | | | | |
+| Debate Thread | | | | | X | | | | | |
+| Evidence Gallery | | | X | | | | X | | | |
+| Activity Item | | | | | | | | | X | |
+| Stats Counter | X | | | | | | | | | X |
+| Navigation Bar | X | X | X | X | X | X | X | X | X | X |
+| Footer | X | X | | X | | X | | | | |
+
+### 8.2 Implementation Priority
+
+Based on the mapping above, implement components in this order to maximize screen coverage:
+
+| Priority | Component | Screens Covered | Sprint |
+|:--------:|-----------|:---------------:|:------:|
+| 1 | Button, Card, Badge, Navigation Bar | All screens | Sprint 1 (S1-D1) |
+| 2 | Avatar, Select/Dropdown, Toast, Modal | 8+ screens | Sprint 1 (S1-D2) |
+| 3 | Pagination, Tabs, Input, TextArea | 6+ screens | Sprint 2 |
+| 4 | Map, Score Ring, Evidence Gallery | 3-4 screens | Sprint 3-4 |
+| 5 | Debate Thread, Activity Item, Stats Counter | 1-2 screens | Sprint 4 |
+
+### 8.3 Screen Complexity Assessment
+
+| Screen | Unique Components | Data Sources | Real-time? | Complexity |
+|--------|:-----------------:|:------------:|:----------:|:----------:|
+| Landing Page | 5 | 1 (stats API) | Yes (counter) | Low |
+| Problem Discovery Board | 8 | 1 (problems API) | No | Medium |
+| Problem Detail | 10 | 3 (problem, evidence, solutions) | No | High |
+| Solution Board | 7 | 1 (solutions API) | No | Medium |
+| Solution Detail + Debates | 11 | 3 (solution, debates, votes) | Yes (WebSocket) | High |
+| Mission Marketplace | 9 | 1 (missions API + geo) | No | High (map) |
+| Mission Detail | 8 | 2 (mission, evidence) | No | Medium |
+| Admin Flagged Queue | 9 | 2 (flagged, guardrail scores) | Yes (WebSocket) | Medium |
+| Activity Feed | 5 | 1 (events API) | Yes (WebSocket) | Low |
+| Profile | 8 | 3 (user, missions, tokens) | No | Medium |
 
 ---
 
