@@ -155,7 +155,7 @@
 
 6. **Soft deletes via `is_active` flags.** No hard deletes on core entities. Partial indexes on `is_active = true` ensure queries over active records remain fast.
 
-7. **Vector embeddings as first-class columns.** Problems and solutions store `vector(1536)` embeddings directly, enabling semantic similarity search via pgvector IVFFlat/HNSW indexes without a separate vector store.
+7. **Vector embeddings as first-class columns.** Problems and solutions store `vector(1024)` embeddings (Voyage AI `voyage-3`) directly, enabling semantic similarity search via pgvector HNSW indexes without a separate vector store.
 
 8. **Timestamps everywhere.** Every table has `created_at`; mutable tables add `updated_at` with auto-update triggers. All timestamps are `TIMESTAMPTZ` (UTC).
 
@@ -533,8 +533,8 @@ export const problems = pgTable(
       .default(0)
       .notNull(),
 
-    // Embedding for semantic similarity search (1536-dim for OpenAI/Voyage)
-    embedding: vector("embedding", { dimensions: 1536 }),
+    // Embedding for semantic similarity search (1024-dim, Voyage AI voyage-3)
+    embedding: vector("embedding", { dimensions: 1024 }),
 
     status: varchar("status", { length: 20 }).default("active").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -668,8 +668,8 @@ export const solutions = pgTable(
       .default("0")
       .notNull(),
 
-    // Embedding
-    embedding: vector("embedding", { dimensions: 1536 }),
+    // Embedding (1024-dim, Voyage AI voyage-3)
+    embedding: vector("embedding", { dimensions: 1024 }),
 
     status: varchar("status", { length: 20 })
       .default("proposed")
@@ -1070,6 +1070,10 @@ export const tokenTransactions = pgTable(
     referenceType: text("reference_type"), // 'mission' | 'solution' | 'problem' | 'circle' | etc.
     referenceId: uuid("reference_id"),
     description: text("description"),
+    balanceBefore: decimal("balance_before", {
+      precision: 18,
+      scale: 8,
+    }).notNull(),
     balanceAfter: decimal("balance_after", {
       precision: 18,
       scale: 8,
@@ -1092,6 +1096,10 @@ export const tokenTransactions = pgTable(
     check(
       "balance_after_non_negative",
       sql`${table.balanceAfter} >= 0`,
+    ),
+    check(
+      "balance_after_equals_before_plus_amount",
+      sql`${table.balanceAfter} = ${table.balanceBefore} + ${table.amount}`,
     ),
   ],
 );
@@ -2308,7 +2316,7 @@ async function recordTokenTransaction(
       );
     }
 
-    // Insert transaction record
+    // Insert transaction record (double-entry: balance_before + amount = balance_after)
     await tx.insert(tokenTransactions).values({
       humanId,
       amount,
@@ -2316,6 +2324,7 @@ async function recordTokenTransaction(
       referenceType,
       referenceId,
       description,
+      balanceBefore: currentBalance.toFixed(8),
       balanceAfter: newBalance.toFixed(8),
     });
 

@@ -76,11 +76,11 @@
 
 | Attribute | Detail |
 |-----------|--------|
-| **Description** | Create the `packages/db` package with Drizzle ORM. Define schema for Phase 1 core tables: `agents`, `humans` (minimal for forward-compat), `problems`, `solutions`, `debates`. Include all columns from proposal Section 8.1. Define the `problem_domain` enum. Set up pgvector `vector(1536)` columns on `problems` and `solutions`. Create all indexes (B-tree, GIN for arrays, IVFFlat for vectors, GiST for geo). Configure `drizzle.config.ts` with connection string from env. |
+| **Description** | Create the `packages/db` package with Drizzle ORM. Define schema for Phase 1 core tables: `agents`, `humans` (minimal for forward-compat), `problems`, `solutions`, `debates`. Include all columns from proposal Section 8.1. Define the `problem_domain` enum. Set up pgvector `vector(1024)` columns on `problems` and `solutions`. Create all indexes (B-tree, GIN for arrays, IVFFlat for vectors, GiST for geo). Configure `drizzle.config.ts` with connection string from env. |
 | **Estimated Hours** | 10h |
 | **Assigned Role** | BE1 |
 | **Dependencies** | S1-02 (PostgreSQL running) |
-| **Acceptance Criteria** | All 6 core tables defined in Drizzle schema files. TypeScript types are auto-inferred from schema. Schema compiles without errors. All indexes defined. `problem_domain` enum matches the 15 approved domains. Vector columns use `vector(1536)` type. |
+| **Acceptance Criteria** | All 6 core tables defined in Drizzle schema files. TypeScript types are auto-inferred from schema. Schema compiles without errors. All indexes defined. `problem_domain` enum matches the 15 approved domains. Vector columns use `vector(1024)` type. |
 
 #### S1-05: Database Migration Pipeline
 
@@ -675,7 +675,7 @@
 | **Estimated Hours** | 6h |
 | **Assigned Role** | BE1 |
 | **Dependencies** | S4-01 (problems), S4-02 (solutions), S3-05 (BullMQ infra) |
-| **Acceptance Criteria** | Approved problems and solutions get embeddings generated async. Embedding stored in vector(1536) column. Batch processing works. Failed embeddings retry 3 times. Content without embedding is still visible (embedding is optional enhancement). |
+| **Acceptance Criteria** | Approved problems and solutions get embeddings generated async. Embedding stored in vector(1024) column. Batch processing works. Failed embeddings retry 3 times. Content without embedding is still visible (embedding is optional enhancement). |
 
 #### S4-06: Semantic Search Endpoint
 

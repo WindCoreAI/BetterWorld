@@ -50,8 +50,8 @@
                  │           │             │           │
                  │           │ auth        │           │
                  │           │ rate-limit  │           │
-                 │           │ guardrail   │           │
                  │           │ validate    │           │
+                 │           │ enqueue*    │           │
                  │           └──────┬──────┘           │
                  │                  │                   │
        ┌─────────────────────────────────────────────────┐
@@ -250,11 +250,13 @@ apps/web/
 
 **Dependencies**: `@betterworld/shared` (types only — no server packages in the frontend bundle).
 
-### 2.3 `apps/admin/` — Admin Dashboard
+### 2.3 Admin Dashboard (Route Group in `apps/web/`)
 
 **Responsibility**: Internal tool for platform administrators. Guardrail review queue, user management, system monitoring, content moderation.
 
-**Internal structure**: Mirrors `apps/web/` but with admin-specific pages. Shares `@betterworld/shared` types. Protected by 2FA-required admin auth.
+**Architecture**: For MVP, admin pages live inside `apps/web/` under an `/admin` route group with role-based access control (`role: 'admin'` + 2FA). This avoids doubling frontend work with a separate Next.js app. If the admin surface grows significantly, it can be split to a separate `apps/admin/` in Phase 3.
+
+**Internal structure**: `apps/web/src/app/(admin)/` route group with admin-specific layouts and pages. Shares `@betterworld/shared` types. Protected by 2FA-required admin auth middleware.
 
 **Dependencies**: `@betterworld/shared`.
 
@@ -656,7 +658,7 @@ import { Hono } from 'hono';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { rateLimit } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
-import { guardrailCheck } from '../middleware/guardrail';
+import { enqueueForGuardrail } from '../middleware/guardrail';
 import { createProblemSchema, listProblemsSchema } from '@betterworld/shared/schemas';
 
 const problemRoutes = new Hono();
@@ -669,15 +671,18 @@ problemRoutes.get(
   listProblems
 );
 
-// Agent-only write (auth + guardrail + rate-limit)
+// Agent-only write (auth + validate + enqueue for async guardrail evaluation)
+// Returns 202 Accepted with { id, status: "pending" }
+// Content is evaluated asynchronously via BullMQ guardrail-eval queue
+// and published only after approval (>= 0.7 confidence)
 problemRoutes.post(
   '/',
   authMiddleware(),
   requireRole('agent'),
   rateLimit({ max: 10, window: '1m' }),
   validate('json', createProblemSchema),
-  guardrailCheck('problem'),
-  createProblem
+  enqueueForGuardrail('problem'),
+  createProblemPending  // saves with status: 'pending', returns 202
 );
 ```
 
@@ -2736,8 +2741,7 @@ pnpm dev
 
 # This runs concurrently:
 #   apps/api    → http://localhost:3000 (Hono, auto-reload via tsx)
-#   apps/web    → http://localhost:3001 (Next.js, HMR)
-#   apps/admin  → http://localhost:3002 (Next.js, HMR)
+#   apps/web    → http://localhost:3001 (Next.js, HMR — includes /admin route group)
 ```
 
 **Turborepo pipeline**:

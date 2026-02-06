@@ -11,8 +11,7 @@
 | # | Document | Description |
 |---|----------|-------------|
 | 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v2.0 — refined) |
-| 2 | [Documentation Audit Report](AUDIT-REPORT.md) | 47 findings across 4 severity levels, cross-doc consistency matrix |
-| 3 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Systematic cross-doc review: 6 critical design decisions, 7 core technical challenges, required actions |
+| 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
 
 ---
 
@@ -36,6 +35,8 @@
 | 4 | [API Design & Contract](engineering/04-api-design.md) | All REST endpoints, TypeScript interfaces, WebSocket events, error codes, rate limits | ~700 |
 | 5 | [Agent Integration Protocol](engineering/05-agent-integration-protocol.md) | OpenClaw skill files, framework-agnostic REST protocol, TypeScript + Python SDKs | ~2,995 |
 | 6 | [DevOps & Infrastructure](engineering/06-devops-and-infrastructure.md) | Docker Compose, CI/CD workflows, Railway/Fly.io config, monitoring, cost estimates | ~2,871 |
+| 7 | [Testing Strategy](engineering/07-testing-strategy.md) | Unit, integration, E2E testing approach, guardrail test suite | — |
+| 8 | [BYOK AI Cost Management](engineering/08-byok-ai-cost-management.md) | Bring Your Own Key architecture, multi-provider support, key security, cost metering, migration plan (T4) | ~1,200 |
 
 ## Design
 
@@ -52,20 +53,35 @@
 | 2 | [Risk Register & Mitigation](cross-functional/02-risk-register.md) | 20+ risks scored, top-10 playbooks, red team schedule, incident response | ~1,062 |
 | 3 | [Pitch Deck Outline](cross-functional/03-pitch-deck-outline.md) | 14-slide deck with speaker notes, appendix materials, FAQ/objection handling | ~1,290 |
 
+## Technical Challenge Research (challenges/)
+
+Deep research documents for each of the 7 core technical challenges identified in [REVIEW-AND-TECH-CHALLENGES.md](REVIEW-AND-TECH-CHALLENGES.md).
+
+| ID | Document | Topic | Key Finding |
+|----|----------|-------|-------------|
+| T1 | [Constitutional Guardrail Reliability](challenges/T1-constitutional-guardrail-reliability.md) | Prompt injection defense, classifier reliability, cost-efficient guardrails | Defense-in-depth with ensemble only where false negatives >5% |
+| T2 | [Evidence Verification Pipeline](challenges/T2-evidence-verification-pipeline.md) | EXIF, AI image detection, peer review incentives, fraud detection | GPS + timestamp + Vision + peer review + honeypots; accept some gaming, focus on detection |
+| T3 | [Cold Start / Marketplace Bootstrap](challenges/T3-cold-start-marketplace-bootstrap.md) | Two-sided marketplace bootstrap, geographic density, BYOK impact on growth | Pilot city strategy, seed 100+ problems, evergreen missions, university partnerships |
+| T4 | [AI Cost Management — BYOK](challenges/T4-ai-cost-management-byok.md) | Bring Your Own Key architecture, multi-provider support, cost metering | BYOK eliminates AI scaling costs; platform only pays for guardrails + embeddings |
+| T5 | [Hono Framework Maturity](challenges/T5-hono-framework-maturity-risk.md) | Hono vs Fastify, WebSocket support, middleware ecosystem | Revised risk 6/25 (down from 9); keep Hono with service-layer abstraction |
+| T6 | [pgvector Performance at Scale](challenges/T6-pgvector-performance-at-scale.md) | HNSW tuning, memory consumption, migration triggers | Use `halfvec(1024)` for 50% savings; migrate to Qdrant at 500K+ vectors |
+| T7 | [Progressive Trust Model](challenges/T7-progressive-trust-model.md) | Trust tiers, Sybil prevention, patient attacker detection, reputation scoring | 5-tier state machine, reputation starts at 0, asymmetric decay, registration deposit |
+
 ---
 
 ## Reading Order
 
 ### For Engineers starting implementation:
 1. **Roadmap** (understand the full timeline and phases)
-2. **Audit Report** (know what's incomplete or inconsistent before relying on docs)
+2. Review & Technical Challenges (know open issues and key decisions)
 3. PRD (understand what to build)
 4. Technical Architecture (understand how)
 5. Database Design (start with schema)
 6. API Design (define contracts)
 7. Sprint Plan Phase 1 (know the sprint detail)
 8. AI/ML Architecture (understand guardrails)
-9. DevOps (set up infrastructure)
+9. BYOK AI Cost Management (understand BYOK key architecture and cost model)
+10. DevOps (set up infrastructure)
 
 ### For Designers:
 1. PRD (understand scope)
@@ -83,7 +99,8 @@
 
 ### For Agent Developers (external):
 1. Agent Integration Protocol (how to connect)
-2. API Design (endpoint reference)
+2. BYOK AI Cost Management (understand API key requirements and cost model)
+3. API Design (endpoint reference)
 
 ---
 
