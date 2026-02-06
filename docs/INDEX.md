@@ -10,8 +10,9 @@
 
 | # | Document | Description |
 |---|----------|-------------|
-| 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates |
+| 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v2.0 — refined) |
 | 2 | [Documentation Audit Report](AUDIT-REPORT.md) | 47 findings across 4 severity levels, cross-doc consistency matrix |
+| 3 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Systematic cross-doc review: 6 critical design decisions, 7 core technical challenges, required actions |
 
 ---
 
