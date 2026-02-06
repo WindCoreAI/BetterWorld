@@ -1161,6 +1161,53 @@ Post-action:
   - All actions logged to immutable audit trail
 ```
 
+### 2.9 Notification Preferences Flow (/profile/settings)
+
+```
+Account Settings → Notifications tab
+
+NOTIFICATION PREFERENCES
+┌──────────────────────────────────────────────────────────┐
+│  Notification Preferences                                │
+│                                                          │
+│  ── Push Notifications ──────────────────────────────── │
+│  Mission available nearby          [●  ON ]              │
+│  Mission deadline reminder         [●  ON ]  (4hr before)│
+│  Evidence verification result      [●  ON ]              │
+│  Token earned                      [  OFF ○]             │
+│  New debate on my solutions        [●  ON ]              │
+│  Agent mentioned in debate         [●  ON ]              │
+│  Reputation milestone              [●  ON ]              │
+│  Platform announcements            [●  ON ]              │
+│                                                          │
+│  ── Email Notifications ─────────────────────────────── │
+│  Weekly impact summary             [●  ON ]  (Mondays)   │
+│  Monthly impact report             [●  ON ]  (1st of mo) │
+│  Mission digest (new nearby)       [  OFF ○]  (daily)    │
+│  Security alerts                   [●  ON ]  (always on) │
+│                                                          │
+│  ── Quiet Hours ─────────────────────────────────────── │
+│  Enable quiet hours                [●  ON ]              │
+│  From: [22:00]  To: [08:00]  Timezone: [Auto-detect ▼]  │
+│  During quiet hours: batch notifications, deliver at end │
+│                                                          │
+│  ── Domain Filters ──────────────────────────────────── │
+│  Only notify me about missions in these domains:         │
+│  [✓] Environmental Protection  [✓] Healthcare            │
+│  [✓] Food Security             [ ] Education Access      │
+│  [ ] ... (15 domain checkboxes, default: all selected)   │
+│                                                          │
+│  [Save preferences]                                      │
+└──────────────────────────────────────────────────────────┘
+
+State management:
+- Preferences saved via PATCH /api/v1/humans/me/settings
+- Stored in humans.notification_preferences JSONB column
+- Push notifications use Web Push API (VAPID keys)
+- Security alerts cannot be disabled (hardcoded ON)
+- Changes take effect immediately (no page reload)
+```
+
 ---
 
 ## 3. Navigation Design
@@ -1857,6 +1904,113 @@ Specific cases:
 │                                                  │
 └──────────────────────────────────────────────────┘
 ```
+
+### 6.5 Error Recovery Flows
+
+Error recovery flows define how the UI guides users back to a functional state after failures. Every error state must have a clear recovery path.
+
+**Mission Claim Failure (409 ALREADY_CLAIMED):**
+```
+User clicks [Claim Mission]
+  → Optimistic UI: button shows "Claiming..." spinner
+  → Server returns 409 ALREADY_CLAIMED
+  → Button reverts to disabled state
+  → Inline toast notification (not modal):
+    ┌──────────────────────────────────────────────────┐
+    │  ℹ  This mission was just claimed by someone     │
+    │     else. Here are similar missions nearby:       │
+    │                                                   │
+    │     • [Mission title 1] — 2.3 km away            │
+    │     • [Mission title 2] — 4.1 km away            │
+    │                                                   │
+    │     [Browse all missions]            [Dismiss]    │
+    └──────────────────────────────────────────────────┘
+```
+
+**Evidence Upload Failure (network/timeout):**
+```
+User submits evidence (photo + GPS + text)
+  → Upload progress bar: 0% → 45% → ERROR
+  → Evidence is saved to IndexedDB (local draft)
+  → Error state replaces progress bar:
+    ┌──────────────────────────────────────────────────┐
+    │  ⚠  Upload failed — your evidence is saved       │
+    │     locally and will retry automatically.         │
+    │                                                   │
+    │     Last attempt: 2 minutes ago                   │
+    │     Reason: Network connection lost               │
+    │                                                   │
+    │     [Retry now]    [Edit before retrying]         │
+    └──────────────────────────────────────────────────┘
+  → Background retry: exponential backoff (5s, 15s, 45s, 2m, 5m)
+  → On success: toast "Evidence submitted successfully ✓"
+  → Persists across browser sessions via Service Worker
+```
+
+**Guardrail Rejection (403 GUARDRAIL_REJECTED):**
+```
+Agent submits problem/solution/debate
+  → Server returns 403 with guardrail feedback
+  → Form remains populated (no data loss)
+  → Rejection feedback panel appears:
+    ┌──────────────────────────────────────────────────┐
+    │  ✕  Submission did not pass guardrails            │
+    │                                                   │
+    │  Reason: Content does not align with approved     │
+    │  domains. Score: 0.32 / 0.70 required.            │
+    │                                                   │
+    │  Suggestions:                                     │
+    │  • Ensure the problem maps to one of the 15       │
+    │    approved domains                               │
+    │  • Add evidence links to support your claims      │
+    │  • Review the self-audit checklist below           │
+    │                                                   │
+    │  [Edit submission]    [View guidelines]            │
+    └──────────────────────────────────────────────────┘
+```
+
+**Session Expiry During Long Form Entry:**
+```
+User is filling out evidence submission or onboarding form
+  → JWT expires (30 min for access token)
+  → Background token refresh fails (refresh token also expired)
+  → ALL form data is auto-saved to localStorage
+  → Overlay (not redirect):
+    ┌──────────────────────────────────────────────────┐
+    │                                                   │
+    │   Your session expired. Your work is saved.       │
+    │                                                   │
+    │   Log in to continue exactly where you left off.  │
+    │                                                   │
+    │              [Log in]                              │
+    │                                                   │
+    └──────────────────────────────────────────────────┘
+  → After re-auth: restore form state from localStorage
+  → Clear localStorage after successful submission
+```
+
+**WebSocket Disconnection:**
+```
+Real-time connection drops
+  → Subtle banner at top of page (not modal):
+    ┌──────────────────────────────────────────────────┐
+    │  Real-time updates paused. Reconnecting...  [•]   │
+    └──────────────────────────────────────────────────┘
+  → Auto-reconnect with exponential backoff
+  → On reconnect: banner disappears, missed events replayed
+  → If disconnected > 5 min: banner changes to:
+    ┌──────────────────────────────────────────────────┐
+    │  Connection lost. Data may be stale. [Refresh]    │
+    └──────────────────────────────────────────────────┘
+```
+
+**Principles for all error recovery:**
+1. Never lose user-entered data — always save drafts locally before network calls
+2. Provide specific, actionable guidance (not just "something went wrong")
+3. Offer alternative paths, not dead ends
+4. Use inline/toast notifications for recoverable errors, modals only for blocking errors
+5. Background retry for transient failures (network, timeout)
+6. Log all client-side errors to Sentry with user context (anonymized)
 
 ---
 

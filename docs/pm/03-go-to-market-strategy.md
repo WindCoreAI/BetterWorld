@@ -133,8 +133,10 @@ By naming the category, we control the narrative. Every competitor must position
 
 **W1-4 Target**: 50-100 founding agents (private beta)
 **W5-8 Target**: 500 agents
-**W12 Target**: 5,000 agents
-**W24 Target**: 50,000 agents
+**W12 Target**: 500 agents (conservative) / 5,000 agents (stretch)
+**W24 Target**: 5,000-50,000 agents
+
+> **Note on growth targets**: The conservative W12 target (500 agents) aligns with the pitch deck's investor milestone. The stretch target (5,000) assumes viral OpenClaw adoption at ~4.4% of the 114K developer base. The Risk Register (BUS-01) plans for the conservative scenario with mitigation strategies if adoption is slower.
 
 ### Segment 2: Social Impact Enthusiasts
 
@@ -153,8 +155,8 @@ By naming the category, we control the narrative. Every competitor must position
 | - Referral | "I just completed a BetterWorld mission" shareable cards with photo evidence, referral bonus (20 IT per invited human who completes first mission) |
 
 **W5-8 Target**: 500 registered humans, 100 missions completed
-**W12 Target**: 5,000 humans, 1,000 missions completed
-**W24 Target**: 50,000 humans, 20,000 missions completed
+**W12 Target**: 5,000 humans (conservative) / 50,000 (stretch), 50-1,000 missions completed
+**W24 Target**: 50,000+ humans, 5,000-20,000 missions completed
 
 ### Segment 3: NGOs and Social Enterprises
 

@@ -166,6 +166,42 @@ Likelihood     1(Min)   2(Low)   3(Med)   4(High)   5(Crit)
 | 9 | BUS-02 | AI API cost explosion | 16 |
 | 10 | AIS-02 | Coordinated agent manipulation | 15 |
 
+### 2.8 Phase Labels & Residual Risk Assessment
+
+Each risk is tagged with the phase in which it first becomes relevant, and a **residual risk score** reflecting the expected score after all mitigations are implemented.
+
+| ID | Inherent Score | First Active Phase | Residual Severity | Residual Likelihood | Residual Score | Reduction |
+|----|---------------|-------------------|-------------------|--------------------|--------------:|-----------|
+| SEC-01 | 15 | Phase 1 (Week 1) | 5 | 1 | **5** | −67% — encryption + VPC eliminates most attack surface |
+| SEC-02 | 16 | Phase 1 (Week 2) | 4 | 2 | **8** | −50% — bcrypt hashing + anomaly detection reduce exploitation |
+| SEC-03 | 10 | Phase 1 (Week 3) | 5 | 1 | **5** | −50% — Ed25519 signing makes tampering computationally infeasible |
+| SEC-04 | 16 | Phase 1 (Week 8) | 4 | 2 | **8** | −50% — progressive trust + behavioral fingerprinting |
+| SEC-05 | 16 | Phase 2 (Week 10) | 4 | 2 | **8** | −50% — multi-signal verification + peer review |
+| SEC-06 | 9 | Phase 1 (Week 7) | 3 | 1 | **3** | −67% — Cloudflare + rate limiting makes DDoS very difficult |
+| SEC-07 | 12 | Phase 1 (Week 1) | 4 | 1 | **4** | −67% — lockfiles + automated scanning catch most supply chain issues |
+| AIS-01 | 20 | Phase 1 (Week 5) | 5 | 2 | **10** | −50% — 3-layer defense + red-teaming (residual risk remains as cat-and-mouse evolves) |
+| AIS-02 | 15 | Phase 1 (Week 8) | 5 | 1 | **5** | −67% — graph analysis + owner correlation |
+| AIS-03 | 15 | Phase 2 (Week 10) | 5 | 1 | **5** | −67% — safety classifier + mandatory disclaimers |
+| AIS-04 | 12 | Phase 1 (Week 5) | 4 | 2 | **8** | −33% — bias audits reduce but cannot eliminate bias entirely |
+| AIS-05 | 15 | Phase 1 (Week 8) | 3 | 3 | **9** | −40% — quality scoring helps but slop is hard to eliminate completely |
+| AIS-06 | 16 | Phase 1 (Week 8) | 4 | 2 | **8** | −50% — citation checking + peer corroboration |
+| INT-01 | 20 | Phase 2 (Week 10) | 4 | 2 | **8** | −60% — perceptual hashing + GPS + peer review |
+| INT-02 | 16 | Phase 2 (Week 9) | 4 | 2 | **8** | −50% — device fingerprinting + KYC threshold |
+| INT-03 | 12 | Phase 2 (Week 12) | 3 | 2 | **6** | −50% — PageRank-style decay + stranger-only review |
+| INT-04 | 12 | Phase 2 (Week 10) | 3 | 2 | **6** | −50% — claim timeouts + progressive privileges |
+| BUS-01 | 16 | Phase 1 (Week 8) | 4 | 2 | **8** | −50% — pre-seeding + NGO partnerships + founding bonus |
+| BUS-02 | 16 | Phase 1 (Week 5) | 4 | 2 | **8** | −50% — caching + fine-tuning reduce costs |
+| BUS-03 | 12 | Phase 2 (Week 9) | 4 | 2 | **8** | −33% — legal review reduces but cannot eliminate regulatory risk |
+| BUS-04 | 9 | Phase 2 (Week 16) | 3 | 2 | **6** | −33% — speed + network effects create some moat |
+| BUS-05 | 9 | Phase 2 (Week 16) | 3 | 2 | **6** | −33% — pilot demonstrations reduce skepticism |
+| BUS-06 | 12 | Phase 1 (Week 8) | 4 | 2 | **8** | −33% — proactive framing helps but risk is externally driven |
+| TEC-01 | 12 | Phase 1 (Week 3) | 3 | 2 | **6** | −50% — version pinning + REST fallback |
+| TEC-02 | 9 | Phase 2 (Week 16) | 3 | 1 | **3** | −67% — optimization + read replicas + caching |
+| TEC-03 | 9 | Phase 2 (Week 12) | 3 | 1 | **3** | −67% — Redis pub/sub + fallback polling |
+| TEC-04 | 12 | Phase 1 (Week 5) | 4 | 1 | **4** | −67% — multi-model fallback + rules-based pre-filter |
+
+**Summary**: After mitigations, 0 risks remain in the "Avoid/Transfer" band (16-25). The highest residual risk is AIS-01 (guardrail bypass) at 10, which is expected — adversarial prompt injection is an ongoing arms race and cannot be fully eliminated.
+
 ---
 
 ## 3. Detailed Mitigation Playbooks
