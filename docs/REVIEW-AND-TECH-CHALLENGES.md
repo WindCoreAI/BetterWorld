@@ -16,22 +16,22 @@ After a systematic review of every document in the documentation suite, the foll
 
 #### C1. Embedding Dimension Mismatch — **RESOLVED**
 
-- **Where**: `03-database-design.md` defines `vector(1536)` columns (OpenAI dimension).
-  `01-ai-ml-architecture.md` Section 3.2 recommends Voyage AI `voyage-3` at **1024** dimensions.
+- **Where**: `03a-db-overview-and-schema-core.md` defines `vector(1536)` columns (OpenAI dimension).
+  `01b-ai-ml-search-and-decomposition.md` Section 3.2 recommends Voyage AI `voyage-3` at **1024** dimensions.
 - **Impact**: The DB schema, HNSW indexes, storage costs, and all vector operations are dimension-dependent. Changing after data is seeded requires re-embedding everything.
-- **Resolution**: Standardized on **1024 (Voyage AI `voyage-3`)**. Updated `03-database-design.md` and `01-sprint-plan-phase1.md` to `vector(1024)`.
+- **Resolution**: Standardized on **1024 (Voyage AI `voyage-3`)**. Updated `03a-db-overview-and-schema-core.md` and `01a-sprint-plan-sprints-0-2.md` to `halfvec(1024)`.
 
 #### C2. Synchronous vs Asynchronous Guardrail Pipeline — **RESOLVED**
 
-- **Where**: `02-technical-architecture.md` Section 3.2 showed guardrails as synchronous middleware; `01-ai-ml-architecture.md` described async BullMQ jobs.
-- **Resolution**: Chose **async queue with "pending" state**. Updated `02-technical-architecture.md` middleware pipeline diagram and route code to use `enqueueForGuardrail()` returning 202 Accepted.
+- **Where**: `02a-tech-arch-overview-and-backend.md` Section 3.2 showed guardrails as synchronous middleware; `01a-ai-ml-overview-and-guardrails.md` described async BullMQ jobs.
+- **Resolution**: Chose **async queue with "pending" state**. Updated `02a-tech-arch-overview-and-backend.md` middleware pipeline diagram and route code to use `enqueueForGuardrail()` returning 202 Accepted.
 
 #### C3. Missing Messages Table in Database Schema — **RESOLVED**
 
-- **Where**: `05-agent-integration-protocol.md` Section 2.3 (MESSAGING.md) specifies a full agent-to-agent messaging system with send, reply, read/unread, blocking, and threading.
-  `03-database-design.md` has **no `messages` table**.
+- **Where**: `05a-agent-overview-and-openclaw.md` Section 2.3 (MESSAGING.md) specifies a full agent-to-agent messaging system with send, reply, read/unread, blocking, and threading.
+  `03a-db-overview-and-schema-core.md` has **no `messages` table**.
 - **Impact**: The messaging protocol cannot be implemented without a data model.
-- **Resolution**: Messaging system deferred to Phase 2 (Sprint 6 Task 7). Messages table will be added to `03-database-design.md` before Phase 2. MESSAGING.md removed from Phase 1 skill file scope.
+- **Resolution**: Messaging system deferred to Phase 2 (Sprint 6 Task 7). Messages table will be added to `03a-db-overview-and-schema-core.md` before Phase 2. MESSAGING.md removed from Phase 1 skill file scope.
 
 #### C4. Problem Challenge Flow Has No Data Model — **RESOLVED**
 
@@ -42,38 +42,38 @@ After a systematic review of every document in the documentation suite, the foll
 
 #### H1. Admin App Architecture Ambiguity — **RESOLVED**
 
-- **Where**: `02-technical-architecture.md` defined separate `apps/admin/`; sprint plan treated admin as part of web app.
-- **Resolution**: Changed to **route group `apps/web/(admin)/`** with role-based access control. Updated `02-technical-architecture.md` Section 2.3 and dev server references.
+- **Where**: `02a-tech-arch-overview-and-backend.md` defined separate `apps/admin/`; sprint plan treated admin as part of web app.
+- **Resolution**: Changed to **route group `apps/web/(admin)/`** with role-based access control. Updated `02a-tech-arch-overview-and-backend.md` Section 2.3 and dev server references.
 
 #### H2. Agent Verification Depends Solely on X/Twitter API — **RESOLVED**
 
 - **Where**: Verification was X/Twitter-only across PRD and agent integration protocol.
-- **Resolution**: Added **3 verification methods**: X/Twitter tweet, GitHub Gist, and email domain proof. Updated `05-agent-integration-protocol.md` Stage 2 and SKILL.md onboarding text, and `01-prd.md` P0-2.
+- **Resolution**: Added **3 verification methods**: X/Twitter tweet, GitHub Gist, and email domain proof. Updated `05a-agent-overview-and-openclaw.md` Stage 2 and SKILL.md onboarding text, and `01-prd.md` P0-2.
 
 #### H3. Scoring Engine Algorithm Unspecified — **RESOLVED**
 
-- **Where**: `01-prd.md` P0-4 says solutions are scored on "impact, feasibility, cost-efficiency" producing a "composite score." `03-database-design.md` defines the score columns. `01-ai-ml-architecture.md` Section 6 is referenced but the actual algorithm for computing these three scores is never specified.
+- **Where**: `01-prd.md` P0-4 says solutions are scored on "impact, feasibility, cost-efficiency" producing a "composite score." `03a-db-overview-and-schema-core.md` defines the score columns. `01c-ai-ml-evidence-and-scoring.md` Section 6 is referenced but the actual algorithm for computing these three scores is never specified.
 - **Impact**: Sprint 3 Task 8 ("Scoring engine") has no specification to implement against.
 - **Status**: Resolved — Solution Scoring Engine added to AI/ML Architecture doc (Section 6.5). Formula: `impact × 0.40 + feasibility × 0.35 + cost_efficiency × 0.25`.
 
-#### H4. Observability Setup Too Late in Timeline
+#### H4. Observability Setup Too Late in Timeline — **RESOLVED**
 
 - **Where**: `ROADMAP.md` Sprint 4 (Weeks 7-8) includes "Monitoring setup (Sentry + Grafana + health checks)."
 - **Impact**: Six weeks of development without observability means debugging production issues blind. Sprint 2 and 3 involve complex AI API integrations that will fail in ways you can't predict.
-- **Resolution needed**: Move basic observability (structured logging with Pino, Sentry error tracking, health endpoints) to Sprint 1. Full Grafana dashboards can stay in Sprint 4.
+- **Resolution**: Already in ROADMAP v2.0 Sprint 1 Task 12.
 
-#### H5. AI Cost Budget in Phase 1 Seems Unrealistic
+#### H5. AI Cost Budget in Phase 1 Seems Unrealistic — **RESOLVED**
 
 - **Where**: `ROADMAP.md` budget shows Phase 1 AI API cost at **$13/mo**.
-  `01-ai-ml-architecture.md` Section 2.3 estimates $0.88/1K evaluations. At the stated MVP volume of 500-2000 submissions/day, that's $13-53/day, or **$390-1,590/month**.
+  `01a-ai-ml-overview-and-guardrails.md` Section 2.3 estimates $0.88/1K evaluations. At the stated MVP volume of 500-2000 submissions/day, that's $13-53/day, or **$390-1,590/month**.
 - **Impact**: Budget planning is off by 30-120x for Phase 1 AI costs.
-- **Resolution needed**: Revise budget. Even with aggressive caching (30-50% hit rate), the realistic Phase 1 AI cost is **$200-800/month** (not $13/mo). The $13 figure may have assumed API costs only during testing, not production traffic.
+- **Resolution**: ROADMAP v2.0 corrected to $400/mo with BYOK model (see T4).
 
 ### 1.3 Medium: Should Resolve Before Phase 2
 
 #### M1. Token Economics Need Double-Entry Accounting — **RESOLVED**
 
-- **Where**: `03-database-design.md` token transactions lacked balance tracking.
+- **Where**: `03a-db-overview-and-schema-core.md` token transactions lacked balance tracking.
 - **Resolution**: Added `balance_before` column to `token_transactions` schema, added `balance_after_equals_before_plus_amount` check constraint, and updated the transaction insert code to include `balanceBefore`.
 
 #### M2. Pagination Model Still Has Residual Inconsistency — **PARTIALLY RESOLVED**
@@ -84,7 +84,7 @@ After a systematic review of every document in the documentation suite, the foll
 
 #### M3. Reputation Scoring Algorithm Referenced But Not Defined
 
-- **Where**: `ROADMAP.md` Documentation Debt table lists "Define reputation scoring algorithm" as High priority, due Week 8.
+- **Where**: `ROADMAP.md` Documentation Debt table lists "Define reputation scoring algorithm" as High priority, due Week 6.
 - **Issue**: The algorithm affects agent trust levels, content visibility, mission access, and leaderboards. It should be specified before Phase 1 ends because the progressive trust model (SEC-04 mitigation) depends on it.
 - **Recommendation**: Define at minimum the input signals, weighting, and decay function before Sprint 3.
 
@@ -112,7 +112,7 @@ These are the hard engineering problems that will determine whether BetterWorld 
 
 1. **Prompt injection is an unsolved problem.** The classifier must treat user content as data, not instructions. But LLMs don't have a true data/instruction boundary. Sophisticated attackers will find bypasses.
 
-2. **Latency budget is tight.** The 2-second target for real-time evaluation leaves ~1.5s for the Haiku API call. Network jitter, cold starts, or API degradation can blow this budget. The fallback path (GPT-4o-mini) introduces a second API dependency.
+2. **Latency budget is tight.** The 5-second Phase 1 target (tightening to 3s in Phase 2 and 2s in Phase 3) leaves limited headroom for the Haiku API call. Network jitter, cold starts, or API degradation can blow this budget. The fallback path (GPT-4o-mini) introduces a second API dependency.
 
 3. **Batch evaluation reliability.** Sending 20 items in one prompt is cost-efficient but risks cross-contamination (one bad item influencing evaluation of others) and makes error handling complex (what if the LLM returns 19 results instead of 20?).
 
@@ -179,7 +179,7 @@ These are the hard engineering problems that will determine whether BetterWorld 
 ### T4. AI API Cost Management — BYOK Model
 
 > **Deep research**: [challenges/T4-ai-cost-management-byok.md](challenges/T4-ai-cost-management-byok.md)
-> **Engineering spec**: [engineering/08-byok-ai-cost-management.md](engineering/08-byok-ai-cost-management.md)
+> **Engineering spec**: [engineering/08a-byok-architecture-and-security.md](engineering/08a-byok-architecture-and-security.md)
 
 **Risk Score**: 16 (BUS-02)
 
@@ -202,7 +202,7 @@ Problem discovery:     Agent's own LLM inference
 Solution generation:   Agent's own LLM inference
 Debate participation:  Agent's own LLM inference
 Task decomposition:    Could use agent's key or platform key (TBD)
-Evidence verification: Platform key (safety-critical)
+Evidence verification: Agent-owner-paid (via BYOK) — uses agent's own API key for Vision calls
 ```
 
 **Why this works**: Moltbook proved that 1.5M+ agents will join a platform under BYOK. Agent developers already have API keys. This eliminates the biggest scaling cost risk — the platform's AI bill never explodes with agent growth.
@@ -211,6 +211,8 @@ Evidence verification: Platform key (safety-critical)
 - MVP (100 agents): ~$13/mo guardrails + embeddings (infrastructure is the main cost)
 - Growth (1K agents): ~$128/mo guardrails + embeddings
 - Scale (10K agents): ~$1,280/mo guardrails + embeddings
+
+> **Note**: The $13/mo figure assumes BYOK is fully adopted. During MVP ramp-up before BYOK adoption, platform-paid AI costs are ~$400/mo (see H5 resolution and ROADMAP budget).
 
 **Remaining challenges**:
 1. **Guardrail costs still scale with submissions** — mitigated by semantic caching (30-50% hit rate) and fine-tuned model (Phase 4, 60-90% cost reduction)
@@ -274,19 +276,21 @@ Evidence verification: Platform key (safety-critical)
 
 3. **Bootstrap problem for new agents.** Requiring all content to go to human review for the first 30 days means the admin team must review every submission from every new agent. At 100 new agents in Week 1, that's 100 × 5 submissions/day = 500 reviews/day. This is not feasible with a 3-person team.
 
-**Recommended approach**:
-- Simplify the Phase 1 trust model: new agents get 3 submissions/day (not 5), auto-approved at threshold >=0.85 (not all to human review). This reduces admin burden while maintaining safety.
-- Only route to human review when the classifier flags the content (0.4-0.7 range), regardless of agent age.
-- Implement the full progressive trust model in Phase 2 when there's more admin capacity.
-
-### Trust Model Reconciliation
-The trust model has been standardized across all documents to the canonical T7 5-tier system:
+**Canonical 5-tier model (Phase 2+ target)**:
 - Probationary (0-19) → Restricted (20-39) → Standard (40-59) → Trusted (60-79) → Established (80-100)
 - Baseline trust: 0 (earned, not given)
 - Asymmetric decay: 2x penalty multiplier
 - Reference: [T7 - Progressive Trust Model](challenges/T7-progressive-trust-model.md)
 
-Documents updated: AI/ML Architecture, BYOK Cost Management, Agent Integration Protocol.
+**D13 Phase 1 simplification (2-tier)**:
+- **New agents** (< 7 days): all content routed to human review.
+- **Verified agents**: standard guardrail thresholds apply (reject < 0.4, flag 0.4-0.7, approve >= 0.7).
+- Full 5-tier model deferred to Phase 2 when admin capacity and labeled data are sufficient.
+
+**Phase 1 trust model (per D13)**: New agents (first 7 days) --> all content human-reviewed. Verified agents --> standard guardrail thresholds (reject < 0.4, flag 0.4-0.7, approve >= 0.7). Full 5-tier progressive trust model deferred to Phase 2 (see T7).
+
+### Trust Model Reconciliation
+Documents updated to reflect the canonical 5-tier system (Phase 2+) and D13 2-tier Phase 1 simplification: AI/ML Architecture, BYOK Cost Management, Agent Integration Protocol.
 
 ---
 
@@ -317,24 +321,24 @@ Not everything needs changing. These design decisions are well-reasoned and shou
 ### Before Writing Code (Sprint 1 Week 1)
 | # | Action | Owner | Documents to Update | Status |
 |---|--------|-------|---------------------|--------|
-| 1 | ~~Decide embedding dimension: 1024 vs 1536~~ | Engineering Lead | `03-database-design.md`, `01-sprint-plan-phase1.md` | **DONE** — 1024 (Voyage AI) |
-| 2 | ~~Decide guardrail pipeline: sync vs async~~ | Engineering Lead | `02-technical-architecture.md` | **DONE** — Async queue |
-| 3 | ~~Decide admin app: separate vs route group~~ | Engineering Lead + FE | `02-technical-architecture.md` | **DONE** — Route group |
-| 4 | ~~Add fallback agent verification methods~~ | Product + Engineering | `01-prd.md`, `05-agent-integration-protocol.md` | **DONE** — 3 methods |
-| 5 | Move basic observability to Sprint 1 | BE1 | `ROADMAP.md`, `01-sprint-plan-phase1.md` | Already in ROADMAP v2.0 |
+| 1 | ~~Decide embedding dimension: 1024 vs 1536~~ | Engineering Lead | `03a-db-overview-and-schema-core.md`, `01a-sprint-plan-sprints-0-2.md` | **DONE** — 1024 (Voyage AI) |
+| 2 | ~~Decide guardrail pipeline: sync vs async~~ | Engineering Lead | `02a-tech-arch-overview-and-backend.md` | **DONE** — Async queue |
+| 3 | ~~Decide admin app: separate vs route group~~ | Engineering Lead + FE | `02a-tech-arch-overview-and-backend.md` | **DONE** — Route group |
+| 4 | ~~Add fallback agent verification methods~~ | Product + Engineering | `01-prd.md`, `05a-agent-overview-and-openclaw.md` | **DONE** — 3 methods |
+| 5 | Move basic observability to Sprint 1 | BE1 | `ROADMAP.md`, `01a-sprint-plan-sprints-0-2.md` | Already in ROADMAP v2.0 |
 | 6 | ~~Correct Phase 1 AI API budget~~ | Finance + Engineering | `ROADMAP.md` | **DONE** — BYOK model + corrected in ROADMAP v2.0 |
 
 ### Before Sprint 3 (Guardrails Implementation)
 | # | Action | Owner | Documents to Update |
 |---|--------|-------|---------------------|
-| 7 | ~~Define scoring engine algorithm (impact, feasibility, cost-efficiency)~~ | AI Safety Lead + PM | `01-ai-ml-architecture.md` (Section 6.5) | **DONE** — `impact × 0.40 + feasibility × 0.35 + cost_efficiency × 0.25` |
-| 8 | Define reputation scoring algorithm | PM + Engineering | New section in `01-ai-ml-architecture.md` or separate doc |
+| 7 | ~~Define scoring engine algorithm (impact, feasibility, cost-efficiency)~~ | AI Safety Lead + PM | `01c-ai-ml-evidence-and-scoring.md` (Section 6.5) | **DONE** — `impact × 0.40 + feasibility × 0.35 + cost_efficiency × 0.25` |
+| 8 | Define reputation scoring algorithm | PM + Engineering | New section in `01a-ai-ml-overview-and-guardrails.md` or separate doc |
 | 9 | Simplify Phase 1 progressive trust model (reduce admin burden) | Engineering Lead | `02-risk-register.md` SEC-04 mitigation |
 
 ### Before Phase 2
 | # | Action | Owner | Documents to Update | Status |
 |---|--------|-------|---------------------|--------|
-| 10 | ~~Add `messages` table to DB schema (or defer messaging)~~ | BE1 | `03-database-design.md` | **DONE** — Messaging deferred to Phase 2 (C3) |
-| 11 | Define problem challenge data model | BE1 | `03-database-design.md`, `04-api-design.md` | Open (deferred to P1) |
+| 10 | ~~Add `messages` table to DB schema (or defer messaging)~~ | BE1 | `03a-db-overview-and-schema-core.md` | **DONE** — Messaging deferred to Phase 2 (C3) |
+| 11 | Define problem challenge data model | BE1 | `03a-db-overview-and-schema-core.md`, `04-api-design.md` | Open (deferred to P1) |
 | 12 | ~~Add evidence upload rate limits~~ | BE2 | `04-api-design.md` | **DONE** (M4) |
-| 13 | ~~Implement double-entry token accounting constraints~~ | BE2 | `03-database-design.md` | **DONE** (M1) |
+| 13 | ~~Implement double-entry token accounting constraints~~ | BE2 | `03a-db-overview-and-schema-core.md` | **DONE** (M1) |

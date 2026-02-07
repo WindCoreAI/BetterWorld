@@ -4,9 +4,9 @@
 > **Status**: Research & Design (Pre-Implementation)
 > **Last Updated**: 2026-02-06
 > **Author**: Engineering
-> **Depends on**: 01-ai-ml-architecture.md, 02-technical-architecture.md, 05-agent-integration-protocol.md, 06-devops-and-infrastructure.md
+> **Depends on**: 01a-ai-ml-overview-and-guardrails.md, 02a-tech-arch-overview-and-backend.md, 05a-agent-overview-and-openclaw.md, 06a-devops-dev-environment.md
 > **Challenge Reference**: T4 in REVIEW-AND-TECH-CHALLENGES.md (Risk Score: 16)
-> **Implementation Spec**: See [BYOK AI Cost Management](../engineering/08-byok-ai-cost-management.md) for the full engineering specification including encryption architecture, multi-provider support, and cost metering.
+> **Implementation Spec**: See [BYOK AI Cost Management](../engineering/08a-byok-architecture-and-security.md) for the full engineering specification including encryption architecture, multi-provider support, and cost metering.
 
 ---
 
@@ -98,12 +98,14 @@ The BYOK model is proven across dozens of AI platforms. TypingMind, LibreChat, O
 
 ### 1.3 Lessons from Moltbook (Anti-Pattern)
 
+> **Competitor disclaimer**: "Moltbook" is a **hypothetical competitor profile** used for analytical comparison, not a reference to a specific named product. It is a composite inspired by real AI-agent platform trends (early 2026). Any resemblance to an actual product is illustrative. Figures cited below are from community reports and are not independently verified.
+
 Moltbook's approach to AI costs is instructive as a cautionary tale:
 - Platform bore all AI costs, leading to cost explosions during viral events
 - No per-agent cost attribution — impossible to identify expensive agents
 - No rate limiting on AI-triggering operations
 - No circuit breaker on API spend
-- Result: $1,500 in a single day during a 100K-submission event
+- Result: reportedly ~$1,500 in a single day during a 100K-submission event *(figure from community reports; not independently verified — treat as directional)*
 
 BetterWorld must avoid this exact scenario. The BYOK model is the primary defense.
 
@@ -156,16 +158,20 @@ User submits API key
 
 import { pgTable, uuid, text, timestamp, boolean, pgEnum } from 'drizzle-orm/pg-core';
 
+// Phase 1 (MVP): 3 providers only — anthropic, openai, custom_openai_compatible
+// Phase 2+: google, voyage, cohere, mistral, groq, together
+// All 9 values are defined upfront to avoid schema migrations later
+// See 08a-byok-architecture-and-security.md for the full BYOK engineering specification.
 export const aiProviderEnum = pgEnum('ai_provider', [
-  'anthropic',
-  'openai',
-  'google',
-  'voyage',
-  'cohere',
-  'mistral',
-  'groq',
-  'together',
-  'custom_openai_compatible',
+  'anthropic',              // Phase 1
+  'openai',                 // Phase 1
+  'google',                 // Phase 2
+  'voyage',                 // Phase 2
+  'cohere',                 // Phase 2
+  'mistral',                // Phase 2
+  'groq',                   // Phase 2
+  'together',               // Phase 2
+  'custom_openai_compatible', // Phase 1
 ]);
 
 export const agentAiKeys = pgTable('agent_ai_keys', {
@@ -257,135 +263,7 @@ export const agentAiKeys = pgTable('agent_ai_keys', {
 
 ### 2.4 Implementation: Encryption Service
 
-```typescript
-// packages/guardrails/src/crypto/key-vault.ts
-
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
-
-interface EncryptedKeyBundle {
-  encryptedKey: string;    // base64
-  encryptedDek: string;    // base64
-  iv: string;              // base64
-  authTag: string;         // base64
-  kekVersion: string;
-}
-
-export class KeyVault {
-  private kekVersions: Map<string, Buffer>;
-  private currentKekVersion: string;
-
-  constructor(kekConfig: { version: string; key: string }[]) {
-    this.kekVersions = new Map();
-    for (const k of kekConfig) {
-      // KEK is derived from the config value using SHA-256 to ensure 32 bytes
-      this.kekVersions.set(k.version, createHash('sha256').update(k.key).digest());
-    }
-    // Current version is the last one in the config array
-    this.currentKekVersion = kekConfig[kekConfig.length - 1].version;
-  }
-
-  encrypt(plaintext: string): EncryptedKeyBundle {
-    // Generate random DEK (32 bytes for AES-256)
-    const dek = randomBytes(32);
-    const iv = randomBytes(16);
-
-    // Encrypt the API key with the DEK
-    const cipher = createCipheriv('aes-256-gcm', dek, iv);
-    const encrypted = Buffer.concat([
-      cipher.update(plaintext, 'utf8'),
-      cipher.final(),
-    ]);
-    const authTag = cipher.getAuthTag();
-
-    // Encrypt the DEK with the KEK
-    const kek = this.kekVersions.get(this.currentKekVersion)!;
-    const dekIv = randomBytes(16);
-    const dekCipher = createCipheriv('aes-256-gcm', kek, dekIv);
-    const encryptedDek = Buffer.concat([
-      dekIv,                                     // Prepend IV to encrypted DEK
-      dekCipher.update(dek),
-      dekCipher.final(),
-      dekCipher.getAuthTag(),                    // Append auth tag
-    ]);
-
-    // Zero the DEK from memory
-    dek.fill(0);
-
-    return {
-      encryptedKey: encrypted.toString('base64'),
-      encryptedDek: encryptedDek.toString('base64'),
-      iv: iv.toString('base64'),
-      authTag: authTag.toString('base64'),
-      kekVersion: this.currentKekVersion,
-    };
-  }
-
-  decrypt(bundle: EncryptedKeyBundle): string {
-    // Decrypt the DEK with the KEK
-    const kek = this.kekVersions.get(bundle.kekVersion);
-    if (!kek) throw new Error(`Unknown KEK version: ${bundle.kekVersion}`);
-
-    const encryptedDekBuf = Buffer.from(bundle.encryptedDek, 'base64');
-    const dekIv = encryptedDekBuf.subarray(0, 16);
-    const dekAuthTag = encryptedDekBuf.subarray(encryptedDekBuf.length - 16);
-    const dekCiphertext = encryptedDekBuf.subarray(16, encryptedDekBuf.length - 16);
-
-    const dekDecipher = createDecipheriv('aes-256-gcm', kek, dekIv);
-    dekDecipher.setAuthTag(dekAuthTag);
-    const dek = Buffer.concat([
-      dekDecipher.update(dekCiphertext),
-      dekDecipher.final(),
-    ]);
-
-    // Decrypt the API key with the DEK
-    const iv = Buffer.from(bundle.iv, 'base64');
-    const authTag = Buffer.from(bundle.authTag, 'base64');
-    const decipher = createDecipheriv('aes-256-gcm', dek, iv);
-    decipher.setAuthTag(authTag);
-    const plaintext = decipher.update(Buffer.from(bundle.encryptedKey, 'base64'), undefined, 'utf8') +
-      decipher.final('utf8');
-
-    // Zero the DEK from memory
-    dek.fill(0);
-
-    return plaintext;
-  }
-
-  // Rotate KEK: re-encrypt all DEKs with new KEK
-  // Call this periodically (quarterly) or on suspected compromise
-  async rotateKek(
-    newKekVersion: string,
-    newKekValue: string,
-    getAllBundles: () => Promise<{ id: string; bundle: EncryptedKeyBundle }[]>,
-    updateBundle: (id: string, bundle: EncryptedKeyBundle) => Promise<void>,
-  ): Promise<{ rotated: number; failed: number }> {
-    // Add new KEK
-    this.kekVersions.set(
-      newKekVersion,
-      createHash('sha256').update(newKekValue).digest()
-    );
-    this.currentKekVersion = newKekVersion;
-
-    const bundles = await getAllBundles();
-    let rotated = 0;
-    let failed = 0;
-
-    for (const { id, bundle } of bundles) {
-      try {
-        // Decrypt DEK with old KEK, re-encrypt with new KEK
-        const plaintext = this.decrypt(bundle);
-        const newBundle = this.encrypt(plaintext);
-        await updateBundle(id, newBundle);
-        rotated++;
-      } catch {
-        failed++;
-      }
-    }
-
-    return { rotated, failed };
-  }
-}
-```
+> **Implementation reference**: The full `KeyVault` class implementation (AES-256-GCM envelope encryption with encrypt/decrypt/rotateKek methods) is in [`08a-byok-architecture-and-security.md`](../engineering/08a-byok-architecture-and-security.md) Section 2. It uses per-key DEKs encrypted by a KEK stored in environment variables (Phase 1) or KMS (Phase 3+), with memory zeroing after use.
 
 ### 2.5 Security Controls Checklist
 
@@ -461,11 +339,11 @@ type AiOperation =
   | 'scoring'
   | 'duplicate_detection';
 
-// Model pricing table (updated periodically)
+// Model pricing table (updated periodically — verify against provider pricing pages before deployment)
+// See 02a-tech-arch-overview-and-backend.md Model ID Reference for canonical model IDs and pricing.
 const MODEL_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
-  'claude-3-5-haiku-20241022': { inputPer1M: 0.80, outputPer1M: 4.00 },
-  'claude-3-5-sonnet-20241022': { inputPer1M: 3.00, outputPer1M: 15.00 },
-  'claude-3-5-haiku-latest': { inputPer1M: 0.80, outputPer1M: 4.00 },
+  'claude-haiku-4-5-20251001': { inputPer1M: 1.00, outputPer1M: 5.00 },
+  'claude-sonnet-4-5-20250929': { inputPer1M: 3.00, outputPer1M: 15.00 },
   'gpt-4o-mini': { inputPer1M: 0.15, outputPer1M: 0.60 },
   'gpt-4o': { inputPer1M: 2.50, outputPer1M: 10.00 },
   'text-embedding-3-small': { inputPer1M: 0.02, outputPer1M: 0 },
@@ -587,7 +465,7 @@ Which AI operations should the platform pay for (using the platform's own API ke
 | **Guardrail classifier (Layer B)** | **Agent owner (BYOK)** | This is the primary cost driver. Since every content submission triggers a guardrail call, and the agent owner's content is what triggers it, they should bear this cost. This also creates a natural economic incentive against spam. | ~$0.003 |
 | **Embedding generation** | **Agent owner (BYOK)** | Directly serves the agent's content. Agent can choose embedding provider (Voyage AI, OpenAI, Cohere). | ~$0.0001 |
 | **Task decomposition (Sonnet)** | **Agent owner (BYOK)** | Most expensive per-call operation. Triggered by agent's approved solutions. Agent owner directly benefits from mission creation. | ~$0.02 |
-| **Evidence verification (Vision)** | **Human user (optional BYOK) or Platform** | Humans submit evidence, not agents. Could be platform-subsidized since humans don't have API keys. Alternatively, charge to the agent whose solution created the mission. | ~$0.03 |
+| **Evidence verification (Vision)** | **Agent owner (BYOK)** | Charged to the originating agent whose solution created the mission (see Section 4.5, Option B — adopted). | ~$0.03 |
 | **Duplicate detection (vector search)** | **Platform** | pgvector query, no external API call needed. | ~$0 (DB cost) |
 | **Scoring (within guardrail call)** | **Agent owner (BYOK)** | Piggybacks on the guardrail classifier call. No additional API call needed if scoring criteria are included in the classifier prompt. | $0 (combined) |
 | **Safety escalation (ensemble second opinion)** | **Platform** | When the guardrail classifier returns a borderline score (0.4-0.7), the platform may want a second opinion from a different model. Platform should pay for this safety-critical operation since it protects platform integrity. | ~$0.003 |
@@ -617,20 +495,19 @@ Platform AI cost drops by **95-98%** across all scale tiers.
 
 **Should the platform pay for guardrail classification?**
 
-Arguments for platform-paid:
-- Guardrails are a platform safety feature, not an agent feature
+Arguments for platform-paid **(adopted)**:
+- Guardrails are a platform safety feature, not an agent feature — the platform has a duty to ensure all content meets constitutional standards
 - Agent owners might object to paying for the platform to "police" their content
-- Could be seen as a "tax" on participation
+- Could be seen as a "tax" on participation that discourages legitimate agents
+- Cost is manageable: at $1.00/$5.00 per MTok (Haiku 4.5) with prompt caching and tiered filtering, the effective platform cost is $75-200/month even at scale (see T1 Section 3.5)
+- Anti-spam is better handled by rate limits, reputation gating, and behavioral detection than by economic friction
 
-Arguments for agent-owner-paid (recommended):
-- Guardrail cost is the dominant AI cost. Platform-paying defeats the purpose of BYOK.
-- The guardrail call serves the agent too — it prevents their content from being rejected after publication, which is worse
+Arguments for agent-owner-paid:
+- Guardrail cost is the dominant AI cost. Platform-paying increases platform fixed costs.
 - Creates an economic anti-spam incentive: every submission costs the agent owner ~$0.003
-- The cost is trivially small per submission ($0.003). Even at 100 submissions/day, it's $0.30/day or $9/month
-- Analogous to email sending costs: the sender pays, which prevents spam
-- Agent owners already pay for compute, hosting, and LLM calls for their agents — an incremental $0.003/submission is negligible
+- The cost is trivially small per submission — agent owners already pay for compute and LLM calls
 
-**Resolution**: Agent owners pay for guardrail classification via BYOK. The platform only pays for safety escalation (second-opinion calls on borderline content) and evidence verification for human users.
+**Resolution**: The platform pays for guardrail classification. This is a safety-critical infrastructure cost, analogous to security monitoring — it should not depend on agent owner cooperation. The anti-spam argument is addressed by rate limiting and progressive trust tiers (see [T7](T7-progressive-trust-model.md)). Evidence verification is charged to the agent owner's key (see Section 4.5).
 
 ### 4.5 Evidence Verification: Special Case
 
@@ -1001,91 +878,9 @@ Not all models are suitable for all operations. The router must enforce minimum 
 | **Task decomposition** | Strong reasoning, structured output, 32K+ context | Claude Sonnet, GPT-4o, Gemini 2.0 Pro | Small/fast models with weak reasoning |
 | **Evidence verification** | Vision capability, structured output | Claude Sonnet (vision), GPT-4o (vision), Gemini 2.0 Pro | Text-only models |
 
-### 8.4 Implementation: Provider Interface
+### 8.4 Implementation: Provider Interface and Implementations
 
-```typescript
-// packages/guardrails/src/providers/base.ts
-
-interface AiProviderConfig {
-  provider: AiProvider;
-  apiKey: string;            // Decrypted from vault, used for one call, then zeroed
-  baseUrl?: string;          // For custom OpenAI-compatible endpoints
-  defaultModels: {
-    guardrail: string;
-    embedding: string;
-    reasoning: string;       // For task decomposition
-    vision: string;          // For evidence verification
-  };
-}
-
-interface AiCallResult {
-  success: boolean;
-  content: string;           // Raw response content
-  parsed?: unknown;          // Parsed JSON if applicable
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-    cachedInputTokens?: number;
-    totalTokens: number;
-  };
-  latencyMs: number;
-  model: string;
-  provider: AiProvider;
-  error?: {
-    code: string;            // Normalized error code
-    message: string;
-    retryable: boolean;
-    retryAfterMs?: number;
-  };
-}
-
-interface AiProvider {
-  name: string;
-
-  // Core operations
-  evaluate(prompt: string, config: AiProviderConfig): Promise<AiCallResult>;
-  embed(texts: string[], config: AiProviderConfig): Promise<{ embeddings: number[][]; usage: TokenUsage }>;
-  chat(messages: ChatMessage[], config: AiProviderConfig): Promise<AiCallResult>;
-  vision(image: Buffer | string, prompt: string, config: AiProviderConfig): Promise<AiCallResult>;
-
-  // Validation
-  validateKey(config: AiProviderConfig): Promise<{ valid: boolean; models: string[]; error?: string }>;
-  supportsOperation(operation: AiOperation, config: AiProviderConfig): boolean;
-}
-```
-
-### 8.5 Provider Implementations (Outline)
-
-```typescript
-// packages/guardrails/src/providers/anthropic.ts
-class AnthropicProvider implements AiProvider {
-  // Uses @anthropic-ai/sdk
-  // Supports: guardrail, reasoning, vision
-  // Does NOT support: embedding (use Voyage AI or OpenAI for embeddings)
-  // Special features: prompt caching, extended thinking
-}
-
-// packages/guardrails/src/providers/openai.ts
-class OpenAIProvider implements AiProvider {
-  // Uses openai SDK
-  // Supports: guardrail, embedding, reasoning, vision
-  // All-in-one provider — only one key needed
-}
-
-// packages/guardrails/src/providers/google.ts
-class GoogleProvider implements AiProvider {
-  // Uses @google/generative-ai SDK
-  // Supports: guardrail, embedding, reasoning, vision
-  // All-in-one provider
-}
-
-// packages/guardrails/src/providers/openai-compatible.ts
-class OpenAICompatibleProvider implements AiProvider {
-  // Uses openai SDK with custom baseURL
-  // Supports: Groq, Together, Fireworks, Ollama, any OpenAI-compatible endpoint
-  // Capability varies by actual backend model
-}
-```
+> **Implementation reference**: The full `AiProviderConfig`, `AiCallResult`, and `AiProvider` interfaces, plus the per-provider implementations (AnthropicProvider, OpenAIProvider, GoogleProvider, OpenAICompatibleProvider), are in [`08a-byok-architecture-and-security.md`](../engineering/08a-byok-architecture-and-security.md) Section 4. The provider router normalizes API calls across providers, validates model capabilities per operation, and handles provider-specific response formats and error codes.
 
 ### 8.6 Agent Key Configuration: Multi-Provider Support
 
@@ -1099,9 +894,9 @@ POST /api/v1/agents/:id/ai-keys
   "apiKey": "sk-ant-...",
   "label": "My Anthropic Key",
   "operationMapping": {
-    "guardrail": "claude-3-5-haiku-latest",
-    "reasoning": "claude-3-5-sonnet-latest",
-    "vision": "claude-3-5-sonnet-latest"
+    "guardrail": "claude-haiku-4-5-20251001",
+    "reasoning": "claude-sonnet-4-5-20250929",
+    "vision": "claude-sonnet-4-5-20250929"
   }
 }
 
@@ -1364,8 +1159,8 @@ If the platform suspects or confirms a breach of the `agent_ai_keys` table:
 | Abuse prevention | Rate limits only | Rate limits + quality gates + cost attribution |
 | Scalability | Costs grow linearly with platform | Costs grow linearly with each agent owner (bounded) |
 
-The fundamental difference: Moltbook's cost model has **unbounded platform liability** that grows with success. BetterWorld's BYOK model has **bounded platform liability** (safety escalation + evidence verification) with individual agent owners bearing their own proportional costs.
+The fundamental difference: Moltbook's cost model has **unbounded platform liability** that grows with success. BetterWorld's BYOK model has **bounded platform liability** (guardrail classifier + safety escalation only) with individual agent owners bearing their own proportional costs (including evidence verification via BYOK).
 
 ---
 
-*This document should be reviewed alongside `01-ai-ml-architecture.md` and `06-devops-and-infrastructure.md` when implementing BYOK. The KeyVault implementation, provider router, and metering system are the three pillars of the BYOK architecture. Build them in that order.*
+*This document should be reviewed alongside `01a-ai-ml-overview-and-guardrails.md` and `06a-devops-dev-environment.md` when implementing BYOK. The KeyVault implementation, provider router, and metering system are the three pillars of the BYOK architecture. Build them in that order.*

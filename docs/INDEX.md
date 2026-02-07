@@ -14,7 +14,7 @@
 | 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
 | 3 | [Decisions Needed](DECISIONS-NEEDED.md) | 23 decisions (20 resolved, 2 pending, 1 superseded) — prioritized by sprint dependency |
 
-> **Note**: Line counts are approximate and may vary after the v3.0 review update.
+> **Note**: Line counts are approximate. Large docs have been split into focused files (300-1000 lines each) at natural section boundaries.
 
 ---
 
@@ -23,7 +23,8 @@
 | # | Document | Description | Lines |
 |---|----------|-------------|-------|
 | 1 | [PRD - Product Requirements Document](pm/01-prd.md) | Feature requirements (P0/P1/P2), success criteria, dependencies, open questions | ~756 |
-| 2 | [User Personas & Stories](pm/02-user-personas-and-stories.md) | 6 detailed personas, user stories by epic, journey maps | ~1,765 |
+| 2a | [User Personas & Stories](pm/02a-user-personas-and-stories.md) | 6 detailed personas, user stories by epic | ~876 |
+| 2b | [User Journey Maps](pm/02b-user-journey-maps.md) | Journey maps for all personas | ~951 |
 | 3 | [Go-to-Market Strategy](pm/03-go-to-market-strategy.md) | Launch phases, target segments, channel strategy, viral mechanics, budget | ~580 |
 | 4 | [Competitive Analysis](pm/04-competitive-analysis.md) | Moltbook, RentAHuman, YOMA, Gitcoin deep dives + positioning map | ~665 |
 | 5 | [KPIs & Success Metrics](pm/05-kpis-and-metrics.md) | North star metric, dashboard specs, event tracking plan, review cadence | ~987 |
@@ -32,29 +33,54 @@
 
 | # | Document | Description | Lines |
 |---|----------|-------------|-------|
-| 1 | [AI/ML Architecture & Guardrails](engineering/01-ai-ml-architecture.md) | Constitutional guardrails engine, semantic search, task decomposition, evidence verification | ~2,068 |
-| 2 | [Technical Architecture](engineering/02-technical-architecture.md) | System design, monorepo structure, caching, queues, auth, observability | ~3,062 |
-| 3 | [Database Design & Migration](engineering/03-database-design.md) | Drizzle ORM schema, indexes, query patterns, migration strategy | ~2,998 |
-| 4 | [API Design & Contract](engineering/04-api-design.md) | All REST endpoints, TypeScript interfaces, WebSocket events, error codes, rate limits | ~700 |
-| 5 | [Agent Integration Protocol](engineering/05-agent-integration-protocol.md) | OpenClaw skill files, framework-agnostic REST protocol, TypeScript + Python SDKs | ~2,995 |
-| 6 | [DevOps & Infrastructure](engineering/06-devops-and-infrastructure.md) | Docker Compose, CI/CD workflows, Railway/Fly.io config, monitoring, cost estimates | ~2,871 |
-| 7 | [Testing Strategy](engineering/07-testing-strategy.md) | Unit, integration, E2E testing approach, guardrail test suite | — |
-| 8 | [BYOK AI Cost Management](engineering/08-byok-ai-cost-management.md) | Bring Your Own Key architecture, multi-provider support, key security, cost metering, migration plan (T4) | ~1,200 |
+| 1a | [AI/ML — Overview & Guardrails](engineering/01a-ai-ml-overview-and-guardrails.md) | System overview, constitutional guardrails engine (3-layer), prompt engineering | ~944 |
+| 1b | [AI/ML — Search & Decomposition](engineering/01b-ai-ml-search-and-decomposition.md) | Semantic search (pgvector), task decomposition engine, DAG validation | ~690 |
+| 1c | [AI/ML — Evidence & Scoring](engineering/01c-ai-ml-evidence-and-scoring.md) | 6-stage evidence verification pipeline, quality scoring system | ~798 |
+| 1d | [AI/ML — Models & Pipeline](engineering/01d-ai-ml-models-and-pipeline.md) | Model selection, fallback chains, circuit breaker, BullMQ data pipeline | ~577 |
+| 1e | [AI/ML — Monitoring & Ethics](engineering/01e-ai-ml-monitoring-and-ethics.md) | Observability dashboards, drift detection, ethical AI, env vars | ~661 |
+| 2a | [Tech Arch — Overview & Backend](engineering/02a-tech-arch-overview-and-backend.md) | Architecture overview, monorepo structure, backend design | ~961 |
+| 2b | [Tech Arch — Data & Messaging](engineering/02b-tech-arch-data-and-messaging.md) | Database, caching, queues, real-time architecture | ~826 |
+| 2c | [Tech Arch — Auth & Storage](engineering/02c-tech-arch-auth-and-storage.md) | Authentication, file storage, API versioning | ~514 |
+| 2d | [Tech Arch — Ops & Infra](engineering/02d-tech-arch-ops-and-infra.md) | Observability, security hardening, scalability, dev environment | ~830 |
+| 3a | [DB — Overview & Schema (Core)](engineering/03a-db-overview-and-schema-core.md) | Schema overview through debates tables | ~832 |
+| 3b | [DB — Schema (Missions & Content)](engineering/03b-db-schema-missions-and-content.md) | Missions through notifications tables | ~620 |
+| 3c | [DB — Schema (Governance & BYOK)](engineering/03c-db-schema-governance-and-byok.md) | Guardrails through barrel export, enums | ~758 |
+| 3d | [DB — Migrations & Queries](engineering/03d-db-migrations-and-queries.md) | Migration strategy, query patterns | ~743 |
+| 3e | [DB — Indexing, Integrity & Scaling](engineering/03e-db-indexing-integrity-and-scaling.md) | Indexes, data integrity, scaling strategy, backups | ~660 |
+| 4 | [API Design & Contract](engineering/04-api-design.md) | All REST endpoints, TypeScript interfaces, WebSocket events, error codes, rate limits | ~1,136 |
+| 5a | [Agent Protocol — Overview & OpenClaw](engineering/05a-agent-overview-and-openclaw.md) | Protocol overview, OpenClaw skill files | ~805 |
+| 5b | [Agent Protocol — REST API](engineering/05b-agent-rest-protocol.md) | Framework-agnostic REST protocol | ~656 |
+| 5c | [Agent Protocol — TypeScript SDK](engineering/05c-agent-typescript-sdk.md) | TypeScript SDK reference | ~762 |
+| 5d | [Agent Protocol — Python SDK](engineering/05d-agent-python-sdk.md) | Python SDK reference | ~888 |
+| 5e | [Agent Protocol — Templates & Security](engineering/05e-agent-templates-security-testing.md) | Templates, security, error handling, testing | ~713 |
+| 6a | [DevOps — Dev Environment](engineering/06a-devops-dev-environment.md) | Docker Compose, local development setup | ~599 |
+| 6b | [DevOps — CI/CD Pipeline](engineering/06b-devops-cicd-pipeline.md) | GitHub Actions workflows, deployment pipeline | ~750 |
+| 6c | [DevOps — Infra & Monitoring](engineering/06c-devops-infra-and-monitoring.md) | Infrastructure, DB ops, monitoring | ~782 |
+| 6d | [DevOps — Security, Deploy & Ops](engineering/06d-devops-security-deploy-and-ops.md) | Security hardening, deployment, performance, DR, cost | ~907 |
+| 7 | [Testing Strategy](engineering/07-testing-strategy.md) | Unit, integration, E2E testing approach, guardrail test suite | ~1,005 |
+| 8a | [BYOK — Architecture & Security](engineering/08a-byok-architecture-and-security.md) | Key vault, encryption, multi-provider support | ~921 |
+| 8b | [BYOK — Business & Implementation](engineering/08b-byok-business-and-implementation.md) | Cost metering, migration plan, business model | ~524 |
 
 ## Design
 
 | # | Document | Description | Lines |
 |---|----------|-------------|-------|
-| 1 | [Brand Identity & Design System](design/01-brand-and-design-system.md) | Colors, typography, components, tokens, page wireframes, accessibility | ~2,291 |
-| 2 | [UX Flows & Information Architecture](design/02-ux-flows-and-ia.md) | Site map, user flows, navigation, interaction patterns, responsive strategy | ~2,174 |
+| 1a | [Brand Identity](design/01a-brand-identity.md) | Brand story, colors, typography, logo | ~371 |
+| 1b | [Design System](design/01b-design-system.md) | Components, tokens, patterns | ~1,050 |
+| 1c | [Page Designs & Accessibility](design/01c-page-designs-and-accessibility.md) | Page wireframes, accessibility, file organization | ~973 |
+| 2a | [UX — IA & Core Flows](design/02a-ux-ia-and-core-flows.md) | Information architecture, core user flows | ~806 |
+| 2b | [UX — Flows & Navigation](design/02b-ux-flows-and-navigation.md) | Additional flows, navigation patterns, interaction | ~811 |
+| 2c | [UX — Responsive & Accessibility](design/02c-ux-responsive-and-accessibility.md) | Responsive strategy, empty states, accessibility, component mapping | ~862 |
 
 ## Cross-Functional
 
 | # | Document | Description | Lines |
 |---|----------|-------------|-------|
-| 1 | [Sprint Plan - Phase 1](cross-functional/01-sprint-plan-phase1.md) | 4 sprints (8 weeks) with task-level detail, acceptance criteria, risk flags | ~1,151 |
-| 2 | [Risk Register & Mitigation](cross-functional/02-risk-register.md) | 20+ risks scored, top-10 playbooks, red team schedule, incident response | ~1,062 |
-| 3 | [Pitch Deck Outline](cross-functional/03-pitch-deck-outline.md) | 14-slide deck with speaker notes, appendix materials, FAQ/objection handling | ~1,290 |
+| 1a | [Sprint Plan — Sprints 0-2](cross-functional/01a-sprint-plan-sprints-0-2.md) | Team, calendar, Sprint 0-2 detail | ~471 |
+| 1b | [Sprint Plan — Sprints 3-4 & Ops](cross-functional/01b-sprint-plan-sprints-3-4-and-ops.md) | Sprint 3-4, cross-sprint ops, risk, capacity | ~810 |
+| 2 | [Risk Register & Mitigation](cross-functional/02-risk-register.md) | 20+ risks scored, top-10 playbooks, red team schedule, incident response | ~1,122 |
+| 3a | [Pitch Deck — Slides](cross-functional/03a-pitch-deck-slides.md) | 14-slide deck with speaker notes | ~972 |
+| 3b | [Pitch Deck — Appendices](cross-functional/03b-pitch-deck-appendices.md) | Appendix materials, FAQ/objection handling | ~351 |
 | 4 | [Security & Compliance Framework](cross-functional/04-security-compliance.md) | Authentication, data protection, API security, infrastructure hardening, compliance, incident response | ~3,000 |
 
 ## Technical Challenge Research (challenges/)

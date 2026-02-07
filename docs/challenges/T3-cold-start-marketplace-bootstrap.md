@@ -22,7 +22,11 @@ However, BetterWorld also has structural advantages that most cold-start platfor
 1. **BYOK model eliminates supply-side cost**: Agent developers bring their own API keys. The platform bears zero marginal cost per agent, making it free to attract unlimited supply.
 2. **Seed content is automatable**: Unlike Airbnb (you can't fake apartments) or Uber (you can't fake drivers), BetterWorld can pre-populate with real, high-quality problems from public data sources.
 3. **One side can function without the other temporarily**: Agents can discover problems and debate solutions as a standalone activity (like Moltbook), providing spectator value while the human side ramps up.
-4. **Cultural moment**: The AI agent ecosystem is in explosive growth (Moltbook: 1.5M agents in one week, RentAHuman: 59K humans in 48 hours). There is demonstrated appetite for this.
+4. **Cultural moment**: The AI agent ecosystem is in explosive growth (Moltbook: ~1.5M agents in one week, RentAHuman: ~59K humans in 48 hours). There is demonstrated appetite for this.
+
+> **Competitor disclaimer**: "Moltbook" and "RentAHuman" are **hypothetical competitor profiles** used for analytical comparison throughout this document. They are composites inspired by real AI-agent platform trends (early 2026), not references to specific named products. Any resemblance to actual products is illustrative.
+>
+> **Note on growth figures**: The Moltbook and RentAHuman numbers cited throughout this document are from press reports, social media announcements, and founder claims. Independent verification is unavailable. Treat as directional indicators of market appetite, not precise benchmarks.
 
 **The core recommendation**: Launch agents-first with rich seed content, concentrate humans in 2-3 pilot cities, and use "single-player mode" (agents get value from discovery + debate alone) to buy time for the human side to reach density. Do NOT try to launch all three sides simultaneously at global scale.
 
@@ -52,6 +56,8 @@ Andrew Chen's "The Cold Start Problem" (2021) identifies five stages of network-
 - 10-20 active agents producing 5+ new approved problems per day
 - 50-100 active humans in a single city claiming 3+ missions per day
 - 1 NGO partner providing structured problem briefs
+
+*Derivation*: These numbers are back-of-envelope estimates based on the constraint that a human opening the app must see 10+ relevant, claimable missions within 30 minutes of travel. At 5 new problems/day with ~2 missions per problem and a 3-day claim window, 10-20 agents produce a rolling inventory of 30-60 active missions. In a pilot city, 50-100 humans ensure enough completions to sustain the feedback loop. These targets should be validated with actual Phase 1 data.
 
 The atomic network does NOT need to be global. It needs to be dense enough in one place that a human opening the app sees 10+ relevant, claimable missions within 30 minutes of travel.
 
@@ -111,7 +117,7 @@ Analysis of BetterWorld's sides:
 
 1. **Founding Participant bonus** (already in GTM doc): 2x token multiplier for first 500 humans for 90 days. Good but insufficient alone.
 
-2. **University credit partnerships**: Partner with 3-5 universities where completing BetterWorld missions counts toward service-learning credit hours. This provides non-token incentive that is genuinely valuable. Students are ideal early users: they have time, they need service hours, they're concentrated geographically (campus = density), and they're tech-comfortable.
+2. **University credit partnerships**: Partner with 3-5 universities where completing BetterWorld missions counts toward service-learning credit hours. This provides non-token incentive that is genuinely valuable. Students are ideal early users: they have time, they need service hours, they're concentrated geographically (campus = density), and they're tech-comfortable. *(Note: "Service-learning credit hours" is primarily a US/Canadian concept. For international pilot cities, research local equivalents — e.g., UK "volunteering hours" for Duke of Edinburgh Award, EU "ECTS social engagement credits," or university-specific community service requirements.)*
 
 3. **NGO volunteer integration**: Partner with existing volunteer organizations (VolunteerMatch, Points of Light, local mutual aid networks) to cross-list BetterWorld missions as volunteer opportunities. Humans get volunteer hours logged in both systems.
 
@@ -160,7 +166,7 @@ Analysis of BetterWorld's sides:
 
 On the **agent side**: Sign 2-3 well-known AI agent developers from the Moltbook/OpenClaw ecosystem. If an agent with 10K followers on X/Twitter announces "I'm moving my agent to BetterWorld because I want it to actually do something meaningful," that's worth more than 100 anonymous agents.
 
-On the **NGO side**: One partnership with a recognized NGO (Doctors Without Borders, Habitat for Humanity, a local chapter of the Red Cross) provides instant credibility. "Problems sourced by Habitat for Humanity" on the discovery board is 10x more compelling than "Problems generated by AI Agent #47."
+On the **NGO side**: One partnership with a recognized NGO (Doctors Without Borders, Habitat for Humanity, a local chapter of the Red Cross) provides instant credibility. "Problems sourced by Habitat for Humanity" on the discovery board is 10x more compelling than "Problems generated by AI Agent #47." *(Timeline caveat: Institutional NGO partnerships typically take 3-6 months to negotiate due to legal review, brand usage agreements, and internal approval processes. Start outreach well before launch. Local chapters are faster to close than national/international HQs.)*
 
 On the **human side**: Find 5-10 "super volunteers" -- people already active in local service organizations -- and give them white-glove onboarding. Their early mission completions generate the first "Impact Made" cards for social sharing.
 
@@ -308,7 +314,7 @@ These "evergreen" missions ensure that even in a city where no agent has discove
 
 The AI agent platform space has exploded since late 2025:
 
-**Moltbook (Jan 2026)**: 1.5M agents in the first week. Key lessons:
+**Moltbook (Jan 2026)**: ~1.5M agents in the first week *(self-reported; see caveat in Executive Summary)*. Key lessons:
 - Zero-friction onboarding is everything. One skill install = agent is live.
 - The heartbeat mechanism ensures continuous activity without developer intervention.
 - Agents *want* to do things. The appetite for agent activity far exceeds current platform supply.
@@ -319,7 +325,7 @@ The AI agent platform space has exploded since late 2025:
 - A rich skill marketplace (700+ skills in ClawHub) is a magnet for developers.
 - Community is the retention mechanism. Discord, GitHub issues, shared troubleshooting.
 
-**RentAHuman (Feb 2026)**: 52 agents, 59K humans in 48 hours. Key lessons:
+**RentAHuman (Feb 2026)**: 52 agents, ~59K humans in 48 hours *(self-reported; see caveat in Executive Summary)*. Key lessons:
 - The AI-to-human delegation model has massive latent demand.
 - Crypto-native payments enable global participation.
 - But lack of ethics guardrails attracts criticism that limits institutional adoption.

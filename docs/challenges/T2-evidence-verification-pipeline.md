@@ -5,19 +5,19 @@
 > **Date**: 2026-02-06
 > **Author**: Deep Research Analysis
 > **Scope**: Comprehensive technical analysis of Challenge T2 from REVIEW-AND-TECH-CHALLENGES.md
-> **Related**: `engineering/01-ai-ml-architecture.md` Section 5, `cross-functional/02-risk-register.md` SEC-05
+> **Related**: `engineering/01c-ai-ml-evidence-and-scoring.md` Section 5, `cross-functional/02-risk-register.md` SEC-05
 
-> **Phase 1 Scope (D12)**: 3 stages only -- metadata extraction, plausibility check, AI vision analysis. Perceptual hashing, anomaly detection, and peer review are deferred to Phase 2.
+> **Phase 1 Scope (D12)**: 3 stages only -- metadata extraction, plausibility check, AI vision analysis. Perceptual hashing, anomaly detection, and peer review are deferred to Phase 2. Sections discussing deferred features are marked with **(Phase 2+)** throughout this document.
 
 ---
 
 ## Executive Summary
 
-Evidence verification is the trust backbone of BetterWorld. When a human claims they distributed 200 flyers in downtown Nairobi, the platform must determine whether this actually happened — without spending $2 per verification call to a Vision LLM that the platform (not the agent owner) must pay for.
+Evidence verification is the trust backbone of BetterWorld. When a human claims they distributed 200 flyers in downtown Nairobi, the platform must determine whether this actually happened — without spending $2 per verification call to a Vision LLM.
 
-**The core constraint**: Agent owners pay their own AI costs (BYOK), but evidence verification is a **platform cost** because it verifies human missions, not agent actions. The platform wants to minimize costs to hosting + DB. Vision AI at ~$2/1K calls is acceptable at 500/day ($1/day) but catastrophic at scale (50K/day = $100/day = $3K/month).
+**The core constraint**: Under BYOK (see [T4](T4-ai-cost-management-byok.md)), evidence verification Vision AI costs are charged to the **agent owner's API key** — the agent that created the mission bears the verification cost. The platform only pays for the guardrail classifier (safety-critical, platform-funded). This keeps platform costs limited to hosting + DB + guardrails. However, the platform must still optimize the pipeline because excessive per-mission verification costs discourage agent owners from creating missions.
 
-> **Cost attribution**: Under BYOK (see [T4](T4-ai-cost-management-byok.md)), Claude Vision costs for evidence verification are charged to the agent owner's API key, not the platform. Platform only pays for the guardrail classifier pass.
+> **Cost attribution (canonical)**: Evidence verification = agent-owner-pays (via BYOK). Guardrail classifier = platform-pays (safety-critical). See [T4](T4-ai-cost-management-byok.md) for the full cost model.
 
 **Key findings from this research**:
 
@@ -37,7 +37,7 @@ Evidence verification is the trust backbone of BetterWorld. When a human claims 
 
 7. **A properly designed multi-stage pipeline can reduce Vision AI calls by 70-85%.** By ordering checks from cheapest to most expensive and short-circuiting on clear pass/fail, the effective cost per verification drops from $0.002 to $0.0003-0.0006.
 
-**Bottom line**: The current architecture in `01-ai-ml-architecture.md` Section 5 sends every photo through Claude Vision as a primary step. This must be redesigned as a cascading pipeline where Vision AI is the last resort, not the first check. The estimated savings: **$800-2,400/month at 50K daily submissions**.
+**Bottom line**: The current architecture in `01c-ai-ml-evidence-and-scoring.md` Section 5 sends every photo through Claude Vision as a primary step. This must be redesigned as a cascading pipeline where Vision AI is the last resort, not the first check. The estimated savings: **$800-2,400/month at 50K daily submissions**.
 
 ---
 
@@ -101,7 +101,7 @@ The critical problem: EXIF data is frequently stripped or lost in transit.
 - Drag-and-drop: Same as file picker — ~90% retention
 - Screenshots: **No GPS data, only screen capture metadata** — 0% useful retention
 
-**Effective EXIF GPS retention rate for a platform like BetterWorld**: Realistically **15-35%** of submitted evidence photos will have usable GPS EXIF data, depending on submission flow:
+**Effective EXIF GPS retention rate for a platform like BetterWorld** *(approximate — based on developer documentation and community reports as of early 2026; re-validate with actual submission data during Phase 1 beta)*: Realistically **15-35%** of submitted evidence photos will have usable GPS EXIF data, depending on submission flow:
 - If users must take photos in-app: 85-95%
 - If users can upload from gallery: 60-80%
 - If users can forward from messaging: 0-15%
@@ -333,26 +333,26 @@ Each layer catches a different subset. Combined, the system catches 90-95% of fr
 
 ### 3.1 The Cost Problem
 
-The current architecture in `01-ai-ml-architecture.md` Section 5.2 sends every photo to Claude Vision (Sonnet-class model) for analysis. The cost structure:
+The current architecture in `01c-ai-ml-evidence-and-scoring.md` Section 5.2 sends every photo to Claude Vision (Sonnet-class model) for analysis. The cost structure:
 
 | Model | Cost per 1K input tokens | Cost per 1K output tokens | Typical image tokens | Cost per image analysis |
 |-------|-------------------------|--------------------------|---------------------|------------------------|
-| Claude 3.5 Sonnet (Vision) | $3.00 | $15.00 | ~1,600 (768px image) | ~$0.002 |
-| Claude 3.5 Haiku (Vision) | $0.25 | $1.25 | ~1,600 | ~$0.0003 |
+| Claude Sonnet 4.5 (Vision) | $3.00 | $15.00 | ~1,600 (768px image) | ~$0.002 |
+| Claude Haiku 4.5 (Vision) | $1.00 | $5.00 | ~1,600 | ~$0.001 |
 | GPT-4o | $2.50 | $10.00 | ~765 (low detail) | ~$0.001 |
 | GPT-4o-mini | $0.15 | $0.60 | ~765 | ~$0.0002 |
 | Gemini 1.5 Flash | $0.075 | $0.30 | ~258 | ~$0.00005 |
 
-**Current cost at scale**:
-- 500/day (Phase 2): $1/day = $30/month — manageable
-- 5,000/day (Phase 3): $10/day = $300/month — significant platform cost
-- 50,000/day (Phase 4): $100/day = $3,000/month — unsustainable as a platform cost
+**Current cost at scale** *(these costs are borne by agent owners via BYOK, not the platform — see exec summary and [T4](T4-ai-cost-management-byok.md) Section 4.5; however, the platform must still optimize the pipeline because excessive per-mission verification costs discourage agent owners from creating missions)*:
+- 500/day (Phase 2): $1/day = $30/month — manageable per-agent cost
+- 5,000/day (Phase 3): $10/day = $300/month — significant aggregate cost across agent owners
+- 50,000/day (Phase 4): $100/day = $3,000/month — requires pipeline optimization to keep per-mission costs acceptable
 
 ### 3.2 Open-Source Vision Model Alternatives
 
 Self-hosted open-source models can handle basic image classification tasks at near-zero marginal cost (only compute).
 
-**Viable open-source vision models (2025-2026)**:
+**Viable open-source vision models (as of early 2026 — this space evolves rapidly; verify model availability, licensing, and benchmark scores before implementation)**:
 
 | Model | Parameters | Task Suitability | GPU Required | Quality vs Claude Vision |
 |-------|-----------|-----------------|-------------|------------------------|
@@ -980,6 +980,8 @@ Priority 4 (Future): Carrier location verification
 
 ### 7.2 Multi-Stage Pipeline Architecture
 
+> **Phase 1 Implementation Scope (D12)**: Phase 1 implements **3 of the 6 pipeline stages** below: Stage 0 (Intake), Stage 1 (Hash Check), and Stage 5 (Vision AI via Claude). Stages 2 (Metadata/EXIF), 3 (AI Detection), and 4 (CLIP similarity) are deferred to Phase 2+. Peer Review (Stage 6) launches in Phase 2. This means Phase 1 runs every evidence image through hash dedup and then Claude Vision directly -- a simpler pipeline that is sufficient for MVP volumes (500/day) and avoids the complexity of CLIP hosting and Hive API integration until proven necessary.
+
 ```
                          EVIDENCE SUBMISSION
                                 │
@@ -1151,7 +1153,7 @@ const THRESHOLDS = {
 
 ### 7.6 BullMQ Integration
 
-The pipeline maps naturally onto the existing BullMQ job queue architecture defined in `01-ai-ml-architecture.md`:
+The pipeline maps naturally onto the existing BullMQ job queue architecture defined in `01c-ai-ml-evidence-and-scoring.md`:
 
 ```typescript
 // Queue definitions
@@ -1229,7 +1231,7 @@ const worker = new Worker('evidence.pipeline', async (job) => {
 **Phase 1 cost model (500 submissions/day)**:
 - Claude Vision for all: $1/day = $30/month
 - Hash/EXIF/GPS: $0
-- **Total: ~$30/month** (acceptable as platform cost)
+- **Total: ~$30/month** (acceptable as agent-owner cost via BYOK)
 
 ### Phase 2 (Month 3-4): Optimization — Reduce Vision AI Dependency
 
@@ -1442,7 +1444,7 @@ Given the analysis above, the optimal strategy by phase:
 ### ADR-T2-03: Cascading pipeline architecture
 
 **Status**: Proposed
-**Context**: The current design sends all evidence through Claude Vision ($0.002/call). At scale (50K/day), this is $3,000/month in platform cost — unsustainable for a platform that wants to minimize costs beyond hosting + DB.
+**Context**: The current design sends all evidence through Claude Vision ($0.002/call). At scale (50K/day), this is $3,000/month in aggregate agent-owner cost (via BYOK) — excessive per-mission costs discourage agent owners from creating missions.
 **Decision**: Implement a multi-stage cascading pipeline where free/cheap checks execute first (hash, EXIF, metadata), then moderately-priced checks (Hive AI detection, CLIP), and Claude Vision is called only for the 15-25% of ambiguous cases.
 **Consequences**: More complex pipeline logic. More components to maintain. But 70-85% reduction in Vision AI API calls at scale. Savings exceed $2,000/month at 50K/day volume.
 

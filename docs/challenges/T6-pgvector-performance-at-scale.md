@@ -75,7 +75,7 @@ SET maintenance_work_mem = '2GB';
 SET max_parallel_maintenance_workers = 4;
 
 CREATE INDEX CONCURRENTLY idx_problems_embedding_hnsw
-  ON problems USING hnsw (embedding vector_cosine_ops)
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
   WITH (m = 24, ef_construction = 200);
 ```
 
@@ -119,6 +119,8 @@ Before iterative scans, pgvector would fetch `LIMIT` results from the HNSW index
 ### 2.1 pgvector HNSW Benchmarks (1024-dim, cosine similarity)
 
 All benchmarks assume PostgreSQL 16, pgvector 0.8.0, 8 vCPU / 32GB RAM instance (representative of a Railway/Fly.io production config).
+
+> **Benchmark disclaimer**: The latency and throughput numbers in this section are **projected estimates based on published pgvector benchmarks, ann-benchmarks.com data, and vendor documentation** -- not measurements on BetterWorld's actual workload. Real-world performance will vary based on data distribution, query patterns, concurrent load, and hosting tier. The "8 vCPU / 32 GB RAM" configuration maps approximately to Railway Pro (8 vCPU / 32 GB) or Fly.io Performance-8x; actual Railway/Fly.io tier naming and resource allocations should be verified against current provider pricing pages before capacity planning. Re-validate these projections with actual BetterWorld data during Phase 1 beta.
 
 #### Query Latency (single-threaded, ef_search=40 default)
 
@@ -298,7 +300,7 @@ HNSW has three key parameters:
 ```sql
 -- Index creation
 CREATE INDEX idx_problems_embedding_hnsw
-  ON problems USING hnsw (embedding vector_cosine_ops)
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
   WITH (m = 16, ef_construction = 128);
 
 -- Query-time setting
@@ -312,7 +314,7 @@ SET hnsw.ef_search = 40;  -- default, sufficient for <50K
 ```sql
 -- Index creation (rebuild when entering this phase)
 CREATE INDEX CONCURRENTLY idx_problems_embedding_hnsw
-  ON problems USING hnsw (embedding vector_cosine_ops)
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
   WITH (m = 24, ef_construction = 200);
 
 -- Query-time setting (per-session or connection pool default)
@@ -329,7 +331,7 @@ SET maintenance_work_mem = '4GB';
 SET max_parallel_maintenance_workers = 4;
 
 CREATE INDEX CONCURRENTLY idx_problems_embedding_hnsw
-  ON problems USING hnsw (embedding vector_cosine_ops)
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
   WITH (m = 32, ef_construction = 256);
 
 -- Query-time: use adaptive ef_search based on use case
@@ -359,7 +361,7 @@ BetterWorld is read-heavy (many more searches than inserts). Optimize for this:
 3. **Partial indexes**: Index only approved content to reduce graph size:
    ```sql
    CREATE INDEX idx_problems_approved_embedding
-     ON problems USING hnsw (embedding vector_cosine_ops)
+     ON problems USING hnsw (embedding halfvec_cosine_ops)
      WITH (m = 24, ef_construction = 200)
      WHERE guardrail_status = 'approved' AND embedding IS NOT NULL;
    ```
@@ -368,7 +370,7 @@ BetterWorld is read-heavy (many more searches than inserts). Optimize for this:
    ```sql
    -- Per-domain partial indexes reduce search space
    CREATE INDEX idx_problems_emb_health
-     ON problems USING hnsw (embedding vector_cosine_ops)
+     ON problems USING hnsw (embedding halfvec_cosine_ops)
      WITH (m = 16, ef_construction = 128)
      WHERE domain = 'health' AND guardrail_status = 'approved';
    ```
@@ -556,7 +558,7 @@ COPY problems (id, embedding) FROM STDIN;
 SET maintenance_work_mem = '2GB';
 SET max_parallel_maintenance_workers = 4;
 CREATE INDEX idx_problems_embedding_hnsw
-  ON problems USING hnsw (embedding vector_cosine_ops)
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
   WITH (m = 24, ef_construction = 200);
 ```
 
@@ -1464,7 +1466,7 @@ Phase 4+ (>500K vectors):
 
 ### 10.3 Updated Database Schema Recommendations
 
-The current `03-database-design.md` should be updated:
+The current `03a-db-overview-and-schema-core.md` should be updated:
 
 1. **Change `vector(1536)` to `halfvec(1024)` everywhere** — aligns with Voyage AI decision and saves 75% storage vs current schema.
 

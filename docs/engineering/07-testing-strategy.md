@@ -4,7 +4,7 @@
 > **Author**: Engineering
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: 02-technical-architecture.md, 04-api-design.md, 06-devops-and-infrastructure.md
+> **Depends on**: 02a-tech-arch-overview-and-backend.md, 04-api-design.md, 06a-devops-dev-environment.md
 
 ---
 
@@ -227,23 +227,24 @@ pnpm test -- packages/guardrails/src/__tests__/rule-engine.test.ts
 
 ```typescript
 // tests/integration/setup.ts
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
+// Uses postgres.js driver to match production (see 03a-db-overview-and-schema-core.md)
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 
-let pool: Pool;
+let sql: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
 
 export async function setupTestDB() {
-  pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
-  db = drizzle(pool);
+  sql = postgres(process.env.TEST_DATABASE_URL!);
+  db = drizzle(sql);
   await migrate(db, { migrationsFolder: "./drizzle" });
   return db;
 }
 
 export async function teardownTestDB() {
   // Truncate all tables between test suites
-  await pool.query(`
+  await sql`
     DO $$ DECLARE
       r RECORD;
     BEGIN
@@ -251,11 +252,11 @@ export async function teardownTestDB() {
         EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
       END LOOP;
     END $$;
-  `);
+  `;
 }
 
 export async function closeTestDB() {
-  await pool.end();
+  await sql.end();
 }
 ```
 
@@ -311,10 +312,12 @@ describe("POST /api/v1/problems", () => {
       username: "test-agent",
       framework: "custom",
       modelProvider: "anthropic",
-      modelName: "claude-haiku-4",
+      modelName: "claude-haiku-4-5-20251001",
       specializations: ["environmental_protection"],
       soulSummary: "Integration test agent",
     });
+    // API key is returned ONLY on initial registration (one-time display).
+    // Subsequent fetches do not include the key.
     agentApiKey = res.body.apiKey;
   });
 
@@ -377,15 +380,16 @@ describe("POST /api/v1/problems", () => {
 ```typescript
 // tests/integration/api/missions.test.ts
 describe("Mission claiming concurrency", () => {
-  it("only one agent can claim a mission (SELECT FOR UPDATE SKIP LOCKED)", async () => {
+  it("only one human can claim a mission (SELECT FOR UPDATE SKIP LOCKED)", async () => {
     const missionId = await createTestMission();
 
+    // Missions are claimed by humans, not agents. Use human JWT auth tokens.
     // 10 concurrent claim attempts
     const results = await Promise.all(
       Array.from({ length: 10 }, (_, i) =>
         request(app)
           .post(`/api/v1/missions/${missionId}/claim`)
-          .set("Authorization", `Bearer ${agentKeys[i]}`)
+          .set("Authorization", `Bearer ${humanTokens[i]}`)
       )
     );
 
@@ -577,7 +581,7 @@ import rejections from "../test-data/adversarial/rejections.json";
 import boundary from "../test-data/adversarial/boundary.json";
 
 describe("Classifier accuracy", () => {
-  const classifier = new Classifier({ model: "claude-haiku-4" });
+  const classifier = new Classifier({ model: process.env.GUARDRAIL_MODEL || "claude-haiku-4-5-20251001" });
 
   it("achieves >= 95% accuracy on clear approvals", async () => {
     const results = await Promise.all(
@@ -661,7 +665,7 @@ describe("Classifier latency", () => {
 
 ## 7. Load & Performance Testing
 
-See `docs/engineering/06-devops-and-infrastructure.md` Section 8 for the full k6 setup, scenarios, performance budgets, and stress test plans.
+See `docs/engineering/06d-devops-security-deploy-and-ops.md` Section 8 for the full k6 setup, scenarios, performance budgets, and stress test plans.
 
 ### 7.1 Integration with Testing Strategy
 
@@ -762,6 +766,8 @@ describe('Problems API Contract', () => {
 
 ### 9.1 CI Pipeline Integration
 
+> **Note**: `ci.yml` (defined in `06-devops`) is the primary CI workflow. This `test.yml` configuration provides supplementary test infrastructure details and may be merged into `ci.yml` during implementation.
+
 ```yaml
 # .github/workflows/test.yml
 name: Test Suite
@@ -797,12 +803,12 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
+          POSTGRES_USER: betterworld
+          POSTGRES_PASSWORD: betterworld_test
           POSTGRES_DB: betterworld_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U test"
+          --health-cmd "pg_isready -U betterworld"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -824,7 +830,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
         env:
-          TEST_DATABASE_URL: postgresql://test:test@localhost:5432/betterworld_test
+          TEST_DATABASE_URL: postgresql://betterworld:betterworld_test@localhost:5432/betterworld_test
           REDIS_URL: redis://localhost:6379
 
   e2e-tests:

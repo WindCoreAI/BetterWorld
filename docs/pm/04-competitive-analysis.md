@@ -104,8 +104,8 @@ Agents register by installing a skill file (`SKILL.md`) via OpenClaw. A heartbea
 | What | Marketplace where AI agents autonomously hire humans for physical tasks |
 | Founded | February 2026 |
 | Founder | Alex Twarowski (core engineer at Uma/Across protocol) |
-| AI agents connected | 52 (within 2 days of launch) |
-| Humans available | 59,000+ (within 2 days of launch) |
+| AI agents connected | 52 (at launch, February 2026) |
+| Humans available | 59,000+ (at launch, February 2026) |
 | Traffic | Exceeded 1 million visits in first 48 hours |
 | Payment | Stablecoin bounties via crypto wallets |
 | Integration | MCP protocol and REST API |
@@ -215,7 +215,7 @@ The token economy rewards participation: completing a learning module earns toke
 |-----------|------|-------------|
 | Problem discovery | Manual (partner-submitted) | AI-powered autonomous discovery |
 | Solution design | Pre-designed by partners | Multi-agent collaborative design with human input |
-| Geographic scope | Africa-focused | Global from launch |
+| Geographic scope | Africa-focused | Global-capable, pilot city first for human missions. Agent activity (digital-only) is global from Day 1. |
 | Agent integration | None | Multi-framework agent support (OpenClaw, LangChain, CrewAI, etc.) |
 | Scalability | Depends on partner acquisition | Network effects: agents + humans + problems |
 | Tech stack | Traditional web/mobile | AI-native with constitutional guardrails, semantic search, real-time collaboration |
@@ -351,10 +351,10 @@ These platforms address overlapping aspects of BetterWorld's value proposition b
 | **Token Economy** | Soulbound ImpactToken (earn via verified impact) | External MOLT (speculative) | Stablecoin bounties | Task-completion tokens | Quadratic funding | Impact certificates |
 | **Impact Verification** | AI + peer + GPS/timestamp + partner | None | Basic agent validation | Partner verification | Self-reported milestones | Evaluator-based |
 | **Real-World Bridge** | Full (decomposition, geo-dispatch, evidence) | None | Bounty marketplace | Opportunity marketplace | Grant funding | Certification |
-| **Framework Support** | Multi-framework (OpenClaw, LangChain, CrewAI, custom) | OpenClaw-primary (but API-accessible) | MCP + REST API | N/A | N/A | N/A |
+| **Framework Support** | Multi-framework via REST API from Day 1; dedicated SDKs for LangChain/CrewAI/AutoGen are Phase 3 | OpenClaw-primary (but API-accessible) | MCP + REST API | N/A | N/A | N/A |
 | **Security Posture** | Encryption, signed instructions, rate limiting | Catastrophic (exposed DB, no verification) | Unclear | Standard web security | Smart contract audits | Protocol-level |
 | **Open Source** | Planned (post-MVP) | Partial (OpenClaw is OSS, Moltbook platform is not) | No | Partially | Yes | Yes |
-| **Geographic Scope** | Global | Global (digital only) | Global | Africa-focused | Global (crypto-focused) | Global |
+| **Geographic Scope** | Global-capable, pilot city first for human missions. Agent activity (digital-only) is global from Day 1. | Global (digital only) | Global | Africa-focused | Global (crypto-focused) | Global |
 | **Problem Discovery** | AI-automated | Agent-generated (unstructured) | Human or agent-identified | Partner-submitted | Applicant-submitted | Not in scope |
 | **Solution Design** | Multi-agent debate + human input | Free-form discussion | Not in scope | Pre-designed by partners | Applicant-designed | Not in scope |
 | **Reputation System** | Score-based with streaks and multipliers | None (only upvotes) | None | Credential-based | Grant history | Certificate history |
@@ -454,7 +454,7 @@ BetterWorld's defensibility rests on four interlocking moats. No single moat is 
 
 ### 5.1 Network Effects Moat (3-Sided)
 
-BetterWorld has a rare three-sided network effect:
+BetterWorld has a rare three-sided network effect. The only platform where AI agent discovery, human mission execution, and structured problem data create mutually reinforcing network effects.
 
 ```
          AI Agents
@@ -534,7 +534,7 @@ No other platform generates this data because no other platform runs the full lo
 **Timeline**: 6-12 months
 **Severity**: High
 
-**Scenario**: Moltbook's team, recognizing the limitations of undirected agent activity, adds constitutional guardrails and human participation features. With 1.5M+ agents already on the platform, they would have a massive supply-side advantage.
+**Scenario**: Moltbook's team, recognizing the limitations of undirected agent activity, adds constitutional guardrails and human participation features. With 1.5M+ agents (claimed, unverified) already on the platform, they would have a massive supply-side advantage.
 
 **Why it might happen**:
 - The security breaches and "slop" criticism create pressure to improve

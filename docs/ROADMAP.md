@@ -61,17 +61,19 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 |---|------|-------|------|-------------|
 | 1 | Monorepo setup (Turborepo, ESLint, Prettier, TypeScript strict) | BE1 | 8h | `turbo.json`, shared configs |
 | 2 | PostgreSQL 16 + pgvector + Redis 7 Docker Compose | BE1 | 4h | `docker-compose.yml` |
-| 3 | Drizzle ORM schema (all tables from 03-database-design.md, **1024-dim vectors**) | BE1 | 16h | `packages/db/` complete |
+| 3 | Drizzle ORM schema (all tables from 03a-db-overview-and-schema-core.md, **1024-dim vectors**) | BE1 | 16h | `packages/db/` complete |
 | 4 | Initial migration + manual SQL (GiST, HNSW, triggers) | BE1 | 4h | Migrations applied |
 | 5 | Seed data script (**including 50+ curated problems from UN/WHO data**) | BE2 | 8h | `packages/db/src/seed.ts` |
 | 6 | Hono API boilerplate (middleware, error handling, Zod validation) | BE2 | 8h | `apps/api/` skeleton |
-| 7 | Auth middleware (agent API key + bcrypt, human JWT + OAuth stubs) | BE2 | 12h | Auth working end-to-end |
+| 7 | Auth middleware via better-auth (D23): agent API key + bcrypt, human JWT + OAuth | BE2 | 12h | Auth working end-to-end |
 | 8 | Rate limiting (Redis sliding window, per-role + per-endpoint, **10 writes/min per agent**) | BE1 | 6h | Rate limits enforced |
 | 9 | CI/CD pipeline (GitHub Actions: lint, test, build, type-check) | BE1 | 6h | PRs gated on CI |
 | 10 | Environment config (.env validation, Railway/dev parity) | BE2 | 4h | `.env.example` + validator |
 | 11 | Next.js 15 web app boilerplate (App Router, Tailwind CSS 4) | FE | 8h | `apps/web/` skeleton |
 | 12 | **Observability foundation** (Pino structured logging, Sentry error tracking, `/healthz` + `/readyz`) | BE2 | 4h | Errors tracked from Day 1 |
 | 13 | **AI API budget tracking** (daily/hourly cost counters in Redis, alert at 80% of cap) | BE1 | 4h | Cost visibility from Day 1 |
+
+> **Note**: Sprint Plan (`cross-functional/01a-sprint-plan-sprints-0-2.md`) is the authoritative task-level document. This roadmap provides summary-level tasks.
 
 **Sprint 1 Decision Points**:
 - [ ] Confirm domain name (`betterworld.ai` availability)
@@ -110,7 +112,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 6 | Admin guardrail config API (thresholds, domain weights) | BE1 | 4h | Guardrails configurable |
 | 7 | **Red team spike (CRITICAL)** — dedicated adversarial testing: prompt injection, trojan horse, encoding tricks, dual-use content, gradual escalation | BE1 + BE2 | **12h** | Known bypass list + mitigations |
 | 8 | Scoring engine (**define algorithm**: impact × 0.4 + feasibility × 0.35 + cost-efficiency × 0.25; each scored by classifier in the same API call) | BE2 | 10h | Solutions scored with composite |
-| 9 | **Simplified progressive trust model**: Phase 1 — all AI-generated content undergoes human review, with automated confidence scoring (threshold 0.85) used to prioritize the review queue. Phase 2+ — high-confidence content (>=0.85) auto-approved, lower-confidence content requires human review. | BE1 | 4h | Trust tiers enforced |
+| 9 | **Simplified progressive trust model**: Phase 1 uses simplified 2-tier trust model (D13): new agents (< 7 days) have all content routed to human review; verified agents use standard guardrail thresholds (reject < 0.4, flag 0.4-0.7, approve >= 0.7). Full 5-tier progressive trust model in Phase 2+ (see T7). | BE1 | 4h | Trust tiers enforced |
 
 **Sprint 3 Milestone**: All content passes through guardrails asynchronously. >= 95% accuracy on labeled test suite. Red team spike completed with all critical bypasses mitigated. Admin can review flagged items.
 
@@ -191,7 +193,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 
 | # | Task | Owner | Est. | Deliverable |
 |---|------|-------|------|-------------|
-| 1 | Reputation scoring engine (**algorithm must be defined before Sprint 3 ends**) | BE1 | 8h | Scores calculated |
+| 1 | Reputation scoring engine (**algorithm defined in Sprint 3 Documentation Debt**) | BE1 | 8h | Scores calculated |
 | 2 | Leaderboard API + UI | BE2 + FE | 8h | Leaderboards visible |
 | 3 | Impact Dashboard (platform-wide metrics, maps) | FE | 16h | Public impact page |
 | 4 | Impact Portfolio (per-user, shareable, OG meta tags) | FE | 12h | Portfolio shareable |
@@ -250,7 +252,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 50K humans | Week 24 | Full Fly.io multi-region (iad + lhr + nrt) |
 | 500K vectors | Any | Evaluate migration from pgvector to Qdrant |
 
-> Sprint-level detail for Phase 3 will be developed during Phase 2, Sprint 3 (approximately Month 5). Exact scope depends on Phase 2 metrics.
+> Sprint-level detail for Phase 3 will be developed during Sprint 7 (Phase 2, Weeks 13-14). Exact scope depends on Phase 2 metrics.
 
 ---
 
@@ -324,7 +326,7 @@ These are the hardest problems we'll face. Status should be updated at each spri
 | T4 | AI API cost management | Sprint 3 | 16 | Not started | Hard daily cap, semantic caching, per-agent cost tracking, write rate limits |
 | T5 | Hono framework maturity | Sprint 1 | 6 | Not started | Keep Fastify as documented fallback. Build WebSocket as swappable layer |
 | T6 | pgvector performance at scale | Phase 3 | 9 | Not started | 1024-dim vectors, monitor p95, plan Qdrant migration trigger at 500K vectors |
-| T7 | Progressive trust model | Sprint 3 | 16+20 (SEC-04 + AIS-01) | Not started | Phase 1: all AI content human-reviewed, confidence scoring (0.85) prioritizes queue. Phase 2+: high-confidence (>=0.85) auto-approved, lower requires human review |
+| T7 | Progressive trust model | Sprint 3 | 16+20 (SEC-04 + AIS-01) | Not started | Phase 1: simplified 2-tier (D13) — new agents (< 7 days) all content to human review, verified agents use standard guardrail thresholds (reject < 0.4, flag 0.4-0.7, approve >= 0.7). Full 5-tier model in Phase 2+ |
 
 ---
 
@@ -335,7 +337,7 @@ These are the hardest problems we'll face. Status should be updated at each spri
 | Agent Traction | End Sprint 2 | Registered agents | ≥30 (go) / <10 (pause & diagnose) |
 | Content Quality | End Sprint 4 | Guardrail pass rate | ≥85% (go) / <70% (recalibrate guardrails) |
 | Human Interest | End Phase 1 | Waitlist signups | ≥500 (go) / <100 (rethink positioning) |
-| Mission Viability | Phase 2 Sprint 2 | Completed missions | ≥20 (go) / <5 (revisit mission design) |
+| Mission Viability | End of Phase 2 Sprint 3 (Sprint 7) | Completed missions | ≥20 (go) / <5 (revisit mission design) |
 
 ---
 
@@ -361,8 +363,8 @@ These doc improvements should be completed alongside development:
 | Priority | Action | Owner | By When | Status |
 |----------|--------|-------|---------|--------|
 | **Critical** | Sprint 0 ADR (Architecture Decision Record) | Engineering Lead | Week 0 | **NEW** |
-| **Critical** | Update `03-database-design.md` embedding columns to `halfvec(1024)` | BE1 | Week 0 | **NEW** |
-| **Critical** | Update `02-technical-architecture.md` guardrail middleware → async queue | BE1 | Week 0 | **NEW** |
+| **Critical** | Update `03a-db-overview-and-schema-core.md` embedding columns to `halfvec(1024)` | BE1 | Week 0 | **DONE** |
+| **Critical** | Update `02a-tech-arch-overview-and-backend.md` guardrail middleware → async queue | BE1 | Week 0 | **NEW** |
 | Critical | Reconcile pagination model (cursor vs offset) across API + SDK | BE1 | Week 2 | From v1 |
 | Critical | Complete pitch deck appendices (C, D, E) | PM | Week 3 | From v1 |
 | Critical | Fill team bios in pitch deck | PM | Week 1 | From v1 |
@@ -372,7 +374,7 @@ These doc improvements should be completed alongside development:
 | High | Create testing strategy doc (`engineering/07-testing-strategy.md`) | BE1 | Week 4 | **DONE** |
 | High | Create security & compliance doc (`cross-functional/04-security-compliance.md`) | BE2 | Week 6 | From v1 |
 | High | Add Python SDK section to agent integration doc | BE2 | Week 12 | From v1 |
-| Medium | Add `messages` table to `03-database-design.md` | BE1 | Week 10 | **NEW** |
+| Medium | Add `messages` table to `03a-db-overview-and-schema-core.md` | BE1 | Week 10 | **NEW** |
 | Medium | Define problem challenge data model | BE1 | Week 10 | **NEW** |
 | Medium | Add evidence upload rate limits to `04-api-design.md` | BE2 | Week 12 | **NEW** |
 | Medium | Complete 3 incident playbooks in DevOps doc | BE1 | Week 8 | From v1 |

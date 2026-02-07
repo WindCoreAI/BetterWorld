@@ -4,7 +4,7 @@
 > **Author**: Engineering + Legal
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: 04-api-design.md, 06-devops-and-infrastructure.md, 02-risk-register.md
+> **Depends on**: 04-api-design.md, 06a-devops-dev-environment.md, 02-risk-register.md
 
 ---
 
@@ -131,12 +131,12 @@ Revocation:  DELETE /api/v1/auth/agents/keys/:prefix → immediate invalidation
 
 | Layer | Method | Details |
 |-------|--------|---------|
-| Data in transit | TLS 1.2+ (1.3 preferred) | Enforced by Cloudflare. HSTS enabled. |
+| Data in transit | TLS 1.3 (required for all connections. TLS 1.2 not supported — new platform, no legacy compatibility needed) | Enforced by Cloudflare. HSTS enabled. |
 | Data at rest (database) | AES-256 (provider-managed) | Railway/Fly.io managed encryption for PostgreSQL volumes. |
 | Data at rest (object storage) | AES-256 (SSE-S3) | Cloudflare R2 server-side encryption. |
 | API key hashes | bcrypt (cost factor 12) | One-way hash. Original key never stored. |
 | TOTP secrets | AES-256-GCM | Encrypted in database with application-level key. |
-| Backup codes | bcrypt (cost factor 10) | One-way hash. Codes shown once at generation. |
+| Backup codes | bcrypt (cost factor 12) | One-way hash. Codes shown once at generation. |
 
 ### 3.3 Personally Identifiable Information (PII)
 
@@ -159,7 +159,7 @@ Revocation:  DELETE /api/v1/auth/agents/keys/:prefix → immediate invalidation
 | Access logs | 90 days | Automated log rotation |
 | Audit logs | 2 years | Archived to cold storage, then deleted |
 | Guardrail evaluation logs | 1 year | Automated cleanup |
-| Rejected content | 30 days (for appeals) | Automated purge |
+| Rejected content | 90 days (for appeals). Automatic extension if appeal is in progress. | Automated purge |
 | Completed missions | Indefinite (public impact record) | Anonymized on account deletion |
 | Database backups | 30 days | Automated rotation |
 
@@ -212,6 +212,7 @@ const createProblemSchema = z.object({
 | Human API (per user) | 30 | 1 min | `rl:human:{userId}` | 429 |
 | Admin API (per user) | 120 | 1 min | `rl:admin:{userId}` | 429 |
 | Auth endpoints | 5 | 5 min | `rl:auth:{ip}` | 429 + temporary block |
+| WebSocket connections | 5/min per IP | 1 min | `rl:ws:{ip}` | Connection attempts — Prevents resource exhaustion |
 
 ### 4.3 HTTP Security Headers
 
@@ -250,6 +251,16 @@ app.use("*", cors({
 ```
 
 **Rule**: Never use `origin: "*"` in production. CORS is explicitly allowlisted.
+
+### 4.5 CSRF Protection
+
+Since human and admin authentication uses HttpOnly cookies (JWT), all state-changing endpoints require CSRF protection:
+
+1. **`SameSite` cookie attribute**: Set to `Strict` for admin cookies (highest protection for sensitive operations) and `Lax` for human user cookies (allows top-level GET navigations while blocking cross-origin POST/PUT/DELETE). Configured via better-auth cookie settings.
+2. **CSRF token for state-changing requests**: All POST/PUT/DELETE/PATCH endpoints require an `X-CSRF-Token` header. Token issued via `GET /api/v1/auth/csrf` (tied to session, expires with session). Server validates token on every state-changing request; missing or invalid token returns 403.
+3. **Origin/Referer header validation**: Middleware validates `Origin` header (or `Referer` as fallback) on all state-changing requests. Requests with an `Origin` not matching the allowlisted domains (Section 4.4 CORS configuration) are rejected with 403. Requests with no `Origin` and no `Referer` are also rejected (prevents direct-request attacks from non-browser clients bypassing cookie auth).
+
+> **Note**: Agent API key authentication (Bearer token in `Authorization` header) is not vulnerable to CSRF because cookies are not used. CSRF protection applies only to cookie-based human and admin authentication flows.
 
 ---
 
@@ -490,7 +501,7 @@ function validateSelfAudit(
 | Queue depth (pending reviews) | < 50 | > 100 |
 | Mean time to human review | < 24h | > 48h |
 
-> **Latency targets by phase**: Classifier p95 latency target tightens to < 3s in Phase 2 and < 2s in Phase 3.
+> **Latency targets by phase**: Sprint 3 target: < 3s average latency. Phase 1 p95 target: < 5s (includes queue wait time). Classifier p95 latency target tightens to < 3s in Phase 2 and < 2s in Phase 3.
 
 ---
 
@@ -500,7 +511,7 @@ function validateSelfAudit(
 
 | Regulation | Applicability | Status |
 |------------|---------------|--------|
-| **GDPR** (EU) | If EU users register or EU agent data is processed | Phase 2 compliance target |
+| **GDPR** (EU) | If EU users register or EU agent data is processed | Phase 1 (basic) — privacy policy, consent management, data subject rights, lawful basis documentation. Phase 2 (full) — Data Protection Officer appointment, Data Protection Impact Assessments, cross-border transfer mechanisms. |
 | **CCPA/CPRA** (California) | If California residents use the platform | Phase 2 compliance target |
 | **SOC 2 Type I** | Investor and enterprise partner requirement | Phase 3 target (Month 12+) |
 | **COPPA** (US) | Not applicable — platform requires age 18+ | Enforced at registration |
@@ -520,7 +531,22 @@ function validateSelfAudit(
 | Data breach notification | Designed | 72-hour notification process (Section 9) |
 | DPO appointment | Deferred | Required when processing at scale — evaluate at 10K users |
 
-### 8.3 AI-Specific Compliance
+### 8.3 OWASP Top 10 (2021) Mapping
+
+| OWASP ID | Risk | BetterWorld Controls |
+|----------|------|-------------------------|
+| A01:2021 | Broken Access Control | Role-based middleware (Section 2.4 RBAC matrix), row-level security via Drizzle query filters, agent/human/admin permission boundaries |
+| A02:2021 | Cryptographic Failures | AES-256-GCM envelope encryption (BYOK key storage), bcrypt (cost 12) for API keys and passwords, TLS 1.3 enforced for all connections (Section 3.2) |
+| A03:2021 | Injection | Drizzle ORM parameterized queries (no raw SQL concatenation), Zod input validation on all endpoints (Section 4.1) |
+| A04:2021 | Insecure Design | Constitutional guardrails (3-layer defense-in-depth), fail-secure defaults (deny on auth failure, hold on guardrail failure) (Section 1.2) |
+| A05:2021 | Security Misconfiguration | Zod-validated environment configuration (`packages/shared/src/config.ts`), security headers (CSP, HSTS, X-Frame-Options) (Section 4.3) |
+| A06:2021 | Vulnerable Components | Dependabot automated PRs, `pnpm audit` in CI pipeline, Socket.dev/Snyk dependency scanning, Trivy container image scanning (Section 11) |
+| A07:2021 | Authentication Failures | better-auth with OAuth 2.0 PKCE, TOTP 2FA for admin accounts, rate limiting on auth endpoints (5 req/5 min), 15-min JWT expiry (Section 2) |
+| A08:2021 | Software/Data Integrity | SBOM generation in CI, signed deployments via GitHub Actions, `--frozen-lockfile` enforcement, Ed25519-signed heartbeat instructions (Section 6) |
+| A09:2021 | Security Logging & Monitoring Failures | Pino structured logging with request IDs, Sentry error tracking, audit trail for all admin actions, security alerting via Slack/PagerDuty (Section 10) |
+| A10:2021 | Server-Side Request Forgery (SSRF) | URL allowlisting for external API calls (Anthropic, Cloudflare), evidence URL validation against permitted schemes and domains (Section 4.1) |
+
+### 8.4 AI-Specific Compliance
 
 | Requirement | Implementation |
 |-------------|---------------|
@@ -539,7 +565,7 @@ function validateSelfAudit(
 | Severity | Definition | Response Time | Examples |
 |----------|-----------|:-------------:|---------|
 | **P1 - Critical** | Data breach, complete service outage, guardrail bypass allowing harmful content | 15 min | Database compromise, API key leak, mass content approval failure |
-| **P2 - High** | Partial outage, security vulnerability discovered, guardrail degradation | 1 hour | Single endpoint down, elevated error rates, classifier accuracy drop |
+| **P2 - High** | Partial outage, security vulnerability discovered, guardrail degradation | 30 minutes | Single endpoint down, elevated error rates, classifier accuracy drop |
 | **P3 - Medium** | Performance degradation, non-critical bug, monitoring gap | 4 hours | Slow queries, intermittent 5xx, queue backlog |
 | **P4 - Low** | Minor issue, cosmetic, documentation gap | Next business day | UI glitch, log formatting, non-critical dependency update |
 
@@ -627,7 +653,7 @@ interface AuditLogEntry {
 | Anthropic (Claude) | Content text (for classification) | High | Yes | Completed |
 | Cloudflare | All traffic (edge proxy) | High | Yes | Completed |
 | Railway / Fly.io | All application data | Critical | Yes | Completed |
-| Neon / Supabase (DB) | All database data | Critical | Yes | In progress |
+| Railway PostgreSQL (MVP) / Fly.io PostgreSQL (scale) | All database data | Critical | Yes | In progress |
 | Cloudflare R2 | Evidence files (images, docs) | High | Yes (covered by CF) | Completed |
 | GitHub | Source code, CI secrets | High | Yes | Completed |
 | Google OAuth | User email, name | Medium | Standard terms | N/A |

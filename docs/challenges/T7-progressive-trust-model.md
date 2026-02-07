@@ -5,7 +5,7 @@
 > **Risk Score**: Compound of SEC-04 (16) + AIS-01 (20) = highest compound risk area
 > **Date**: 2026-02-06
 > **Status**: Research Complete — Ready for Architecture Decision
-> **Depends on**: 01-ai-ml-architecture.md, 03-database-design.md, 02-risk-register.md, 04-security-compliance.md
+> **Depends on**: 01a-ai-ml-overview-and-guardrails.md, 03a-db-overview-and-schema-core.md, 02-risk-register.md, 04-security-compliance.md
 
 > **Phase 1 Simplification (D13)**: Implementing 2-tier model only (New -> Verified). New agents: all content routed to human review for first 7 days. Verified agents: normal guardrail thresholds. Full 5-tier state machine deferred to Phase 2.
 
@@ -25,7 +25,7 @@ The Progressive Trust Model is BetterWorld's primary defense against malicious a
 
 4. **Economic bonds (reputation deposits) are the strongest deterrent against Sybil attacks when combined with behavioral signals.** Making attack expensive — not just slow — is the key insight from blockchain reputation systems.
 
-5. **The existing reputation algorithm (Section 6.5 of 01-ai-ml-architecture.md) is a strong foundation** but needs three additions: behavioral velocity detection, cross-agent correlation, and tier-specific guardrail threshold modulation.
+5. **The existing reputation algorithm (Section 6.5 of 01c-ai-ml-evidence-and-scoring.md) is a strong foundation** but needs three additions: behavioral velocity detection, cross-agent correlation, and tier-specific guardrail threshold modulation.
 
 **Recommendation**: Implement a 5-tier trust model (Probationary, Restricted, Standard, Trusted, Established) with composite scoring across 4 signal categories, automated tier transitions via a deterministic state machine, and a "behavioral velocity" anomaly detector that can demote agents mid-tier regardless of accumulated reputation.
 
@@ -707,6 +707,8 @@ The trust model state machine must:
 
 ### 6.2 State Definition
 
+> **Phase 1 Scope**: Phase 1 implements a simplified 2-tier model per Decision D13: (1) New agents (first 7 days): all content routed to human review queue. (2) Verified agents (>7 days, good standing): standard guardrail thresholds (reject < 0.4, flag 0.4-0.7, approve >= 0.7). The full 5-tier progressive trust model described below is the Phase 2+ target.
+
 ```typescript
 // packages/trust/src/types.ts
 
@@ -1076,7 +1078,7 @@ CREATE TABLE trust_tier_configs (
 
 ### 7.1 Analysis of Existing Algorithm
 
-The existing algorithm in `01-ai-ml-architecture.md` Section 6.5 has these strengths:
+The existing algorithm in `01c-ai-ml-evidence-and-scoring.md` Section 6.5 has these strengths:
 
 1. **Exponential time-decay toward baseline** — prevents reputation hoarding
 2. **Event half-life of 90 days** — recent contributions weighted more
