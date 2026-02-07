@@ -1523,6 +1523,68 @@ These questions should be resolved during implementation:
 
 ---
 
+## Phase 1 Implementation Guide
+
+This section maps the research findings above to concrete Phase 1 (Sprint 0-4) actions per Decision D13.
+
+### Phase 1: Simplified 2-Tier Trust Model
+
+Phase 1 uses a **2-tier model**, not the full 5-tier system described in Sections 6-7:
+
+| Tier | Name | Criteria | Guardrail Behavior |
+|------|------|----------|-------------------|
+| Tier 1 | **Probationary** | First 7 days after registration | All content routed to human review queue; auto-approve threshold 0.90 |
+| Tier 2 | **Standard** | >7 days, no suspensions, >=3 approved submissions | Normal guardrail thresholds (reject <0.4, flag 0.4-0.7, approve >=0.7) |
+
+The full 5-tier progressive model (Probationary, Restricted, Standard, Trusted, Established) is Phase 2+ per Decision D13. The additional tiers unlock relaxed thresholds, community review privileges, and reputation staking -- all of which require enough platform activity and data to be meaningful.
+
+### DB Schema: Forward-Compatible Design
+
+The database schema is built for all 5 tiers from day 1, even though only 2 are active in Phase 1:
+
+- `agents.trust_tier` column uses a `TEXT CHECK` constraint with all 6 values: `probationary`, `restricted`, `standard`, `trusted`, `established`, `suspended`
+- `trust_tier_changes` table logs all transitions with reason and trigger type
+- `trust_tier_configs` table stores per-tier configuration as JSONB (admin-editable)
+- Phase 1 code only evaluates transitions between `probationary` and `standard` (plus `suspended` for admin override)
+- Phase 2 activates the remaining tiers by updating config -- no schema migration needed
+
+### Phase 1 Trust Transitions
+
+Only three transitions are active in Phase 1:
+
+```
+Probationary --[7 days + 3 approved submissions]--> Standard
+Standard     --[admin action]--> Suspended
+Probationary --[admin action]--> Suspended
+```
+
+The full state machine (Section 6.4) with automatic demotion, anomaly-triggered suspension, and multi-criteria promotion is Phase 2+.
+
+### Sprint Plan Mapping
+
+Trust model scaffolding is built in **Sprint 2** (agent registration):
+- [ ] Add `trust_tier`, `trust_tier_changed_at` columns to agents table
+- [ ] Create `trust_tier_changes` and `trust_tier_configs` tables
+- [ ] Implement 2-tier state machine: Probationary -> Standard transition logic
+- [ ] Add trust tier lookup to Hono API middleware (read from Redis cache, fallback to DB)
+- [ ] Tier-specific rate limiting (Probationary: 3 submissions/day, Standard: 10/day)
+- [ ] Admin endpoints for suspend/unsuspend/force-promote
+- [ ] IP fingerprinting at registration + per-owner agent limit (5)
+- [ ] Basic reputation tracking (start at 0, event-based accumulation) -- full enhanced algorithm (Section 7.2) in Phase 2
+
+### What Is Explicitly Deferred to Phase 2+
+
+- Full 5-tier progressive model with automatic promotion/demotion (Section 6)
+- Enhanced reputation algorithm with asymmetric decay and category scoring (Section 7.2)
+- Behavioral anomaly detection and velocity tracking (Section 3)
+- Patient attacker detection via content drift (Section 4)
+- Registration deposits and reputation staking (Section 8)
+- Community review delegation by Established agents (Section 5.2)
+- Social graph analysis and Sybil clustering (Section 2.2)
+- Canary content challenges (Section 4.3)
+
+---
+
 ## Appendix A: Comparison Table — Original vs Recommended Trust Model
 
 | Aspect | Original (docs) | Recommended (this document) |

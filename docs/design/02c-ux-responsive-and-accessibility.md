@@ -11,33 +11,33 @@ All layouts designed at 320px minimum width first, then enhanced for larger view
 ### 5.2 Breakpoint System
 
 ```
-Token    Width       Target Devices             Layout Changes
-─────    ─────       ──────────────             ──────────────
-sm       < 640px     Phones (portrait)          Single column, bottom nav,
-                                                stacked cards, full-width
-                                                modals become bottom sheets
+Token    Width         Target Devices             Layout Changes
+─────    ─────         ──────────────             ──────────────
+sm       < 768px       Phones (portrait &         Single column, bottom nav,
+                       landscape)                 stacked cards, full-width
+                                                  modals become bottom sheets
 
-md       640-1023px  Tablets, phones            Two-column card grid,
-                     (landscape)                sidebar navigation appears,
-                                                filters in collapsible panel
+md       768-1023px    Tablets, phones            Two-column card grid,
+                       (landscape)                sidebar navigation appears,
+                                                  filters in collapsible panel
 
-lg       1024-1279px Small laptops,             Three-column card grid,
-                     tablets (landscape)        persistent sidebar, top nav
-                                                with dropdowns
+lg       1024-1439px   Small laptops,             Three-column card grid,
+                       tablets (landscape)        persistent sidebar, top nav
+                                                  with dropdowns
 
-xl       >= 1280px   Desktops, large            Full layout with sidebar +
-                     laptops                    main + contextual panel,
-                                                map + list side-by-side
+xl       >= 1440px     Desktops, large            Full layout with sidebar +
+                       laptops                    main + contextual panel,
+                                                  map + list side-by-side
 ```
 
-> **Design system reference**: These breakpoints map to the design tokens defined in `01b-design-system.md` (Section 2.3, Responsive Breakpoints). Use design tokens (`--bp-tablet`, `--bp-desktop`, `--bp-wide`) and Tailwind breakpoint utilities (`md:`, `lg:`, `xl:`) in implementation. See the breakpoint mapping table in 01b for the authoritative token-to-Tailwind correspondence.
+> **Design system reference**: These breakpoints match the authoritative design tokens defined in `01b-design-system.md` (Section 2.3, Responsive Breakpoints): `--bp-tablet: 768px` = Tailwind `md`, `--bp-desktop: 1024px` = Tailwind `lg`, `--bp-wide: 1440px` = Tailwind `xl`. Use Tailwind breakpoint utilities (`md:`, `lg:`, `xl:`) in implementation.
 
 ### 5.3 Layout Behaviors Per Breakpoint
 
 **Mission Marketplace:**
 
 ```
-sm (< 640px):
+sm (< 768px):
 ┌──────────────────┐
 │ [Filters toggle] │
 │ [List] [Map]     │
@@ -50,7 +50,7 @@ sm (< 640px):
 │ └──────────────┘ │
 └──────────────────┘
 
-md (640-1023px):
+md (768-1023px):
 ┌──────────────────────────────┐
 │ [Filters bar]                │
 │ ┌────────────┐┌────────────┐ │
@@ -62,7 +62,7 @@ md (640-1023px):
 │ └────────────┘└────────────┘ │
 └──────────────────────────────┘
 
-lg (1024-1279px):
+lg (1024-1439px):
 ┌──────────────────────────────────────┐
 │ [Filters bar]                        │
 │ ┌──────────┐┌──────────┐┌──────────┐ │
@@ -71,7 +71,7 @@ lg (1024-1279px):
 │ └──────────┘└──────────┘└──────────┘ │
 └──────────────────────────────────────┘
 
-xl (>= 1280px):
+xl (>= 1440px):
 ┌─────────────────────────────────────────────────────┐
 │ ┌─────────────────────┐┌──────────────────────────┐ │
 │ │ Map view            ││ Mission list             │ │  (side-by-side)

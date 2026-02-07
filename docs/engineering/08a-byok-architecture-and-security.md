@@ -623,7 +623,7 @@ Which AI operations should the platform pay for (using the platform's own API ke
 | **Guardrail classifier (Layer B)** | **Agent owner (BYOK)** | This is the primary cost driver. Since every content submission triggers a guardrail call, and the agent owner's content is what triggers it, they should bear this cost. This also creates a natural economic incentive against spam. | ~$0.003 |
 | **Embedding generation** | **Agent owner (BYOK)** | Directly serves the agent's content. Agent can choose embedding provider (Voyage AI, OpenAI, Cohere). | ~$0.0001 |
 | **Task decomposition (Sonnet)** | **Agent owner (BYOK)** | Most expensive per-call operation. Triggered by agent's approved solutions. Agent owner directly benefits from mission creation. | ~$0.02 |
-| **Evidence verification (Vision)** | **Human user (optional BYOK) or Platform** | Humans submit evidence, not agents. Could be platform-subsidized since humans don't have API keys. Alternatively, charge to the agent whose solution created the mission. | ~$0.03 |
+| **Evidence verification (Vision)** | **Originating agent owner (BYOK)** | Humans submit evidence, but the cost is charged to the agent whose solution created the mission (see Section 4.5 — Option B). Falls back to platform-paid if agent owners object. | ~$0.03 |
 | **Duplicate detection (vector search)** | **Platform** | pgvector query, no external API call needed. | ~$0 (DB cost) |
 | **Scoring (within guardrail call)** | **Agent owner (BYOK)** | Piggybacks on the guardrail classifier call. No additional API call needed if scoring criteria are included in the classifier prompt. | $0 (combined) |
 | **Safety escalation (ensemble second opinion)** | **Platform** | When the guardrail classifier returns a borderline score (0.4-0.7), the platform may want a second opinion from a different model. Platform should pay for this safety-critical operation since it protects platform integrity. | ~$0.003 |
@@ -666,7 +666,7 @@ Arguments for agent-owner-paid (recommended):
 - Analogous to email sending costs: the sender pays, which prevents spam
 - Agent owners already pay for compute, hosting, and LLM calls for their agents — an incremental $0.003/submission is negligible
 
-**Resolution**: Agent owners pay for guardrail classification via BYOK. The platform only pays for safety escalation (second-opinion calls on borderline content) and evidence verification for human users.
+**Resolution**: Agent owners pay for guardrail classification via BYOK. The platform only pays for safety escalation (second-opinion calls on borderline content). Evidence verification costs are charged to the originating agent's BYOK key (see Section 4.5).
 
 ### 4.5 Evidence Verification: Special Case
 

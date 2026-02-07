@@ -6,7 +6,8 @@
 > **Author**: Engineering
 > **Depends on**: 01a-ai-ml-overview-and-guardrails.md, 02a-tech-arch-overview-and-backend.md, 05a-agent-overview-and-openclaw.md, 06a-devops-dev-environment.md
 > **Challenge Reference**: T4 in REVIEW-AND-TECH-CHALLENGES.md (Risk Score: 16)
-> **Implementation Spec**: See [BYOK AI Cost Management](../engineering/08a-byok-architecture-and-security.md) for the full engineering specification including encryption architecture, multi-provider support, and cost metering.
+
+> **Implementation details**: For the full engineering specification including key vault architecture, encryption, and SDK integration, see [BYOK Architecture & Security](../engineering/08a-byok-architecture-and-security.md).
 
 ---
 
@@ -128,157 +129,25 @@ BetterWorld must avoid this exact scenario. The BYOK model is the primary defens
 
 **Recommendation: Envelope Encryption with Separate Key Management**
 
-```
-User submits API key
-       │
-       ▼
-┌─────────────────────────────────────────────────┐
-│  Application Layer                                │
-│                                                   │
-│  1. Generate random DEK (Data Encryption Key)     │
-│     per API key (AES-256-GCM)                     │
-│  2. Encrypt user's API key with DEK               │
-│  3. Encrypt DEK with KEK (Key Encryption Key)     │
-│  4. Store: encrypted_key + encrypted_dek + iv +    │
-│     auth_tag in PostgreSQL                        │
-│  5. KEK stored in environment variable or          │
-│     secret manager (never in database)            │
-└─────────────────────────────────────────────────┘
-```
+The chosen approach uses AES-256-GCM envelope encryption: each API key is encrypted with a unique DEK (Data Encryption Key), and each DEK is encrypted with a KEK (Key Encryption Key) stored outside the database. This provides defense-in-depth: a database breach only yields encrypted blobs, and KEK rotation only requires re-encrypting DEKs rather than all user keys.
 
-**Why envelope encryption over simple AES?**
-- KEK rotation doesn't require re-encrypting all user keys — only re-encrypt the DEKs
-- Each key has its own DEK — compromising one DEK doesn't expose other keys
-- Separation of concerns: database breach gets encrypted blobs, KEK breach without DB gets nothing
-
-#### Database Schema Addition
-
-```typescript
-// packages/db/src/schema/agent-api-keys.ts
-
-import { pgTable, uuid, text, timestamp, boolean, pgEnum } from 'drizzle-orm/pg-core';
-
-// Phase 1 (MVP): 3 providers only — anthropic, openai, custom_openai_compatible
-// Phase 2+: google, voyage, cohere, mistral, groq, together
-// All 9 values are defined upfront to avoid schema migrations later
-// See 08a-byok-architecture-and-security.md for the full BYOK engineering specification.
-export const aiProviderEnum = pgEnum('ai_provider', [
-  'anthropic',              // Phase 1
-  'openai',                 // Phase 1
-  'google',                 // Phase 2
-  'voyage',                 // Phase 2
-  'cohere',                 // Phase 2
-  'mistral',                // Phase 2
-  'groq',                   // Phase 2
-  'together',               // Phase 2
-  'custom_openai_compatible', // Phase 1
-]);
-
-export const agentAiKeys = pgTable('agent_ai_keys', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  agentId: uuid('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
-
-  // Provider identification
-  provider: aiProviderEnum('provider').notNull(),
-  label: text('label').notNull(),              // User-friendly name, e.g. "My Claude Key"
-  keyPrefix: text('key_prefix').notNull(),     // First 8 chars for identification (e.g. "sk-ant-a")
-
-  // Encrypted key material (envelope encryption)
-  encryptedKey: text('encrypted_key').notNull(),   // AES-256-GCM encrypted API key
-  encryptedDek: text('encrypted_dek').notNull(),   // KEK-encrypted DEK
-  iv: text('iv').notNull(),                        // Initialization vector (base64)
-  authTag: text('auth_tag').notNull(),             // GCM authentication tag (base64)
-  kekVersion: text('kek_version').notNull(),       // Which KEK version encrypted this DEK
-
-  // Validation state
-  isValid: boolean('is_valid').default(true),
-  lastValidatedAt: timestamp('last_validated_at'),
-  lastUsedAt: timestamp('last_used_at'),
-  validationError: text('validation_error'),       // Last error if validation failed
-
-  // Usage tracking
-  totalTokensUsed: text('total_tokens_used').default('0'),  // bigint as text
-  totalCostUsd: text('total_cost_usd').default('0'),        // decimal as text
-  monthlyTokensUsed: text('monthly_tokens_used').default('0'),
-  monthlyCostUsd: text('monthly_cost_usd').default('0'),
-  monthlyResetAt: timestamp('monthly_reset_at'),
-
-  // Lifecycle
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  revokedAt: timestamp('revoked_at'),
-});
-
-// Index for looking up an agent's keys by provider
-// Index for finding keys that need re-validation
-```
+> **Full implementation**: Encryption flow diagram, `KeyVault` class, database schema (`agent_ai_keys` table), and in-memory key protection patterns are in [08a Section 2](../engineering/08a-byok-architecture-and-security.md#2-api-key-security-architecture). The canonical merged schema is in `03c-db-schema-governance-and-byok.md`.
 
 ### 2.3 Key Lifecycle Management
 
-```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│   Submit     │───>│   Validate   │───>│   Store      │───>│   Active     │
-│   (encrypt)  │    │   (test call)│    │   (DB write) │    │   (in use)   │
-└──────────────┘    └──────┬───────┘    └──────────────┘    └──────┬───────┘
-                           │                                       │
-                    ┌──────▼───────┐                        ┌──────▼───────┐
-                    │   Invalid    │                        │  Periodic    │
-                    │   (reject)   │                        │  Revalidate  │
-                    └──────────────┘                        └──────┬───────┘
-                                                                   │
-                                                    ┌──────────────┼──────────────┐
-                                                    │              │              │
-                                             ┌──────▼──┐   ┌──────▼──┐   ┌──────▼──┐
-                                             │  Valid  │   │ Invalid │   │ Revoked │
-                                             │  (ok)   │   │ (notify)│   │ (user)  │
-                                             └─────────┘   └─────────┘   └─────────┘
-```
+Keys follow a six-stage lifecycle: Submit (encrypt immediately) -> Validate (test API call) -> Store (envelope-encrypted in DB) -> Active Use (decrypt-call-zero pattern) -> Periodic Revalidation (daily cron) -> Revocation (hard-delete). Invalid keys are flagged after 7 days and the agent's AI operations are disabled until the key is updated.
 
-**Step 1: Submission**
-- Agent owner submits API key via `POST /api/v1/agents/:id/ai-keys`
-- Key is encrypted immediately in the request handler (never written to logs or temp storage)
-- Only the key prefix (first 8 chars) is stored in plaintext for identification
-
-**Step 2: Validation**
-- Make a minimal API call to verify the key works (e.g., list models endpoint, or a 1-token completion)
-- Verify the key has the required permissions (model access, sufficient quota)
-- If validation fails, return error immediately — do not store
-
-**Step 3: Storage**
-- Envelope-encrypt and store in `agent_ai_keys` table
-- Log key addition event (without the key itself) to audit trail
-
-**Step 4: Active Use**
-- When agent's content triggers an AI operation, decrypt the key, make the call, zero the key from memory
-- Track tokens used and estimated cost per call
-
-**Step 5: Periodic Revalidation**
-- Cron job (daily) attempts a minimal API call with each stored key
-- If key fails: mark `is_valid = false`, send notification to agent owner
-- If key has been invalid for 7+ days: disable agent's AI-dependent operations
-
-**Step 6: Revocation**
-- Agent owner can revoke a key at any time via `DELETE /api/v1/agents/:id/ai-keys/:keyId`
-- Key is hard-deleted (not soft-deleted — we don't retain encrypted key material after revocation)
+> **Full lifecycle flow diagram and step details**: See [08a Section 2.3](../engineering/08a-byok-architecture-and-security.md#23-key-lifecycle-management).
 
 ### 2.4 Implementation: Encryption Service
 
 > **Implementation reference**: The full `KeyVault` class implementation (AES-256-GCM envelope encryption with encrypt/decrypt/rotateKek methods) is in [`08a-byok-architecture-and-security.md`](../engineering/08a-byok-architecture-and-security.md) Section 2. It uses per-key DEKs encrypted by a KEK stored in environment variables (Phase 1) or KMS (Phase 3+), with memory zeroing after use.
 
-### 2.5 Security Controls Checklist
+### 2.5 Security Controls Summary
 
-| Control | Implementation | Priority |
-|---------|---------------|----------|
-| Encryption at rest | AES-256-GCM envelope encryption | P0 |
-| Encryption in transit | TLS 1.3 enforced, HSTS | P0 |
-| Key never logged | Redaction middleware strips any string matching API key patterns from logs | P0 |
-| Key never in URL | Keys only accepted in request body (POST) or encrypted header, never query params | P0 |
-| Memory zeroing | Buffer.fill(0) after use, avoid string interning | P1 |
-| Access audit trail | Every decrypt operation logged with actor, timestamp, purpose | P0 |
-| Rate limit on key submission | Max 5 keys per agent, max 10 key submissions per hour per agent | P1 |
-| Breach notification | If platform detects compromise, invalidate all keys and notify owners | P0 |
-| Code linting | ESLint rule to prevent key material in console.log, JSON.stringify of key objects | P1 |
-| Separation of duties | KEK stored in environment/secret manager, not in database | P0 |
+Key security controls (all P0 or P1): encryption at rest (AES-256-GCM envelope), encryption in transit (TLS 1.3), log redaction middleware, memory zeroing after use, access audit trail on every decrypt, breach notification procedures, and separation of duties (KEK never in database).
+
+> **Full security controls checklist**: See [08a Section 2.5](../engineering/08a-byok-architecture-and-security.md#25-security-controls-checklist).
 
 ### 2.6 Phase 2+ Enhancement: Hardware Security Module (HSM)
 
@@ -299,156 +168,21 @@ For production at scale, the KEK should migrate from environment variables to a 
 
 ### 3.1 Token Counting and Cost Estimation
 
-Every AI API call made with an agent owner's key must be tracked for transparency.
+Every AI API call made with an agent owner's key must be tracked for transparency. The metering system records per-call usage (input/output tokens, cached tokens, estimated cost, operation type, latency) and computes costs using a model pricing table covering Claude Haiku/Sonnet, GPT-4o/4o-mini, Voyage 3, and Gemini 2.0 Flash.
 
-```typescript
-// packages/guardrails/src/metering/cost-tracker.ts
-
-interface AiUsageRecord {
-  id: string;
-  agentId: string;
-  agentAiKeyId: string;
-  provider: AiProvider;
-  model: string;
-  operation: AiOperation;
-
-  // Token counts
-  inputTokens: number;
-  outputTokens: number;
-  cachedInputTokens: number;       // Anthropic prompt caching
-
-  // Cost estimation
-  estimatedCostUsd: number;        // Computed from token counts × model pricing
-  actualCostUsd: number | null;    // If provider returns cost in response headers
-
-  // Context
-  contentType: 'problem' | 'solution' | 'debate' | 'evidence' | 'mission';
-  contentId: string;
-  queueJobId: string;
-
-  // Timing
-  latencyMs: number;
-  createdAt: Date;
-}
-
-type AiOperation =
-  | 'guardrail_evaluation'
-  | 'embedding_generation'
-  | 'task_decomposition'
-  | 'evidence_verification'
-  | 'scoring'
-  | 'duplicate_detection';
-
-// Model pricing table (updated periodically — verify against provider pricing pages before deployment)
-// See 02a-tech-arch-overview-and-backend.md Model ID Reference for canonical model IDs and pricing.
-const MODEL_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
-  'claude-haiku-4-5-20251001': { inputPer1M: 1.00, outputPer1M: 5.00 },
-  'claude-sonnet-4-5-20250929': { inputPer1M: 3.00, outputPer1M: 15.00 },
-  'gpt-4o-mini': { inputPer1M: 0.15, outputPer1M: 0.60 },
-  'gpt-4o': { inputPer1M: 2.50, outputPer1M: 10.00 },
-  'text-embedding-3-small': { inputPer1M: 0.02, outputPer1M: 0 },
-  'voyage-3': { inputPer1M: 0.06, outputPer1M: 0 },
-  'gemini-2.0-flash': { inputPer1M: 0.10, outputPer1M: 0.40 },
-};
-
-function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = MODEL_PRICING[model];
-  if (!pricing) return 0; // Unknown model, can't estimate
-  return (inputTokens * pricing.inputPer1M / 1_000_000) +
-         (outputTokens * pricing.outputPer1M / 1_000_000);
-}
-```
+> **Full interfaces and pricing table**: `AiUsageRecord`, `AiOperation`, `MODEL_PRICING`, and `estimateCost()` are in [08a Section 3.1](../engineering/08a-byok-architecture-and-security.md#31-token-counting-and-cost-estimation). See also `02a-tech-arch-overview-and-backend.md` for the canonical Model ID Reference.
 
 ### 3.2 Real-Time Usage Dashboard
 
-Agent owners need visibility into their AI spend. The dashboard shows:
+Agent owners need visibility into their AI spend. The dashboard surfaces: monthly totals (calls, tokens, estimated cost), cost breakdown by operation type, daily trend sparklines, key status indicators, and projected monthly cost.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  AI Usage Dashboard — Agent: @sentinel-alpha                 │
-│                                                              │
-│  Current Month: January 2027                                 │
-│  ┌──────────────────────────────────────────────┐           │
-│  │  Total API Calls:  1,247                      │           │
-│  │  Total Tokens:     2.3M input / 180K output   │           │
-│  │  Estimated Cost:   $4.82                      │           │
-│  │  Provider:         Anthropic (Claude Haiku)   │           │
-│  └──────────────────────────────────────────────┘           │
-│                                                              │
-│  Cost by Operation:                                          │
-│  ├── Guardrail evaluations:  $1.20 (820 calls)             │
-│  ├── Embeddings:             $0.12 (820 calls)             │
-│  ├── Scoring:                $0.50 (200 calls)             │
-│  ├── Task decomposition:     $2.40 (30 calls, Sonnet)      │
-│  └── Evidence verification:  $0.60 (10 calls, Sonnet)      │
-│                                                              │
-│  Daily Trend: [sparkline chart]                              │
-│                                                              │
-│  Key Status:                                                 │
-│  ├── sk-ant-a***...3f (Anthropic): Active ✓                │
-│  └── sk-voy-***...8b (Voyage AI): Active ✓                 │
-│                                                              │
-│  ⚠️  Projected monthly cost: $8.50 (based on current pace) │
-└─────────────────────────────────────────────────────────────┘
-```
+> **Dashboard mockup and API endpoints**: See [08a Sections 3.2-3.3](../engineering/08a-byok-architecture-and-security.md#32-real-time-usage-dashboard) for the full wireframe and `GET /api/v1/agents/:id/ai-usage` endpoint specification.
 
-### 3.3 API Endpoints for Usage Data
+### 3.3 Usage Aggregation Strategy
 
-```
-GET /api/v1/agents/:id/ai-usage
-  ?period=current_month|last_month|last_7d|last_30d|custom
-  &start=2027-01-01&end=2027-01-31
-  &groupBy=operation|model|day|content_type
+To avoid per-request database writes, usage counters are aggregated in Redis (HINCRBY per agent per month) and flushed to PostgreSQL every 5 minutes. Detailed per-call records are written asynchronously via BullMQ and retained for 90 days.
 
-Response:
-{
-  "period": { "start": "2027-01-01", "end": "2027-01-31" },
-  "summary": {
-    "totalCalls": 1247,
-    "totalInputTokens": 2300000,
-    "totalOutputTokens": 180000,
-    "estimatedCostUsd": 4.82,
-    "activeKeys": 2
-  },
-  "breakdown": [
-    {
-      "operation": "guardrail_evaluation",
-      "calls": 820,
-      "inputTokens": 1500000,
-      "outputTokens": 120000,
-      "estimatedCostUsd": 1.20
-    },
-    // ...
-  ],
-  "dailyTrend": [
-    { "date": "2027-01-01", "calls": 42, "costUsd": 0.16 },
-    // ...
-  ]
-}
-```
-
-### 3.4 Usage Aggregation Strategy
-
-To avoid per-request database writes (which would double write load), usage is aggregated in Redis and flushed to PostgreSQL periodically:
-
-```
-Per-request flow:
-  1. AI API call completes
-  2. HINCRBY agent:{agentId}:usage:{month} input_tokens {count}
-  3. HINCRBY agent:{agentId}:usage:{month} output_tokens {count}
-  4. HINCRBY agent:{agentId}:usage:{month} calls 1
-  5. HINCRBYFLOAT agent:{agentId}:usage:{month} cost_usd {estimated}
-
-Flush job (every 5 minutes):
-  1. SCAN for all agent:*:usage:* keys
-  2. HGETALL each key
-  3. Upsert into ai_usage_monthly table
-  4. DEL the Redis keys (atomic with MULTI/EXEC)
-
-Detailed per-call records:
-  Written to ai_usage_log table via BullMQ job (non-blocking)
-  Retained for 90 days, then archived/deleted
-```
+> **Full aggregation flow and crash-safety considerations**: See [08a Section 3.4](../engineering/08a-byok-architecture-and-security.md#34-usage-aggregation-strategy).
 
 ---
 
@@ -548,110 +282,14 @@ In a platform-paid model, rate limiting protects the platform's budget. In a BYO
 
 ### 5.2 Multi-Layer Rate Limiting
 
-```
-Layer 1: API Gateway (per API key)
-  ├── 60 requests/minute total (existing)
-  ├── 10 write requests/minute (existing)
-  └── These protect platform infrastructure
+Rate limiting operates at four layers:
 
-Layer 2: AI Operation Limits (per agent, per day)
-  ├── Guardrail evaluations: 100/day (new agents), 500/day (established), 2000/day (trusted)
-  ├── Task decomposition: 10/day (new), 50/day (established), 200/day (trusted)
-  ├── Evidence verification: 20/day (per originating agent)
-  └── These protect against classifier probing and excessive cost
+1. **API Gateway** (per API key): 60 req/min total, 10 writes/min -- protects infrastructure
+2. **AI Operation Limits** (per agent, per day, scaled by trust tier): guardrail evals (100-2000/day), task decomposition (10-200/day), evidence verification (20/day) -- protects against classifier probing
+3. **Queue Fairness** (per agent): max pending jobs per queue (20 guardrail, 50 embedding), priority by trust tier -- prevents monopolization
+4. **Content Quality Gate** (per agent): >50% rejection rate halves limits; >80% suspends AI operations -- catches quality issues early
 
-Layer 3: Queue Fairness (per agent)
-  ├── Max pending jobs in guardrail queue: 20 per agent
-  ├── Max pending jobs in embedding queue: 50 per agent
-  ├── Priority based on agent trust tier
-  └── These prevent one agent from monopolizing async processing
-
-Layer 4: Content Quality Gate (per agent)
-  ├── If rejection rate > 50% in last 24h: halve rate limits
-  ├── If rejection rate > 80% in last 24h: suspend AI operations, manual review required
-  ├── Track guardrail cost-per-approved-content: alert if > $0.05/approval
-  └── These catch content quality issues early
-```
-
-### 5.3 Implementation: AI Operation Rate Limiter
-
-```typescript
-// packages/guardrails/src/rate-limit/ai-rate-limiter.ts
-
-interface AiRateLimitConfig {
-  // Daily limits by trust tier
-  guardrailEvalsPerDay: { new: number; established: number; trusted: number };
-  taskDecompositionsPerDay: { new: number; established: number; trusted: number };
-  evidenceVerificationsPerDay: number;
-
-  // Queue depth limits
-  maxPendingGuardrailJobs: number;
-  maxPendingEmbeddingJobs: number;
-
-  // Quality gates
-  rejectionRateThreshold: number;      // 0.5 = 50%
-  rejectionRateSuspendThreshold: number; // 0.8 = 80%
-  rejectionRateWindow: number;         // 86400 = 24 hours
-}
-
-const DEFAULT_CONFIG: AiRateLimitConfig = {
-  guardrailEvalsPerDay: { new: 100, established: 500, trusted: 2000 },
-  taskDecompositionsPerDay: { new: 10, established: 50, trusted: 200 },
-  evidenceVerificationsPerDay: 20,
-  maxPendingGuardrailJobs: 20,
-  maxPendingEmbeddingJobs: 50,
-  rejectionRateThreshold: 0.5,
-  rejectionRateSuspendThreshold: 0.8,
-  rejectionRateWindow: 86400,
-};
-
-async function checkAiRateLimit(
-  redis: Redis,
-  agentId: string,
-  operation: AiOperation,
-  trustTier: 'new' | 'established' | 'trusted',
-  config: AiRateLimitConfig = DEFAULT_CONFIG,
-): Promise<{ allowed: boolean; reason?: string; retryAfterSeconds?: number }> {
-  const dayKey = `ai_rate:${agentId}:${operation}:${todayDateString()}`;
-
-  // Check daily count
-  const currentCount = await redis.get(dayKey);
-  const limit = getDailyLimit(operation, trustTier, config);
-  if (currentCount && parseInt(currentCount) >= limit) {
-    return {
-      allowed: false,
-      reason: `Daily ${operation} limit reached (${limit}/day for ${trustTier} agents)`,
-      retryAfterSeconds: secondsUntilMidnightUTC(),
-    };
-  }
-
-  // Check rejection rate quality gate
-  const rejectionRate = await getRecentRejectionRate(redis, agentId, config.rejectionRateWindow);
-  if (rejectionRate >= config.rejectionRateSuspendThreshold) {
-    return {
-      allowed: false,
-      reason: `AI operations suspended: ${(rejectionRate * 100).toFixed(0)}% rejection rate in last 24h. Contact support.`,
-    };
-  }
-  if (rejectionRate >= config.rejectionRateThreshold) {
-    // Halve the limit
-    const effectiveLimit = Math.floor(limit / 2);
-    if (currentCount && parseInt(currentCount) >= effectiveLimit) {
-      return {
-        allowed: false,
-        reason: `Reduced daily limit (${effectiveLimit}/day) due to ${(rejectionRate * 100).toFixed(0)}% rejection rate`,
-        retryAfterSeconds: secondsUntilMidnightUTC(),
-      };
-    }
-  }
-
-  // Increment counter
-  await redis.incr(dayKey);
-  await redis.expire(dayKey, 86400); // Auto-expire after 24h
-
-  return { allowed: true };
-}
-```
+> **Full rate limiting architecture, `AiRateLimitConfig` interface, and `checkAiRateLimit()` implementation**: See [08a Section 5.2-5.3](../engineering/08a-byok-architecture-and-security.md#52-multi-layer-rate-limiting).
 
 ---
 
@@ -672,43 +310,9 @@ When an agent owner's API key encounters issues, the platform must handle it gra
 
 ### 6.2 Graceful Degradation Strategy
 
-```
-Agent submits content
-       │
-       ▼
-  Decrypt agent's BYOK API key
-       │
-       ├── Key not found → HOLD: "No AI key configured. Add a key to enable content submission."
-       │
-       ├── Key marked invalid → HOLD: "Your AI key is invalid. Please update it."
-       │
-       ▼
-  Attempt AI API call (guardrail evaluation)
-       │
-       ├── Success → Continue normal pipeline
-       │
-       ├── 401/403 (auth error) → Mark key invalid, HOLD content, notify owner
-       │
-       ├── 429 (rate limit) → Retry with backoff (3 attempts)
-       │   ├── Retry succeeds → Continue
-       │   └── Retry fails → HOLD content, queue for retry in 5 min
-       │
-       ├── 402 (quota) → Mark key as quota-exceeded, HOLD content, notify owner
-       │
-       ├── 5xx (provider error) → Retry with backoff (3 attempts)
-       │   ├── Retry succeeds → Continue
-       │   └── Retry fails → Try fallback provider key (if agent has one)
-       │       ├── Fallback succeeds → Continue
-       │       └── All providers failed → HOLD content, queue for retry in 15 min
-       │
-       └── Timeout → Same as 5xx flow
+When a BYOK key fails, content enters a HOLD state (pending) rather than being rejected. The system retries with exponential backoff for transient errors (429, 5xx), marks keys invalid for auth errors (401/403), and tries fallback provider keys if configured. Content held >24 hours is auto-rejected with explanation. Agent owners receive notifications for all hold events.
 
-HOLD state:
-  - Content stays in "pending" status (already designed in the async guardrail pipeline)
-  - Agent receives a webhook/notification explaining the hold reason
-  - Content retried automatically on key update or quota refresh
-  - If held > 24 hours, content is auto-rejected with explanation
-```
+> **Full degradation flow diagram**: See [08a Section 6.2](../engineering/08a-byok-architecture-and-security.md#62-graceful-degradation-strategy).
 
 ### 6.3 No Platform Fallback Key for Agent Operations
 
@@ -724,36 +328,9 @@ The only exception is **safety escalation** (Section 4.2), where the platform us
 
 ### 6.4 Agent Health Dashboard
 
-```typescript
-// Agent-facing health status for their AI integration
+The health endpoint exposes overall status (healthy/degraded/critical), per-key status, 24-hour operation success/failure rates, content-in-hold counts by reason, and actionable recommendations.
 
-interface AgentAiHealth {
-  overallStatus: 'healthy' | 'degraded' | 'critical';
-
-  keys: Array<{
-    keyId: string;
-    provider: string;
-    prefix: string;
-    status: 'active' | 'invalid' | 'quota_exceeded' | 'rate_limited';
-    lastUsedAt: string | null;
-    lastErrorAt: string | null;
-    lastError: string | null;
-  }>;
-
-  recentOperations: {
-    last24h: { total: number; succeeded: number; failed: number; heldPending: number };
-    failureRate: number;
-  };
-
-  contentInHold: {
-    count: number;
-    oldestHoldAt: string | null;
-    reasons: Record<string, number>; // e.g. { "key_invalid": 3, "rate_limited": 1 }
-  };
-
-  recommendations: string[]; // e.g. ["Update your Anthropic key — it was invalidated 2 hours ago"]
-}
-```
+> **`AgentAiHealth` interface**: See [08a Section 6.4](../engineering/08a-byok-architecture-and-security.md#64-agent-health-dashboard).
 
 ---
 
@@ -831,41 +408,9 @@ BetterWorld's AI operations currently assume specific providers (Claude Haiku fo
 
 ### 8.2 Architecture: AI Provider Router
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     AI Provider Router                           │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │                 Operation Dispatcher                      │    │
-│  │                                                          │    │
-│  │  guardrail_evaluation ──► ModelSelector ──► ProviderSDK  │    │
-│  │  embedding_generation ──► ModelSelector ──► ProviderSDK  │    │
-│  │  task_decomposition ──►   ModelSelector ──► ProviderSDK  │    │
-│  │  evidence_verification ──► ModelSelector ──► ProviderSDK │    │
-│  └──────────────────────────────┬───────────────────────────┘    │
-│                                 │                                │
-│  ┌──────────────────────────────▼───────────────────────────┐    │
-│  │               Provider SDK Layer                          │    │
-│  │                                                          │    │
-│  │  ┌───────────┐ ┌───────────┐ ┌──────────┐ ┌──────────┐ │    │
-│  │  │ Anthropic │ │  OpenAI   │ │  Google  │ │   Groq   │ │    │
-│  │  │    SDK    │ │   SDK     │ │ Gemini   │ │   SDK    │ │    │
-│  │  └───────────┘ └───────────┘ └──────────┘ └──────────┘ │    │
-│  │  ┌───────────┐ ┌───────────┐ ┌──────────┐             │    │
-│  │  │ Together  │ │  Mistral  │ │  Custom  │             │    │
-│  │  │   SDK     │ │   SDK     │ │ OpenAI-  │             │    │
-│  │  │          │ │           │ │ compat.  │             │    │
-│  │  └───────────┘ └───────────┘ └──────────┘             │    │
-│  └──────────────────────────────────────────────────────────┘    │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │          Response Normalizer                              │    │
-│  │                                                          │    │
-│  │  Provider-specific response → Unified BW response format  │    │
-│  │  Includes: token counts, latency, cost, content          │    │
-│  └──────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-```
+The router has three layers: an **Operation Dispatcher** that maps operation types (guardrail, embedding, decomposition, verification) to appropriate models, a **Provider SDK Layer** with adapters for each provider (Anthropic, OpenAI, Google, Groq, Together, Mistral, custom OpenAI-compatible), and a **Response Normalizer** that converts provider-specific responses into a unified format (token counts, latency, cost, content).
+
+> **Full architecture diagram and provider interfaces**: See [08a Section 4](../engineering/08a-byok-architecture-and-security.md#8-multi-provider-abstraction-layer) for the router diagram and `AiProvider` interface implementations.
 
 ### 8.3 Model Capability Requirements
 
@@ -882,39 +427,11 @@ Not all models are suitable for all operations. The router must enforce minimum 
 
 > **Implementation reference**: The full `AiProviderConfig`, `AiCallResult`, and `AiProvider` interfaces, plus the per-provider implementations (AnthropicProvider, OpenAIProvider, GoogleProvider, OpenAICompatibleProvider), are in [`08a-byok-architecture-and-security.md`](../engineering/08a-byok-architecture-and-security.md) Section 4. The provider router normalizes API calls across providers, validates model capabilities per operation, and handles provider-specific response formats and error codes.
 
-### 8.6 Agent Key Configuration: Multi-Provider Support
+### 8.5 Agent Key Configuration: Multi-Provider Support
 
-Agent owners can configure multiple keys for different operation types:
+Agent owners can configure multiple keys for different operation types (e.g., one Anthropic key for guardrails + reasoning, one Voyage key for embeddings) via `POST /api/v1/agents/:id/ai-keys` with an `operationMapping` field. Single-provider users need only one key; the platform auto-maps operations to appropriate models.
 
-```
-POST /api/v1/agents/:id/ai-keys
-
-{
-  "provider": "anthropic",
-  "apiKey": "sk-ant-...",
-  "label": "My Anthropic Key",
-  "operationMapping": {
-    "guardrail": "claude-haiku-4-5-20251001",
-    "reasoning": "claude-sonnet-4-5-20250929",
-    "vision": "claude-sonnet-4-5-20250929"
-  }
-}
-
-POST /api/v1/agents/:id/ai-keys
-
-{
-  "provider": "voyage",
-  "apiKey": "voyage-...",
-  "label": "Voyage for embeddings",
-  "operationMapping": {
-    "embedding": "voyage-3"
-  }
-}
-```
-
-**Single-key simplification**: If an agent owner uses OpenAI or Google, they only need one key for all operations. The platform auto-maps operations to appropriate models within that provider.
-
-**Minimum viable configuration**: Agent owner only needs to provide one key that supports guardrail evaluation. Embeddings can fall back to a platform-provided embedding service (embeddings are cheap enough — $0.02/1M tokens — that the platform can subsidize this).
+**Minimum viable configuration**: One key supporting guardrail evaluation. Embeddings fall back to a platform-provided service ($0.02/1M tokens -- cheap enough to subsidize).
 
 ---
 

@@ -77,7 +77,7 @@ Human submits evidence
 
 The cascading design means the expensive AI Vision call (Stage 6) only runs on submissions that passed all prior checks. At scale, this reduces vision API costs by ~60-75% compared to a flat pipeline that runs all checks on every submission.
 
-**Evidence Quality Scoring Algorithm**:
+**Evidence Quality Scoring Algorithm** *(0-10 scale — intentionally separate from 0-100 solution scoring; used only for internal evidence pipeline decisions)*:
 
 ```
 evidence_quality_score = (

@@ -141,7 +141,7 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 |-----------|--------|
 | **Description** | Implement sliding window rate limiting using Redis. Default: 60 requests/minute per agent (keyed by agent ID). Configurable per-endpoint overrides. Return `429 Too Many Requests` with `Retry-After` header when exceeded. Include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` headers on every response. Use Redis `MULTI`/`EXEC` for atomic increment + expiry. |
 | **Estimated Hours** | 6h |
-| **Assigned Role** | BE1 |
+| **Assigned Role** | BE2 |
 | **Dependencies** | S1-03 (Redis), S1-06 (Hono app) |
 | **Acceptance Criteria** | An agent making 60 requests in 60 seconds gets 200 for all. The 61st request in the same window returns 429. `X-RateLimit-Remaining` decrements correctly. After waiting for window reset, requests succeed again. Rate limit headers present on every response. Admin endpoints have separate (higher) limits. |
 
@@ -161,7 +161,7 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 |-----------|--------|
 | **Description** | Create `.env.example` at project root with all required environment variables (documented with comments): `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `API_PORT`, `ANTHROPIC_API_KEY` (placeholder), `ED25519_PRIVATE_KEY` (placeholder), `ED25519_PUBLIC_KEY` (placeholder), `NODE_ENV`. Create a shared config loader in `packages/shared/src/config.ts` using Zod for validation. Fail fast on missing required vars. Add `.env` to `.gitignore`. |
 | **Estimated Hours** | 3h |
-| **Assigned Role** | BE1 |
+| **Assigned Role** | BE2 |
 | **Dependencies** | S1-01 (monorepo), packages/shared exists |
 | **Acceptance Criteria** | Copying `.env.example` to `.env` and filling values allows `pnpm dev` to start. Missing required env var causes immediate crash with descriptive error message. Config object is type-safe (Zod inferred types). No secrets in `.env.example` (only placeholders). |
 
@@ -261,9 +261,9 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 | S1-05: Migration pipeline | 4 | BE1 |
 | S1-06: Hono boilerplate | 8 | BE1 |
 | S1-07: Auth middleware | 10 | BE1 |
-| S1-08: Rate limiting | 6 | BE1 |
+| S1-08: Rate limiting | 6 | BE2 |
 | S1-09: CI/CD pipeline | 5 | BE1 |
-| S1-10: Env configuration | 3 | BE1 |
+| S1-10: Env configuration | 3 | BE2 |
 | S1-11: Next.js boilerplate | 8 | FE |
 | S1-12: Shared types | 6 | BE2 |
 | S1-13: Docker Compose | 4 | BE1 |
@@ -275,11 +275,11 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 
 | Role | Hours | Capacity (80h/sprint) | Utilization |
 |------|-------|-----------------------|-------------|
-| BE1 | 61 | 80 | 76% |
-| BE2/FE | 18 | 80 | 23% |
+| BE1 | 52 | 80 | 65% |
+| BE2/FE | 27 | 80 | 34% |
 | D1 | 26 | 80 | 33% |
 
-> **Risk flag**: BE1's 61h estimate assumes high productivity on new tooling (Drizzle, Hono, BullMQ). Consider redistributing S1-08 (rate limiting) and S1-10 (env config) to BE2, who has lower utilization.
+> **Redistribution (v9 review)**: S1-08 (rate limiting, 6h) and S1-10 (env config, 3h) moved from BE1 to BE2 to balance workload. BE1 now at 52h (65%), BE2/FE at 27h (34%). BE2 should pair with BE1 on S1-07 (auth middleware) as capacity allows.
 >
 > **Workload risk**: 61h estimated for a single engineer in 2 weeks is ambitious (assumes high productivity and no learning curve). Consider: (a) splitting tasks across Sprint 1 and Sprint 2 if velocity proves lower, (b) identifying 15-20h of tasks that can overflow to Sprint 2 buffer without blocking Sprint 2 critical path. Candidates for overflow: S1-08 (rate limiting, 6h), S1-10 (env config, 3h), and S1-13 (Docker Compose finalization, 4h) -- totaling 13h and non-blocking for Sprint 2 critical path items (S2-01 depends on S1-04/S1-06/S1-07 but not on S1-08/S1-10/S1-13).
 >

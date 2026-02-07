@@ -1478,6 +1478,58 @@ Given the analysis above, the optimal strategy by phase:
 
 ---
 
+## Phase 1 Implementation Guide
+
+This section maps the research findings above to concrete Phase 1 (Sprint 0-4) actions.
+
+### Pipeline Stages: Phase 1 vs Phase 2+
+
+| Stage | Description | Phase 1? | Notes |
+|-------|-------------|----------|-------|
+| Stage 0 | Intake (format validation, rate limit) | Yes | Prerequisite for all evidence handling |
+| Stage 1 | Metadata extraction (EXIF via `exifr`, app GPS capture) | Yes | Cheap first-pass signal; see Section 1 |
+| Stage 2 | Plausibility check (timestamp validation, GPS cross-validation) | Yes | Zero-cost consistency checks on extracted metadata |
+| Stage 3 | Perceptual hashing (pHash/dHash/SHA-256 dedup) | Yes | Cheapest fraud detector; see Section 5 |
+| Stage 4 | Anomaly detection (basic submission-pattern flags) | Yes | Simple flags only (e.g., near-duplicate flagging from Stage 3) |
+| Stage 5 | Peer review | **Phase 2** | Requires reviewer pool, honeypots, reputation scoring |
+| Stage 6 | AI Vision analysis (Claude Vision) | **Phase 2** | Phase 1 uses direct Claude Vision for all non-rejected evidence as a stopgap; full cascading pipeline (Hive + CLIP + tiered Vision) is Phase 2 |
+
+Phase 1 runs a simplified pipeline: Stages 0-4 filter obvious fraud and extract signals at zero marginal cost, then remaining evidence goes directly to Claude Vision (agent-owner-pays via BYOK). At 500 submissions/day this costs ~$30/month -- acceptable for MVP.
+
+### Sprint 3-4 Implementation Checklist
+
+Per the sprint plan: Sprint 3 builds the evidence submission API, Sprint 4 adds the verification pipeline.
+
+**Sprint 3 (Evidence Submission API):**
+- [ ] Evidence upload endpoint with format validation and rate limiting (Stage 0)
+- [ ] Integrate `exifr` for EXIF metadata extraction on upload (Stage 1)
+- [ ] Frontend: capture app GPS via Geolocation API at submission time (Stage 1)
+- [ ] Compute SHA-256 hash on upload and store in `evidence_hashes` table (Stage 3)
+- [ ] Compute pHash and dHash on upload using `sharp` + custom implementation (Stage 3)
+- [ ] Store evidence images in R2/S3 with reference in DB
+
+**Sprint 4 (Verification Pipeline):**
+- [ ] BullMQ job for evidence verification pipeline orchestration
+- [ ] Stage 2: EXIF timestamp plausibility check and GPS cross-validation (app GPS vs EXIF GPS)
+- [ ] Stage 3: Duplicate/near-duplicate detection via pHash hamming distance query
+- [ ] Stage 4: Flag near-duplicate matches and metadata inconsistencies as anomalies
+- [ ] Decision logic: auto-reject duplicates, flag anomalies, pass remaining to Claude Vision
+- [ ] Claude Vision integration for remaining evidence (direct call, no cascading yet)
+- [ ] Evidence status tracking (pending -> verified / rejected / flagged)
+- [ ] Unit tests for hash computation, EXIF extraction, pipeline decision logic
+
+### What Is Explicitly Deferred to Phase 2+
+
+- Hive Moderation API for AI-generated image detection (Section 2)
+- CLIP similarity matching for mission-photo relevance (Section 3.3)
+- Open-source VLM hosting (LLaVA, InternVL2) (Section 3.2)
+- Peer review system with honeypots and reviewer reputation (Section 4)
+- C2PA/Content Credentials verification (Section 2.2.1)
+- Collusion detection and advanced fraud scoring (Section 4.3.5)
+- Geofencing for high-value missions (Section 6.3)
+
+---
+
 ## Summary of Key Recommendations
 
 | # | Recommendation | Phase | Impact | Effort |
