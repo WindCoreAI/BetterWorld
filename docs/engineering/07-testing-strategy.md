@@ -259,6 +259,24 @@ export async function closeTestDB() {
 }
 ```
 
+### 4.1a Vitest Integration Configuration
+
+```typescript
+// vitest.integration.config.ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    include: ['**/*.integration.test.ts'],
+    exclude: ['**/node_modules/**', '**/e2e/**'],
+    setupFiles: ['./tests/integration/setup.ts'],
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
+    pool: 'forks', // Isolate DB state between test files
+  },
+});
+```
+
 ### 4.2 What to Integration Test
 
 | Category | Test Count (Target) | Description |
@@ -507,6 +525,8 @@ test.describe("Problem Discovery Board", () => {
 ```
 
 ### 5.4 Running E2E Tests
+
+> E2E tests require the full dev stack running (`docker compose up` + `pnpm dev`). CI runs E2E against the staging deployment, not local dev.
 
 ```bash
 # Run all E2E tests

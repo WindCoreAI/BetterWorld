@@ -158,6 +158,8 @@ These risks target the incentive layer. If token economics can be gamed, the ent
 
 ### 2.8 Risk Heat Map Summary
 
+> **Naming convention**: Cross-functional risks use the `XF-` prefix. Engineering risks use `ENG-`, PM risks use `PM-`, and design risks use `DES-`. All prefixes are for documentation reference only and are not used in code.
+
 ```
                     Severity ->
 Likelihood     1(Min)   2(Low)   3(Med)   4(High)   5(Crit)
@@ -177,6 +179,8 @@ Likelihood     1(Min)   2(Low)   3(Med)   4(High)   5(Crit)
 2(Unlikely)                               SEC-07    SEC-03
 1(Rare)
 ```
+
+> **Reading guide**: The heat map plots risks by Likelihood (x-axis) vs Impact (y-axis). Red zone (top-right) = immediate action required. Yellow zone = monitor and mitigate. Green zone (bottom-left) = accept. Each cell lists the risk IDs that fall in that quadrant.
 
 ### 2.9 Top 10 Risks by Score
 
@@ -668,6 +672,8 @@ Each risk is tagged with the phase in which it first becomes relevant, and a **r
 2. Evaluate whether the debate diversity requirements were sufficient.
 3. Improve graph analysis algorithms with confirmed cluster patterns.
 4. Consider whether mandatory debate assignment (rather than self-selection) should be the default.
+
+> **Playbook expansion plan**: Detailed playbooks for the remaining 8 top risks will be drafted during Sprint 1 (W1-2) by the engineering lead and reviewed by the full team. Priority order: R3 (data privacy breach), R4 (AI hallucination), R5 (platform abuse), R6 (infrastructure failure), R7 (team burnout), R8 (scope creep), R9 (regulatory change), R10 (dependency vulnerability).
 
 ---
 

@@ -9,6 +9,8 @@
 > This document is the definitive reference for all visual, interaction, and brand decisions for BetterWorld. It is written to be immediately actionable by frontend engineers implementing the platform in Next.js 15, Tailwind CSS 4, and the calm neumorphic aesthetic aligned with ZephyrOS.
 >
 > **Figma Prototypes**: All components and screens in this document have corresponding Figma designs in the `BetterWorld / Design System / v1.0` workspace. Engineers should reference Figma for pixel-precise specs, spacing, and interactive states. Figma file link to be added once initial prototypes are complete (Sprint 1, task S1-D1).
+>
+> **Figma delivery target**: Sprint 1 midpoint (W2). Design lead to create Figma component library and share links. Until then, developers should use the component specifications in this document as the source of truth.
 
 ---
 
@@ -184,6 +186,9 @@ In dark mode, domain colors are lightened to maintain WCAG AA contrast against t
 | Mental Health & Wellbeing | `#8B6DAF` | `#A88BC5` | 5.0:1 | Yes |
 | Community Building | `#D4785C` | `#E89478` | 5.5:1 | Yes |
 | Disaster Response | `#B84545` | `#D46262` | 4.6:1 | Yes |
+
+> **Accessibility**: The Disaster Response domain color (#B84545) has a 4.6:1 contrast ratio, which meets WCAG AA for normal text but fails AAA. For critical UI elements, use the darkened variant or pair with white text on the colored background.
+
 | Digital Inclusion | `#3D8B8B` | `#5EACAC` | 5.6:1 | Yes |
 | Human Rights | `#7B5EA7` | `#9A7EC2` | 4.7:1 | Yes |
 | Clean Water & Sanitation | `#4A87B5` | `#6BA4CC` | 5.4:1 | Yes |
@@ -248,6 +253,8 @@ Using CSS `clamp()` for fluid scaling between mobile (375px) and desktop (1440px
 }
 ```
 
+> **Note**: `clamp()` values are calculated using the formula: `clamp(min, preferred, max)` where preferred = `min + (max - min) * ((100vw - 320px) / (1440 - 320))`. Verify in browser at 320px and 1440px viewport widths.
+
 **Font Pairing Rationale**
 Using Inter for both headings and body (with weight/size differentiation) follows the "superfamily" approach. This eliminates the visual noise of a second typeface and keeps the UI feeling unified. JetBrains Mono provides the necessary contrast for data and code without introducing a third humanist face. The result: warm, readable, modern, and fast to load.
 
@@ -272,6 +279,8 @@ Lucide is the recommended icon library. It is MIT-licensed, actively maintained,
 ```bash
 npm install lucide-react
 ```
+
+> Pin `lucide-react` to a specific version (e.g., `^0.460.0`) in `package.json` to prevent icon breaking changes. Review icon updates quarterly.
 
 **Custom Icon Design Guidelines**
 

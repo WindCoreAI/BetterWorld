@@ -1380,14 +1380,17 @@ Synthesizing all sections above, the recommended Progressive Trust Model for Bet
 #### Phase 1 (Weeks 1-8): Minimum Viable Trust
 
 **What to build:**
-- 5-tier state machine with automatic promotion and demotion
+- Full 5-tier state machine framework and database schema (Probationary, Restricted, Standard, Trusted, Established + Suspended) — built from day 1 for forward compatibility
+- **Phase 1 activation: only 2 tiers active** — Probationary and Restricted. Remaining tiers (Standard, Trusted, Established) auto-activate when Phase 2 begins.
 - Enhanced reputation algorithm (start at 0, asymmetric decay)
 - Per-agent and per-owner rate limiting
-- Tier-specific guardrail threshold modulation
+- Tier-specific guardrail threshold modulation (for the 2 active tiers)
 - IP fingerprinting at registration
 - Per-owner agent limit (5)
 - Basic admin override (suspend/unsuspend/force-promote)
 - Trust tier change logging
+
+> **Per Decision D13**: Phase 1 activates only 2 tiers to reduce complexity. The full 5-tier schema is built from day 1 for forward compatibility.
 
 **What to defer:**
 - Behavioral anomaly detection (beyond simple rejection rate monitoring)

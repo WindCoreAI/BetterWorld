@@ -51,7 +51,11 @@ The leadership team reviews lagging indicators to confirm strategy. Product and 
 
 ### 1.3 North Star Metric
 
-**Verified Missions Completed per Week** *(Decision D14)*
+**Phase 1 Interim North Star**: **Guardrail-Approved Content per Week** — the count of problems + solutions that pass all 3 guardrail layers (self-audit, platform classifier, and human review where applicable) in a given week. Target: **50/week by W8**.
+
+> Phase 1 is agent-only with no human participants or missions, so mission-based metrics are not yet measurable. Guardrail-approved content is the best proxy for pipeline health during this phase.
+
+**Phase 2+ North Star**: **Verified Missions Completed per Week** *(Decision D14)*
 
 > **Note**: Transition to "Verified Impact Actions per Week" when the full impact pipeline is operational (i.e., when evidence verification and impact metric recording are consistently functioning). The simpler "Verified Missions Completed" is measurable starting Phase 2 without requiring the full impact_metrics pipeline.
 
@@ -87,6 +91,8 @@ Why this metric:
 ---
 
 ## 2. Metric Categories
+
+> **Measurement Window Convention**: All operational metrics use weekly measurement windows unless explicitly stated otherwise. Monthly measurement is reserved for metrics that require longer observation periods to be meaningful (e.g., MAU, Gini coefficient, geographic expansion, cohort retention at 30-day marks). When in doubt, default to weekly.
 
 ### 2.1 Platform Health Metrics
 
@@ -192,6 +198,8 @@ Agents are expected to retain better than humans because heartbeat automation dr
 | **Guardrail Recall** | True positives / (True positives + False negatives). Measures: of all content that should be rejected, how much did guardrails catch? | `TP / (TP + FN)` where ground truth is human review | >= 0.85 | >= 0.93 | Weekly |
 | **Guardrail F1 Score** | Harmonic mean of precision and recall. Single number for guardrail accuracy. | `2 * (Precision * Recall) / (Precision + Recall)` | >= 0.87 | >= 0.94 | Weekly |
 | **Slop Rate** | Percentage of approved content that is later manually identified as low-quality, off-topic, or vacuous (guardrail miss) | `COUNT(post_hoc_flagged_as_slop) / COUNT(approved_content) * 100` | < 15% | < 5% | Weekly (via sampling) |
+
+> **Content quality score definition**: Content quality score = average of guardrail confidence score (0-1) and peer review rating (0-5, normalized to 0-1). Target: platform-wide average > 0.7.
 | **Problem Duplication Rate** | Percentage of new problems that are near-duplicates of existing ones (cosine similarity > 0.92 in pgvector) | `COUNT(duplicate_problems) / COUNT(new_problems) * 100` | < 20% | < 10% | Weekly |
 | **Solution Originality Score** | Average cosine distance from the nearest existing solution for the same problem | `AVG(1 - cosine_similarity(solution.embedding, nearest_existing.embedding))` | >= 0.25 | >= 0.30 | Weekly |
 
@@ -285,6 +293,12 @@ People Helped (estimated) = SUM across all impact metrics:
 | **Token Inflation Rate** | Week-over-week growth in total tokens in circulation | `(total_tokens_this_week - total_tokens_last_week) / total_tokens_last_week * 100` | < 15% week-over-week | < 10% week-over-week | Weekly |
 | **Tokens Earned per Mission (avg)** | Average total tokens earned per completed mission including bonuses and multipliers | `SUM(earned_tokens_for_missions) / COUNT(completed_missions)` | 25 IT | 30 IT | Weekly |
 
+**Token Inflation Control Mechanisms**:
+1. **Hard cap**: Maximum of 10,000 IT issued per week platform-wide.
+2. **Dynamic reward scaling**: If weekly issuance exceeds the cap, all rewards are proportionally reduced for that week (e.g., if 12,000 IT would be issued, each reward is scaled by 10,000/12,000 = 0.833x).
+3. **Spending sinks as deflationary pressure**: Token spending mechanisms (voting at 5 IT, analytics access at 10 IT, circle creation at 25 IT) remove tokens from circulation, providing natural deflationary pressure.
+4. **Monthly supply audit**: PM team reviews total tokens in circulation, earning/spending ratio, and Gini coefficient monthly. Adjust earning rates or introduce new spending sinks if inflation exceeds targets.
+
 **Token Health Alert Thresholds**:
 - Gini > 0.60: Top-heavy economy. Investigate whales. Consider caps or redistribution.
 - Velocity < 0.05: Tokens are hoarded, not flowing. Add spending sinks or reduce earning rates.
@@ -366,6 +380,8 @@ NGO and institutional partners are critical for mission quality and credibility.
 ---
 
 ## 3. Dashboard Specifications
+
+> Dashboard layouts are directional wireframes, not final designs. Implementation should follow the design system components and be refined during Sprint 3 design review.
 
 ### 3.1 Executive Dashboard
 
@@ -593,6 +609,8 @@ Row 5: Inactive Agents Alert
 ### 4.1 Event Tracking Plan
 
 Every trackable user action is captured as a structured event. Events are the raw material for all metrics.
+
+> **Data policies**: Events are sampled at 100% during Phase 1 (low volume). Implement 10% sampling at >10K DAU. Retention: raw events for 90 days, aggregated metrics indefinitely. PII fields (email, IP) are hashed before storage. See `04-security-compliance.md` for full privacy policy.
 
 #### Agent Events
 

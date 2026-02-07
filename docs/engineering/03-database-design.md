@@ -820,6 +820,10 @@ export const debatesRelations = relations(debates, ({ one, many }) => ({
     relationName: "debateThread",
   }),
 }));
+
+// > **Depth tracking**: Max debate depth (5 levels) is enforced at the application layer
+// > by counting parent chain length before insert. No DB constraint is needed since the
+// > check is simple and allows flexibility.
 ```
 
 ### 2.7 Missions
@@ -863,6 +867,7 @@ export const missions = pgTable(
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description").notNull(),
     instructions: jsonb("instructions").notNull(), // Step-by-step atomic instructions
+    evidenceRequired: jsonb("evidence_required"),  // Required evidence types and descriptions
 
     // Requirements
     requiredSkills: text("required_skills").array().default([]),
@@ -1026,7 +1031,7 @@ export const evidence = pgTable(
     exifData: jsonb("exif_data"),
     gpsCoordinates: text("gps_coordinates"),
     deviceFingerprint: text("device_fingerprint"),
-    verificationStage: text("verification_stage").default("pending"),
+    verificationStage: text("verification_stage").default("pending"), // Valid: "pending" | "metadata_check" | "ai_review" | "peer_review" | "completed" | "failed"
     verificationScore: real("verification_score"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1878,7 +1883,7 @@ export const guardrailFeedback = pgTable(
     reviewerId: uuid("reviewer_id")
       .notNull()
       .references(() => humans.id),
-    overrideVerdict: text("override_verdict"), // 'pass' | 'fail'
+    overrideVerdict: text("override_verdict"), // 'pass' | 'fail' | 'escalate'
     reason: text("reason"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -2125,6 +2130,12 @@ All enums are defined via `pgEnum` in `packages/db/src/schema/enums.ts` (Section
 | `difficulty_level` | `easy`, `medium`, `hard`, `expert` | `missions.difficulty` |
 | `entity_type` | `agent`, `human` | `reputation_events`, `circle_members`, `notifications`, `circles` |
 
+> **Note on `varchar` status fields**: `solutions.status` and `problems.status` use `varchar(20)` rather than `pgEnum` for flexibility during early iterations. Canonical values are enforced at the application layer:
+> - **Problem status**: `active`, `being_addressed`, `resolved`, `archived`
+> - **Solution status**: `proposed`, `debating`, `ready_for_action`, `in_progress`, `completed`, `abandoned`
+>
+> These may be migrated to `pgEnum` once the status lifecycle stabilizes. See `04-api-design.md` Section 3.4 for state machine diagrams.
+
 ### Adding a New Enum Value
 
 PostgreSQL enums are append-only by default. To add a value:
@@ -2172,7 +2183,7 @@ npx drizzle-kit generate --name descriptive_name
 
 ```bash
 # Inspect the generated SQL
-cat packages/db/drizzle/XXXX_descriptive_name/migration.sql
+cat packages/db/drizzle/YYYYMMDDHHMMSS_descriptive_name/migration.sql
 ```
 
 **Apply** migrations:
@@ -2227,11 +2238,14 @@ Some indexes and features require raw SQL that Drizzle Kit cannot generate. Thes
 ```sql
 -- migrations/0001_add_gist_indexes/migration.sql
 
--- Enable required extensions
+-- Required: Enable pgvector extension (must be done before creating vector columns)
+CREATE EXTENSION IF NOT EXISTS vector;
+-- Required: Enable earthdistance for geo queries
+CREATE EXTENSION IF NOT EXISTS cube;
+CREATE EXTENSION IF NOT EXISTS earthdistance;
+
+-- Enable other required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "cube";
-CREATE EXTENSION IF NOT EXISTS "earthdistance";
-CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- GiST indexes for geographic queries (earthdistance)
 CREATE INDEX IF NOT EXISTS idx_humans_location_gist

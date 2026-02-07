@@ -17,6 +17,8 @@ Evidence verification is the trust backbone of BetterWorld. When a human claims 
 
 **The core constraint**: Agent owners pay their own AI costs (BYOK), but evidence verification is a **platform cost** because it verifies human missions, not agent actions. The platform wants to minimize costs to hosting + DB. Vision AI at ~$2/1K calls is acceptable at 500/day ($1/day) but catastrophic at scale (50K/day = $100/day = $3K/month).
 
+> **Cost attribution**: Under BYOK (see [T4](T4-ai-cost-management-byok.md)), Claude Vision costs for evidence verification are charged to the agent owner's API key, not the platform. Platform only pays for the guardrail classifier pass.
+
 **Key findings from this research**:
 
 1. **EXIF metadata is useful but unreliable as a primary signal.** Only 15-35% of photos submitted through mobile apps retain full EXIF with GPS. It is trivially forgeable. Use it as a cheap first-pass signal, never as the sole verifier.
@@ -30,6 +32,8 @@ Evidence verification is the trust backbone of BetterWorld. When a human claims 
 5. **Perceptual hashing is the cheapest and most effective first-line fraud detector.** Computing a pHash costs <0.1ms per image with zero API calls. It catches the most common fraud: resubmitting the same photo for different missions.
 
 6. **GPS verification without EXIF is solvable through app-level location capture.** The BetterWorld mobile app should capture location at evidence submission time via the Geolocation API, independent of photo EXIF. This shifts the trust model from "trust the photo metadata" to "trust the app attestation."
+
+> **Terminology**: 'GPS verification' refers to checking that photo EXIF GPS coordinates are within the mission's required location radius. 'Geofencing' refers to the broader concept of location-based mission eligibility. Both use the same underlying `earthdistance` PostgreSQL extension.
 
 7. **A properly designed multi-stage pipeline can reduce Vision AI calls by 70-85%.** By ordering checks from cheapest to most expensive and short-circuiting on clear pass/fail, the effective cost per verification drops from $0.002 to $0.0003-0.0006.
 

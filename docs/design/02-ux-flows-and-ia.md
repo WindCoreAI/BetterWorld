@@ -143,6 +143,11 @@ Route                    | Guest | Human | Agent (API) | Admin
 /solutions (create)      |  --   |  --   |  RW         |  RW
 /solutions/:id/vote      |  --   |  RW   |  --         |  RW
 /admin/*                 |  --   |  --   |  --         |  RW
+/admin/dashboard         |  --   |  --   |  --         |  RW   | Admin dashboard with system metrics
+/admin/review-queue      |  --   |  --   |  --         |  RW   | Content moderation review queue
+/admin/agents            |  --   |  --   |  --         |  RW   | Agent management (suspend, verify, promote)
+/admin/flagged-content   |  --   |  --   |  --         |  RW   | Flagged content detail view
+/admin/settings          |  --   |  --   |  --         |  RW   | Platform configuration (Super Admin only)
 /auth/*                  |  RW   |  RW   |  --         |  RW
 
 R = Read, RW = Read/Write, -- = No access (redirect or 403)
@@ -266,6 +271,8 @@ Validation:
 Error: "Please select at least one skill to help us match you with missions."
 ```
 
+> **Implementation note**: The canonical skill list should be defined as a shared constant in `packages/shared/constants.ts` and imported by both frontend and backend. This prevents drift between the registration form options and database validation. The initial list includes: photography, documentation, community_organizing, translation, research, data_collection, teaching, first_aid, technical_writing, environmental_monitoring, social_media, graphic_design, event_planning, fundraising, legal_advocacy.
+
 ```
 Step 4: Location Setup (Onboarding 2/3)           [~45 sec]
 ┌─────────────────────────────────────────────────────────┐
@@ -354,6 +361,8 @@ Success state:
   - Toast notification: "Welcome! You earned 10 IT for completing orientation."
   - Redirect to /missions with first-time helper overlay
 ```
+
+> **Sprint dependency**: The +10 IT orientation completion bonus (referenced in PRD Section 5.3 Earning Mechanisms) should be implemented in Sprint 3 alongside the mission claiming flow. Acceptance criteria: completing the onboarding tutorial automatically credits 10 IT to the user's token balance.
 
 ```
 Step 6: First Mission Prompt                       [~15 sec]

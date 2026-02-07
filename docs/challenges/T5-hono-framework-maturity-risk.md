@@ -589,6 +589,8 @@ To ensure the migration path stays cheap:
 
 ### 9.2 Comparison with Original Assessment
 
+Initial risk: 9/25 -> Revised risk: 6/25 after mitigation analysis.
+
 The original REVIEW-AND-TECH-CHALLENGES.md estimated T5 at score 9. After deeper analysis:
 
 | Factor | Original Assessment | Revised Assessment |

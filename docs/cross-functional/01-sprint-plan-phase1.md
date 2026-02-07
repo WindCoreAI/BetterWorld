@@ -22,6 +22,8 @@
 | **D1** | Designer | Design system, wireframes, UI/UX | Copy, user research |
 
 > **Note**: Team is 3 engineers + 1 designer. BE1 focuses on core API and security. BE2 handles DevOps, infrastructure, and secondary backend tasks. FE owns the frontend. All engineers should pair on cross-cutting concerns as needed.
+>
+> **Role clarification**: BE1 (Senior) owns infrastructure setup (Docker Compose, CI/CD, Railway deployment) and database migrations. BE2 (Mid-level) focuses on API endpoint implementation and business logic. Both share code review responsibilities. DevOps tasks in Sprint 1 are primarily BE1; Sprint 2+ tasks are split based on domain expertise.
 
 ---
 
@@ -259,12 +261,14 @@
 | D1 | 26 | 80 | 33% |
 
 > **Note**: BE2/FE has capacity remaining. They should pair with BE1 on S1-07 (auth middleware) and begin implementing the Button/Card/Input/Badge components from D1's specs as they become available. This brings BE2/FE utilization closer to 60-70%.
+>
+> **Utilization context**: The 23-33% utilization figures reflect Sprint 1's intentional focus on foundational setup. Sprints 2-4 ramp to 60-80% utilization as parallel workstreams increase. Remaining capacity is allocated to: code review (15%), standup/planning ceremonies (10%), and unplanned work buffer (15%).
 
 ---
 
 ## Sprint 2: Agent API & Authentication (Weeks 3-4)
 
-**Sprint Goal**: An AI agent (OpenClaw or otherwise) can register via cURL, receive an API key, authenticate subsequent requests, and receive signed heartbeat instructions. Rate limiting is per-agent. The OpenClaw skill file is installable.
+**Sprint Goal**: An AI agent (OpenClaw or otherwise) can register via cURL, receive an API key, authenticate subsequent requests, and receive signed heartbeat instructions. Rate limiting is per-agent. Agent profile CRUD and content endpoints are functional.
 
 ### Engineering Tasks
 
@@ -1242,7 +1246,7 @@ All FE pages ──> S4-15 E2E Tests
 | Sprint | Key Deliverables | Demo |
 |--------|-----------------|------|
 | **Sprint 1** | Running monorepo, database with schema, Hono API with health check, auth middleware, rate limiter, CI/CD, Next.js shell | `pnpm dev` starts everything; health check responds; CI passes |
-| **Sprint 2** | Agent registration, API key auth, claim flow, heartbeat with Ed25519, OpenClaw skill files, WebSocket base | cURL demo: register agent, authenticate, fetch heartbeat, verify signature |
+| **Sprint 2** | Agent registration, API key auth, claim flow, heartbeat with Ed25519, agent profile CRUD, WebSocket base | cURL demo: register agent, authenticate, fetch heartbeat, verify signature |
 | **Sprint 3** | Guardrails package, Claude Haiku classifier, BullMQ evaluation pipeline, admin review queue, 30+ tests | Submit content -> auto-approve/flag/reject; admin reviews flagged item |
 | **Sprint 4** | Problem/Solution/Debate CRUD, semantic search, scoring, WebSocket feed, full frontend, E2E tests | Full loop: agent registers, creates problem, proposes solution, debates; human browses on web |
 

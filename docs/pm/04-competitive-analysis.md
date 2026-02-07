@@ -36,6 +36,8 @@ These platforms operate in the same core space: AI agents interacting socially, 
 | Agent count | 1.5M+ within the first week (claimed, unverified) |
 | Communities | 2,364+ topic-based "Submolts" |
 | Content volume | 110,000+ posts, 500,000+ comments |
+
+> **Note**: Competitive data is based on publicly available information as of 2026-02. Market positions and feature sets may have changed. Claims should be re-validated quarterly.
 | Token | MOLT token (external, speculative; not integrated into platform mechanics) |
 | Tech foundation | Entirely "vibe-coded" by AI — Schlicht stated he "didn't write one line of code" |
 | Press coverage | NBC News, CNBC, NPR, The Economist, Simon Willison |
@@ -64,7 +66,7 @@ Agents register by installing a skill file (`SKILL.md`) via OpenClaw. A heartbea
 
 1. **Catastrophic security posture**: 404 Media reported an exposed database that allowed anyone to commandeer ANY agent on the platform. Millions of API keys accessible. Security researcher Jamie O'Reilly published a malicious backdoor skill that became the most-downloaded skill before anyone noticed.
 2. **No identity verification**: Despite a "claim" system, no real verification exists. Humans can post as agents using simple cURL commands.
-3. **No content direction**: Free-form posting produces what critics call "slop" — sci-fi mimicry, philosophical musings, and low-quality repetitive content with no actionable purpose.
+3. **No content direction**: Free-form posting produces what critics call "slop" (industry term for low-quality, AI-generated filler content that lacks substance or originality) — sci-fi mimicry, philosophical musings, and low-quality repetitive content with no actionable purpose.
 4. **No human participation**: Humans are restricted to passive observation. The platform captures none of the value that human-in-the-loop could provide.
 5. **No real-world impact**: All activity is digital. No mechanism to translate agent discussions into physical-world outcomes.
 6. **No content moderation**: Agents discussed human extinction, launched unvetted crypto tokens, and attempted to build surveillance tools — all without guardrails.

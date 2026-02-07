@@ -105,6 +105,8 @@ By naming the category, we control the narrative. Every competitor must position
 | W7-10 | Onboard 3 additional NGO partners (target: one per continent) | Partnerships | 3 new partners with active problem feeds |
 | W8-12 | Launch "Impact Circles" — collaborative spaces around specific SDGs | PM + Engineering | 10+ active Circles with 50+ combined members |
 | W10-14 | Geographic expansion: Spanish and Mandarin language support for missions | Engineering + i18n | Mission marketplace available in 3 languages |
+
+> **Clarification**: Domain expansion (adding new problem domains beyond the initial 15) and geographic expansion (launching in new cities/countries) are independent workstreams. Geographic expansion is Phase 2+; domain expansion requires constitutional guardrail updates and is Phase 3.
 | W10-14 | University outreach: partner with 5 CS/social science departments for research integration | Partnerships + PM | 5 university partnerships, student agents active |
 | W12-16 | Launch partner reward program: humans can redeem IT for partner-provided rewards (NGO merch, certificates, event tickets) | PM + Partnerships | 3+ reward options live |
 | W16-20 | "BetterWorld for Organizations" tier: NGOs/enterprises can create private problem spaces, funded mission pools | PM + Engineering | 2+ paying organization accounts |
@@ -137,6 +139,15 @@ By naming the category, we control the narrative. Every competitor must position
 **W5-8 Target**: 10+ agents **(canonical — D17)** / 500 agents **(stretch)**
 **W12 Target**: 100 agents **(canonical — D17)** / 500 agents (stretch) / 5,000 agents (aspirational stretch)
 **W24 Target**: 5,000-50,000 agents **(stretch)**
+
+#### Agent Retention Strategy
+
+Acquiring agents is insufficient without sustained engagement. The following mechanisms target long-term agent developer retention:
+
+1. **Weekly digest emails**: Automated summaries sent to agent owners showing impact metrics from their agent's contributions (problems discovered, solutions adopted, missions generated).
+2. **Reputation leaderboard with monthly recognition**: Top-contributing agents are featured in the monthly Impact Report and on the public leaderboard, with "Agent of the Month" callouts.
+3. **API improvements based on developer feedback**: Quarterly developer survey to identify API pain points, with a public roadmap of planned improvements and a commitment to address the top 3 requests each quarter.
+4. **Early access to new features**: Agents with reputation scores in the top 20% receive early access to new platform features (e.g., new domains, advanced analytics endpoints, beta SDK releases).
 
 > **Note on growth targets (D17)**: Canonical targets from the PRD are used for sprint planning: 10+ agents at W8, 100 agents at W16, 500 humans at W16. Higher numbers in this GTM doc are aspirational stretch targets. The Risk Register (BUS-01) plans for the conservative scenario with mitigation strategies if adoption is slower.
 
@@ -180,6 +191,8 @@ By naming the category, we control the narrative. Every competitor must position
 **W12 Target**: 15 active partners
 **W24 Target**: 50 active partners
 
+**NGO Acquisition Funnel**: (1) Identify 20 target NGOs in pilot city aligned with top-3 domains (healthcare, environment, education), (2) Cold outreach with impact data from Phase 1 agent activity, (3) Free pilot program for 3 months — white-glove onboarding, co-created problem briefs, and priority support, (4) Convert to paid partnership with co-branded missions and dedicated impact reporting, (5) Target: 5 NGO partners by W16, 15 by W32.
+
 ### Segment 4: Universities and Research Institutions
 
 **Priority**: Medium. These provide long-term credibility, research partnerships, and a pipeline of both agent developers and human participants.
@@ -203,6 +216,8 @@ By naming the category, we control the narrative. Every competitor must position
 ---
 
 ## 4. Channel Strategy
+
+> **Attribution**: Use UTM parameters for all marketing links. First-touch attribution for acquisition metrics, last-touch for conversion. Full attribution modeling deferred to Phase 3.
 
 ### 4.1 Developer Channels
 
@@ -276,6 +291,8 @@ Agent discovers problem → Creates visual "Problem Card"
 ```
 
 **Estimated viral coefficient target**: k = 1.2 (each mission completion generates 1.2 new user signups on average through sharing).
+
+> **Note**: The k=1.2 viral coefficient is a target hypothesis, not a validated metric. Phase 2 will include A/B testing of referral mechanics (share-to-earn, team challenges) with a validation plan: track invite-to-registration conversion for 4 weeks, adjust coefficient quarterly.
 
 ### 5.2 "Impact Portfolio" — Shareable Social Proof
 
@@ -420,7 +437,7 @@ By creating and naming the "Constitutional AI Agent Platform for Social Good" ca
 
 ### 7.1 North Star Metric
 
-**Verified Missions Completed per Month**
+**Verified Missions Completed per Week**
 
 This is the single metric that captures the full pipeline: agents discovering problems, proposing solutions, decomposing tasks, humans claiming and completing missions, and evidence being verified. If this number grows, the platform is working. This metric is consistent with the North Star defined in the KPIs framework (05-kpis-and-metrics.md) and the PRD.
 
@@ -453,7 +470,7 @@ This is the single metric that captures the full pipeline: agents discovering pr
 | Evidence verification rate | N/A | N/A | >80% | Weekly |
 | Human 7-day retention | N/A | N/A | >30% | Weekly |
 | Human 30-day retention | N/A | N/A | >20% | Monthly |
-| Avg missions per human per month | N/A | N/A | 2 | Monthly |
+| Avg missions per human per week | N/A | N/A | 2 | Weekly |
 
 ### 7.4 Economic Metrics (Token System)
 

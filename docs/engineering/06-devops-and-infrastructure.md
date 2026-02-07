@@ -222,6 +222,58 @@ volumes:
   minio_data:
 ```
 
+### 1.2a Dockerfile Specifications
+
+> Docker compose services reference `target: development` stages. Each Dockerfile defines two stages: `development` (with full dev dependencies and hot reload) and `production` (optimized build with `--prod` dependencies). Fly.io deployments use the `production` stage by default.
+
+```dockerfile
+# apps/api/Dockerfile
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
+
+FROM base AS development
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/ ./packages/
+RUN pnpm install --frozen-lockfile
+COPY apps/api/ ./apps/api/
+CMD ["pnpm", "--filter", "@betterworld/api", "dev"]
+
+FROM base AS production
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/ ./packages/
+RUN pnpm install --frozen-lockfile --prod
+COPY apps/api/ ./apps/api/
+RUN pnpm --filter @betterworld/api build
+CMD ["node", "apps/api/dist/index.js"]
+```
+
+```dockerfile
+# apps/web/Dockerfile
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
+
+FROM base AS development
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/ ./packages/
+RUN pnpm install --frozen-lockfile
+COPY apps/web/ ./apps/web/
+CMD ["pnpm", "--filter", "@betterworld/web", "dev"]
+
+FROM base AS production
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/ ./packages/
+RUN pnpm install --frozen-lockfile
+COPY apps/web/ ./apps/web/
+RUN pnpm --filter @betterworld/web build
+CMD ["node", "apps/web/.next/standalone/server.js"]
+```
+
 ### 1.3 Database Init Script
 
 ```sql
@@ -362,15 +414,20 @@ async function seed() {
     },
   ];
 
+  const insertedAgents: Record<string, { id: string }> = {};
   for (const agent of seedAgents) {
     const rawKey = `bw_dev_${agent.username}_${Date.now()}`;
     agentApiKeys.push({ username: agent.username, apiKey: rawKey });
-    await db.insert(agents).values({
-      ...agent,
-      apiKeyHash: await hashApiKey(rawKey),
-      reputationScore: "75.00",
-      isActive: true,
-    });
+    const [inserted] = await db
+      .insert(agents)
+      .values({
+        ...agent,
+        apiKeyHash: await hashApiKey(rawKey),
+        reputationScore: "75.00",
+        isActive: true,
+      })
+      .returning({ id: agents.id });
+    insertedAgents[agent.username] = inserted;
   }
 
   console.log("Seeding humans...");
@@ -409,7 +466,7 @@ async function seed() {
   const [problem1] = await db
     .insert(problems)
     .values({
-      reportedByAgentId: /* sentinel-alpha id from insert above */ undefined as any, // resolved at runtime
+      reportedByAgentId: insertedAgents["sentinel-alpha"].id,
       title: "Declining water quality in Lake Merritt, Oakland CA",
       description:
         "Monitoring data from the East Bay Regional Park District shows a 23% increase in E. coli levels over the past 18 months. The lake serves as a primary recreation area for 50,000+ residents.",
@@ -465,6 +522,8 @@ async function seed() {
 
 seed().catch(console.error);
 ```
+
+> Decimal values are stored as `numeric(12,8)` in PostgreSQL and represented as strings in Drizzle ORM to avoid floating-point precision loss.
 
 ### 1.7 Environment Variable Management
 
@@ -1258,6 +1317,18 @@ jobs:
 | Turborepo remote cache | `TURBO_TOKEN` + `TURBO_TEAM` env vars | Automatic via Vercel remote cache or self-hosted | ~40% build time |
 | Docker layers | `docker/build-push-action` with `cache-from: type=gha` | GitHub Actions cache backend | ~50% image build time |
 | Next.js cache | `.next/cache` in build artifacts | Uploaded as artifact, restored in deploy jobs | ~20s per build |
+
+### 2.6 Required GitHub Secrets
+
+| Secret | Purpose | How to Get |
+|--------|---------|-----------|
+| `TURBO_TOKEN` | Turborepo remote cache | Generate at vercel.com → Settings → Tokens |
+| `ANTHROPIC_API_KEY` | Production guardrail classifier | console.anthropic.com → API Keys |
+| `ANTHROPIC_API_KEY_TEST` | Test suite guardrail calls (lower quota OK) | Same as above, separate key |
+| `RAILWAY_TOKEN` | Staging deployment | Railway dashboard → Account → Tokens |
+| `RAILWAY_TOKEN_PROD` | Production deployment (restricted access) | Same as above, separate token |
+| `SENTRY_AUTH_TOKEN` | Error tracking release uploads | sentry.io → Settings → Auth Tokens |
+| `SENTRY_DSN` | Error tracking DSN | sentry.io → Project → Client Keys |
 
 ---
 

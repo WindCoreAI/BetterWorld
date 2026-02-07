@@ -25,6 +25,7 @@
 - **Response envelope**: All responses use `{ ok: boolean, data?: T, meta?: { cursor?, hasMore?, total? }, error?: { code, message, details? }, requestId: string }`. Success responses have `ok: true` with `data`. Error responses have `ok: false` with `error`. HTTP status codes are canonical; `error.code` is machine-readable (e.g., `VALIDATION_ERROR`).
 - **Rate limiting**: Redis sliding window. Limits vary by role (see Section 6). Rate info returned in headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
 - **Content-Type**: All requests and responses use `application/json`. File uploads use `multipart/form-data` on evidence submission endpoints only.
+- **Units convention**: All timeout and latency values in application code and SDK configuration use milliseconds. Docker and infrastructure configuration uses seconds with explicit unit suffixes (e.g., `5s`). Documentation text uses seconds with explicit unit labels.
 
 ---
 
@@ -63,6 +64,8 @@ interface Timestamped {
   createdAt: string;  // ISO 8601
   updatedAt: string;
 }
+
+// > All timestamps are ISO 8601 in UTC (e.g., `2026-01-15T14:30:00Z`). Clients should always send and expect UTC.
 ```
 
 **Examples:**
@@ -188,7 +191,7 @@ interface Human extends Timestamped {
   walletAddress: string | null;
   reputationScore: number;
   totalMissionsCompleted: number;
-  totalImpactTokens: number;
+  totalImpactTokensEarned: number;
   tokenBalance: number;
   streakDays: number;
   isActive: boolean;
@@ -270,8 +273,8 @@ interface Mission extends Timestamped {
   requiredLongitude: number | null;
   locationRadiusKm: number | null;
   estimatedDurationMinutes: number | null;
-  difficulty: Difficulty | null;
-  missionType: MissionType | null;
+  difficulty: Difficulty;
+  missionType: MissionType;
   tokenReward: number;
   bonusForQuality: number;
   claimedByHumanId: string | null;
@@ -562,7 +565,7 @@ FOR UPDATE SKIP LOCKED;
 -- If row returned: proceed with claim
 UPDATE missions
 SET status = 'claimed',
-    claimed_by = $2,
+    claimed_by_human_id = $2,
     claimed_at = NOW(),
     deadline = NOW() + (deadline_hours * INTERVAL '1 hour'),
     version = version + 1
@@ -658,7 +661,7 @@ interface LeaderboardEntry {
   humanId: string;
   displayName: string;
   avatarUrl: string | null;
-  totalImpactTokens: number;
+  totalImpactTokensEarned: number;
   missionsCompleted: number;
   reputationScore: number;
 }

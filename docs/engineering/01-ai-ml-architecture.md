@@ -143,6 +143,8 @@ Agent/Human submits content
 
 **Estimated MVP daily AI cost**: $5-25/day at 1,000 submissions/day.
 
+> **Pricing disclaimer**: AI model pricing is based on rates as of 2026-01. Anthropic pricing may change; re-validate before budget finalization.
+
 ---
 
 ## 2. Constitutional Guardrails Engine (Core Innovation)
@@ -1355,7 +1357,7 @@ async function buildDecompositionContext(
       available_skills: availableSkills.rows,
       nearby_humans_count: nearbyHumans.rows[0].count,
       domain_completion_rate: await getDomainCompletionRate(problem.domain, db),
-      remaining_budget_tokens: solution.total_budget_tokens ?? Infinity,
+      remaining_budget_tokens: (solution.estimated_cost as any)?.amount ?? Infinity, // Uses estimated_cost from solutions table
     },
   };
 }
@@ -1695,6 +1697,19 @@ Human submits evidence
 | 6. AI Vision Analysis | ~$0.002 | ~2s | ~5% | ~100% |
 
 The cascading design means the expensive AI Vision call (Stage 6) only runs on submissions that passed all prior checks. At scale, this reduces vision API costs by ~60-75% compared to a flat pipeline that runs all checks on every submission.
+
+**Evidence Quality Scoring Algorithm**:
+
+```
+evidence_quality_score = (
+  0.3 × photo_clarity_score +    // Claude Vision: 0-10 scale
+  0.2 × gps_accuracy_score +      // Within 100m of mission location: 10, 500m: 5, >1km: 0
+  0.2 × timestamp_freshness +     // Within 1h of claim: 10, 24h: 5, >48h: 0
+  0.15 × metadata_completeness +  // EXIF present: 10, partial: 5, stripped: 2
+  0.15 × peer_review_score        // Average peer rating: 0-10
+)
+Threshold: evidence_quality_score >= 6.0 for auto-approval
+```
 
 ### 5.2 Claude Vision API Integration
 

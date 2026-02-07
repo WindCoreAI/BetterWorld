@@ -1,7 +1,7 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-06 (v4.0 — practical review: 22 decisions identified, critical fixes applied)
+> **Last Review**: 2026-02-06 (v6.0 — systematic review: 16 critical issues fixed, 33 major issues addressed)
 > **Source**: [proposal.md](../proposal.md)
 > **Status**: Complete documentation suite for Phase 1-3 development and marketing
 
@@ -56,6 +56,7 @@
 | 1 | [Sprint Plan - Phase 1](cross-functional/01-sprint-plan-phase1.md) | 4 sprints (8 weeks) with task-level detail, acceptance criteria, risk flags | ~1,151 |
 | 2 | [Risk Register & Mitigation](cross-functional/02-risk-register.md) | 20+ risks scored, top-10 playbooks, red team schedule, incident response | ~1,062 |
 | 3 | [Pitch Deck Outline](cross-functional/03-pitch-deck-outline.md) | 14-slide deck with speaker notes, appendix materials, FAQ/objection handling | ~1,290 |
+| 4 | [Security & Compliance Framework](cross-functional/04-security-compliance.md) | Authentication, data protection, API security, infrastructure hardening, compliance, incident response | ~3,000 |
 
 ## Technical Challenge Research (challenges/)
 

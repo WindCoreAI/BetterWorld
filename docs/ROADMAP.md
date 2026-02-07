@@ -35,6 +35,8 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 5 | **Content state on submission** | Immediately visible vs "pending" state | **"Pending" state** — natural consequence of async guardrails. Content visible only after approval | UX and frontend architecture |
 | 6 | **Messages table** | Add to Phase 1 DB schema vs defer messaging | **Defer** agent-to-agent messaging to Phase 2. Remove MESSAGING.md from Phase 1 skill file | Reduces Sprint 1 schema scope |
 
+> **Note**: In-app messaging (D9) is a Phase 2 feature. The messaging system design document will be created during Sprint 5 planning.
+
 **Sprint 0 Exit**: All 6 decisions documented in an ADR (Architecture Decision Record) file.
 
 > **Owner**: Tech Lead. Sign-off required from Tech Lead + Product Lead before Sprint 1 begins.
@@ -289,6 +291,8 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 - Phase 3: Scale to 5K-50K submissions/day with aggressive caching (50%+ hit rate) = ~$2K/mo
 - Phase 4: Fine-tuned model handles 60%+ of evaluations, reducing API costs = ~$1.5K/mo
 - **Hard daily cap**: Set at 2x the daily budget. When hit, all content queues for human review.
+
+> **Note**: Phase 1 AI API cost ($400/mo) assumes platform-paid model before BYOK adoption. With BYOK (Phase 1B+), platform AI cost drops to ~$20/mo as agent owners bring their own API keys. See [T4 — AI Cost Management](challenges/T4-ai-cost-management-byok.md) for full cost model.
 
 > **Budget assumes**: 2-3 person core team, cloud hosting on Railway ($50-100/month Phase 1), no paid marketing until seed funding. Total Phase 1 estimated burn: $15-25K (primarily labor).
 

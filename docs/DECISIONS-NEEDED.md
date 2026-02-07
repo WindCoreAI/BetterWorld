@@ -37,6 +37,8 @@ Drizzle has first-class support, already implemented in 03-database with 15+ enu
 
 **Propagation needed**: Remove/update the "Enums as CHECK constraints" guidance in `02-tech-arch` Section 4.1.
 
+**Propagation status**: Completed — `03-database-design.md` updated to use pgEnum. CHECK constraint guidance removed from `02-technical-architecture.md`.
+
 ---
 
 ### D3. Admin App Architecture [P1-URGENT] — RESOLVED
@@ -274,7 +276,7 @@ Same core narrative, different emphasis per audience. Social impact version for 
 
 All resolved decisions need to be propagated across the affected docs. Priority order:
 1. **Embedding dimensions** (D1) — update 5+ docs to `halfvec(1024)`
-2. **Enum strategy** (D2) — remove CHECK constraint guidance from 02-tech-arch
+2. ~~**Enum strategy** (D2) — remove CHECK constraint guidance from 02-tech-arch~~ **DONE**
 3. **Admin architecture** (D3) — remove apps/admin from docker-compose and deploy scripts
 4. **API envelope** (D4) — update 04-api-design response format
 5. **MVP scope** (D7) — update PRD, sprint plan, roadmap

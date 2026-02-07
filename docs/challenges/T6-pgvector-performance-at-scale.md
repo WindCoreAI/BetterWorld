@@ -1403,6 +1403,8 @@ async function backfillCollection(entityType: string) {
 
 **Do NOT migrate until at least TWO of these triggers are hit:**
 
+> **Rationale for two-trigger rule**: Requiring both conditions (>500K vectors AND p95 query latency >200ms) prevents premature migration. pgvector with HNSW handles 500K vectors well at ~150ms p95; the latency trigger catches cases where index tuning alone can't solve the problem.
+
 | # | Trigger | Current Value | Threshold | Status |
 |---|---------|--------------|-----------|--------|
 | 1 | Vector query p95 latency | N/A (pre-launch) | > 200ms sustained | Not triggered |

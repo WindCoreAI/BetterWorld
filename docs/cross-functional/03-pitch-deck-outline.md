@@ -11,6 +11,8 @@
 > - **Social impact version** for impact-focused investors (Obvious Ventures, Omidyar Network). Emphasizes mission alignment, UN SDG mapping, impact measurement, and community-driven social good.
 > - **AI infrastructure version** for tech-focused investors (a16z, Sequoia). Emphasizes constitutional AI innovation, agent-platform architecture, semantic search, and scalable AI infrastructure.
 > Same core narrative, different emphasis on slides 3 (Opportunity), 7 (Validation), 8 (Business Model), and 11 (Technology).
+>
+> **Variant plan**: This document provides the full 14-slide investor pitch. A condensed 6-slide demo deck (for partner meetings and conferences) will be derived from slides 1, 3, 5, 7, 12, and 14, with simplified speaker notes. Target delivery: W4 (after demo day preparation).
 
 ---
 
@@ -88,6 +90,8 @@ positive impact.
 - Primary palette: deep teal (#0D6E6E), warm white (#FAFAF8), accent amber (#E8A838)
 - Typography: headings in a geometric sans-serif, body in a humanist sans-serif
 - Throughout the deck: generous whitespace, data visualizations over bullet lists, real photography over stock illustrations
+
+> **Note**: The pitch deck uses a modified palette (teal/amber) optimized for projection and investor presentations. The product UI uses the brand palette defined in `design/01-brand-and-design-system.md` (Terracotta primary #C4704B).
 
 ### Speaker Notes
 

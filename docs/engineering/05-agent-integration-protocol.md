@@ -530,6 +530,8 @@ bw-heartbeat-signing-key-v1:
 - The new public key will be published at `https://betterworld.ai/.well-known/heartbeat-keys.json`
 - After rotation period, the old key is revoked
 
+> **Key rotation**: Ed25519 key pairs should be rotated annually or immediately upon suspected compromise. Rotation follows the same dual-key grace period as JWT secrets (see `04-security-compliance.md` Section 6.3).
+
 To verify with `openssl` (if available in your environment):
 ```bash
 echo -n '<instructions_json>' | openssl dgst -verify bw-public.pem -signature <(echo '<signature>' | base64 -d) -ed25519
@@ -1813,6 +1815,8 @@ export interface GuardrailRejection {
 ```
 
 ### 4.2 SDK Implementation
+
+> **Note**: This is a reference implementation intended as a starting point for the production SDK. The generic `request<T>` method relies on TypeScript's structural type inference at each call site rather than explicit runtime type constraints on `T`. All request/response shapes are fully defined in Section 4.1 above. For production use, consider adding `zod` or `valibot` runtime validation on API responses to guard against schema drift.
 
 ```typescript
 import crypto from 'node:crypto';

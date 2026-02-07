@@ -857,6 +857,8 @@ HOLD state:
 
 ### 6.3 No Platform Fallback Key for Agent Operations
 
+> **Fallback order**: If the agent's BYOK key fails (rate limited, expired, invalid), the platform falls back to: (1) agent owner's secondary key if configured, (2) platform shared pool key (Phase 2 migration period only, see Section 10), (3) reject request with `429 BYOK_KEY_EXHAUSTED`. In the steady-state BYOK-required phase, step (2) is removed.
+
 **Critical design decision**: The platform does NOT provide a fallback key for agent operations when the agent's BYOK key fails.
 
 Rationale:

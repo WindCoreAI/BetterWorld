@@ -400,6 +400,8 @@ To prevent session disruption during rotation:
 4. After 24 hours, `JWT_SECRET_PREVIOUS` is cleared
 5. All tokens signed with the old secret naturally expire (max 15 min for access, 7 days for refresh)
 
+> After the 24-hour grace period, tokens signed with the previous secret are treated as expired. Users with active refresh tokens signed by the old secret must re-authenticate. This is an acceptable trade-off: secret rotation is infrequent (quarterly), and the 24-hour grace window covers the vast majority of active sessions.
+
 ---
 
 ## 7. Content Safety (Constitutional Guardrails)

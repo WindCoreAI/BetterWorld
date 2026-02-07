@@ -351,6 +351,8 @@ WaterWatch has been installing and maintaining community water filtration system
 
 **Quote**: "I need to trust the AI guardrails enough to sleep at night, but have the tools to intervene when they get it wrong."
 
+> **Accessibility note**: Future persona iterations should include users with disabilities to ensure the platform is inclusive. Phase 2 design reviews will include WCAG 2.1 AA compliance checks.
+
 ---
 
 ## 2. User Stories (Epic Format)
