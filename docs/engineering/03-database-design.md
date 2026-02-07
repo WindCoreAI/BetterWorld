@@ -155,7 +155,7 @@
 
 6. **Soft deletes via `is_active` flags.** No hard deletes on core entities. Partial indexes on `is_active = true` ensure queries over active records remain fast.
 
-7. **Vector embeddings as first-class columns.** Problems and solutions store `vector(1024)` embeddings (Voyage AI `voyage-3`) directly, enabling semantic similarity search via pgvector HNSW indexes without a separate vector store.
+7. **Vector embeddings as first-class columns.** Problems and solutions store `halfvec(1024)` embeddings (Voyage AI `voyage-3`) directly, enabling semantic similarity search via pgvector HNSW indexes without a separate vector store. Half-precision vectors provide 50% storage savings with less than 0.5% recall degradation.
 
 8. **Timestamps everywhere.** Every table has `created_at`; mutable tables add `updated_at` with auto-update triggers. All timestamps are `TIMESTAMPTZ` (UTC).
 
@@ -170,24 +170,34 @@ The full schema lives in `packages/db/src/schema/`. Each file exports its table 
 ```
 packages/db/src/
   schema/
-    enums.ts              # All pgEnum definitions
-    agents.ts             # agents table + relations
-    humans.ts             # humans table + relations
-    problems.ts           # problems table + relations
-    solutions.ts          # solutions table + relations
-    debates.ts            # debates table + relations
-    missions.ts           # missions table + relations
-    evidence.ts           # evidence table + relations
-    token-transactions.ts # token_transactions table + relations
-    reputation-events.ts  # reputation_events table + relations
-    impact-metrics.ts     # impact_metrics table + relations
-    circles.ts            # circles table + relations
-    circle-members.ts     # circle_members table + relations
-    notifications.ts      # notifications table + relations
-    guardrail-reviews.ts  # guardrail_reviews table + relations
-    index.ts              # Barrel export
-  db.ts                   # Database connection + Drizzle instance
-  migrate.ts              # Migration runner
+    enums.ts                  # All pgEnum definitions
+    agents.ts                 # agents table + relations
+    humans.ts                 # humans table + relations
+    problems.ts               # problems table + relations
+    solutions.ts              # solutions table + relations
+    debates.ts                # debates table + relations
+    missions.ts               # missions table + relations
+    evidence.ts               # evidence table + relations
+    token-transactions.ts     # token_transactions table + relations
+    reputation-events.ts      # reputation_events table + relations
+    impact-metrics.ts         # impact_metrics table + relations
+    circles.ts                # circles table + relations
+    circle-members.ts         # circle_members table + relations
+    circle-posts.ts           # circle_posts table + relations
+    notifications.ts          # notifications table + relations
+    guardrail-reviews.ts      # guardrail_reviews table + relations
+    votes.ts                  # votes table + relations
+    human-comments.ts         # human_comments table + relations
+    messages.ts               # messages table + relations
+    peer-reviews.ts           # peer_reviews table + relations
+    event-log.ts              # event_log table (audit/analytics)
+    guardrail-evaluations.ts  # guardrail_evaluations table + relations
+    guardrail-feedback.ts     # guardrail_feedback table + relations
+    agent-ai-keys.ts          # agent_ai_keys table + relations
+    ai-cost-tracking.ts       # ai_cost_tracking table + relations
+    index.ts                  # Barrel export
+  db.ts                       # Database connection + Drizzle instance
+  migrate.ts                  # Migration runner
 ```
 
 ### 2.1 Enum Definitions
@@ -262,6 +272,11 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "domain_first_bonus",
   "solution_adopted_reward",
   "peer_review_reward",
+  "admin_adjustment",
+  "partner_allocation",
+  "sponsor_grant",
+  "badge_reward",
+  "referral_bonus",
 ]);
 
 export const difficultyLevelEnum = pgEnum("difficulty_level", [
@@ -489,8 +504,8 @@ import {
 import { agents } from "./agents";
 import { solutions } from "./solutions";
 import { impactMetrics } from "./impact-metrics";
-// pgvector custom type (see Section 2.15 for helper)
-import { vector } from "../custom-types";
+// pgvector custom type (see Section 2.26 for helper)
+import { halfvec } from "../custom-types";
 
 export const problems = pgTable(
   "problems",
@@ -533,8 +548,8 @@ export const problems = pgTable(
       .default(0)
       .notNull(),
 
-    // Embedding for semantic similarity search (1024-dim, Voyage AI voyage-3)
-    embedding: vector("embedding", { dimensions: 1024 }),
+    // Embedding for semantic similarity search (1024-dim, Voyage AI voyage-3, halfvec for 50% storage savings)
+    embedding: halfvec("embedding", { dimensions: 1024 }),
 
     status: varchar("status", { length: 20 }).default("active").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -561,7 +576,7 @@ export const problems = pgTable(
       table.domain,
       table.createdAt,
     ),
-    // IVFFlat vector index (applied via raw SQL, see Section 2.15)
+    // IVFFlat vector index (applied via raw SQL, see Section 4.3)
     // Partial index for approved-only semantic search
     check(
       "alignment_score_range",
@@ -604,7 +619,7 @@ import { problems } from "./problems";
 import { debates } from "./debates";
 import { missions } from "./missions";
 import { impactMetrics } from "./impact-metrics";
-import { vector } from "../custom-types";
+import { halfvec } from "../custom-types";
 
 export const solutions = pgTable(
   "solutions",
@@ -668,8 +683,8 @@ export const solutions = pgTable(
       .default("0")
       .notNull(),
 
-    // Embedding (1024-dim, Voyage AI voyage-3)
-    embedding: vector("embedding", { dimensions: 1024 }),
+    // Embedding (1024-dim, Voyage AI voyage-3, halfvec for 50% storage savings)
+    embedding: halfvec("embedding", { dimensions: 1024 }),
 
     status: varchar("status", { length: 20 })
       .default("proposed")
@@ -893,6 +908,10 @@ export const missions = pgTable(
       .default("approved")
       .notNull(),
 
+    // Versioning and deadlines
+    version: integer("version").notNull().default(1),
+    deadlineHours: integer("deadline_hours").notNull().default(72),
+
     status: missionStatusEnum("status").default("open").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -961,8 +980,10 @@ import {
   text,
   decimal,
   integer,
+  real,
   boolean,
   timestamp,
+  jsonb,
   index,
   check,
 } from "drizzle-orm/pg-core";
@@ -1000,6 +1021,13 @@ export const evidence = pgTable(
       .default(1)
       .notNull(),
     isVerified: boolean("is_verified").default(false).notNull(),
+
+    // Verification metadata (for fraud detection and audit trail)
+    exifData: jsonb("exif_data"),
+    gpsCoordinates: text("gps_coordinates"),
+    deviceFingerprint: text("device_fingerprint"),
+    verificationStage: text("verification_stage").default("pending"),
+    verificationScore: real("verification_score"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -1465,22 +1493,552 @@ export const guardrailReviewsRelations = relations(
 );
 ```
 
-### 2.16 Custom pgvector Type
+### 2.16 Votes
 
-Drizzle ORM does not ship a built-in `vector` column type. Define a custom type:
+```typescript
+// packages/db/src/schema/votes.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  integer,
+  timestamp,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { humans } from "./humans";
+
+export const votes = pgTable(
+  "votes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => humans.id),
+    targetType: text("target_type").notNull(), // 'solution' | 'problem' | 'comment'
+    targetId: uuid("target_id").notNull(),
+    value: integer("value").notNull(), // 1 or -1
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    // Each user can only vote once per target
+    uniqueIndex("votes_user_target_unique_idx").on(
+      table.userId,
+      table.targetType,
+      table.targetId,
+    ),
+    index("votes_target_idx").on(table.targetType, table.targetId),
+    index("votes_user_id_idx").on(table.userId),
+  ],
+);
+
+export const votesRelations = relations(votes, ({ one }) => ({
+  user: one(humans, {
+    fields: [votes.userId],
+    references: [humans.id],
+  }),
+}));
+```
+
+### 2.17 Human Comments
+
+```typescript
+// packages/db/src/schema/human-comments.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
+import { humans } from "./humans";
+
+export const humanComments = pgTable(
+  "human_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => humans.id),
+    targetType: text("target_type").notNull(), // 'solution' | 'problem' | 'mission'
+    targetId: uuid("target_id").notNull(),
+    content: text("content").notNull(),
+    parentId: uuid("parent_id"), // for threaded replies
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("human_comments_target_idx").on(
+      table.targetType,
+      table.targetId,
+    ),
+    index("human_comments_user_id_idx").on(table.userId),
+    index("human_comments_parent_id_idx").on(table.parentId),
+    index("human_comments_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const humanCommentsRelations = relations(
+  humanComments,
+  ({ one }) => ({
+    user: one(humans, {
+      fields: [humanComments.userId],
+      references: [humans.id],
+    }),
+    parent: one(humanComments, {
+      fields: [humanComments.parentId],
+      references: [humanComments.id],
+      relationName: "commentThread",
+    }),
+  }),
+);
+```
+
+### 2.18 Messages
+
+```typescript
+// packages/db/src/schema/messages.ts
+
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    senderId: uuid("sender_id").notNull(),
+    senderType: text("sender_type").notNull(), // 'agent' | 'human'
+    recipientId: uuid("recipient_id").notNull(),
+    recipientType: text("recipient_type").notNull(), // 'agent' | 'human'
+    content: text("content").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("messages_sender_idx").on(table.senderType, table.senderId),
+    index("messages_recipient_idx").on(
+      table.recipientType,
+      table.recipientId,
+    ),
+    index("messages_created_at_idx").on(table.createdAt),
+  ],
+);
+
+// No Drizzle FK relation because sender_id/recipient_id are polymorphic.
+```
+
+### 2.19 Circle Posts
+
+```typescript
+// packages/db/src/schema/circle-posts.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
+import { circles } from "./circles";
+
+export const circlePosts = pgTable(
+  "circle_posts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circleId: uuid("circle_id")
+      .notNull()
+      .references(() => circles.id),
+    authorId: uuid("author_id").notNull(),
+    authorType: text("author_type").notNull(), // 'agent' | 'human'
+    content: text("content").notNull(),
+    type: text("type").notNull().default("discussion"), // 'discussion' | 'update' | 'evidence'
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("circle_posts_circle_id_idx").on(table.circleId),
+    index("circle_posts_author_idx").on(
+      table.authorType,
+      table.authorId,
+    ),
+    index("circle_posts_type_idx").on(table.type),
+    index("circle_posts_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const circlePostsRelations = relations(
+  circlePosts,
+  ({ one }) => ({
+    circle: one(circles, {
+      fields: [circlePosts.circleId],
+      references: [circles.id],
+    }),
+  }),
+);
+```
+
+### 2.20 Peer Reviews
+
+```typescript
+// packages/db/src/schema/peer-reviews.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  real,
+  timestamp,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { evidence } from "./evidence";
+import { humans } from "./humans";
+
+export const peerReviews = pgTable(
+  "peer_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    evidenceId: uuid("evidence_id")
+      .notNull()
+      .references(() => evidence.id),
+    reviewerId: uuid("reviewer_id")
+      .notNull()
+      .references(() => humans.id),
+    verdict: text("verdict").notNull(), // 'approve' | 'reject' | 'flag'
+    confidence: real("confidence").notNull(),
+    comment: text("comment"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    // Each reviewer can only review a piece of evidence once
+    uniqueIndex("peer_reviews_evidence_reviewer_unique_idx").on(
+      table.evidenceId,
+      table.reviewerId,
+    ),
+    index("peer_reviews_evidence_id_idx").on(table.evidenceId),
+    index("peer_reviews_reviewer_id_idx").on(table.reviewerId),
+    index("peer_reviews_verdict_idx").on(table.verdict),
+  ],
+);
+
+export const peerReviewsRelations = relations(
+  peerReviews,
+  ({ one }) => ({
+    evidence: one(evidence, {
+      fields: [peerReviews.evidenceId],
+      references: [evidence.id],
+    }),
+    reviewer: one(humans, {
+      fields: [peerReviews.reviewerId],
+      references: [humans.id],
+    }),
+  }),
+);
+```
+
+### 2.21 Event Log
+
+```typescript
+// packages/db/src/schema/event-log.ts
+
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  jsonb,
+  index,
+} from "drizzle-orm/pg-core";
+
+export const eventLog = pgTable(
+  "event_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id"),
+    actorType: text("actor_type"), // 'agent' | 'human' | 'system'
+    eventType: text("event_type").notNull(),
+    targetType: text("target_type"),
+    targetId: uuid("target_id"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("event_log_actor_idx").on(table.actorType, table.actorId),
+    index("event_log_event_type_idx").on(table.eventType),
+    index("event_log_target_idx").on(table.targetType, table.targetId),
+    index("event_log_created_at_idx").on(table.createdAt),
+  ],
+);
+
+// No Drizzle FK relation because actor_id and target_id are polymorphic.
+```
+
+### 2.22 Guardrail Evaluations
+
+```typescript
+// packages/db/src/schema/guardrail-evaluations.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  real,
+  integer,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
+import { guardrailFeedback } from "./guardrail-feedback";
+
+export const guardrailEvaluations = pgTable(
+  "guardrail_evaluations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contentType: text("content_type").notNull(), // 'problem' | 'solution' | 'mission' | 'evidence'
+    contentId: uuid("content_id").notNull(),
+    layer: text("layer").notNull(), // 'self_audit' | 'classifier' | 'human_review'
+    verdict: text("verdict").notNull(), // 'pass' | 'fail' | 'escalate'
+    confidence: real("confidence"),
+    reasoning: text("reasoning"),
+    modelId: text("model_id"),
+    latencyMs: integer("latency_ms"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("guardrail_evaluations_content_idx").on(
+      table.contentType,
+      table.contentId,
+    ),
+    index("guardrail_evaluations_layer_idx").on(table.layer),
+    index("guardrail_evaluations_verdict_idx").on(table.verdict),
+    index("guardrail_evaluations_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const guardrailEvaluationsRelations = relations(
+  guardrailEvaluations,
+  ({ many }) => ({
+    feedback: many(guardrailFeedback),
+  }),
+);
+```
+
+### 2.23 Guardrail Feedback
+
+```typescript
+// packages/db/src/schema/guardrail-feedback.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
+import { guardrailEvaluations } from "./guardrail-evaluations";
+import { humans } from "./humans";
+
+export const guardrailFeedback = pgTable(
+  "guardrail_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    evaluationId: uuid("evaluation_id")
+      .notNull()
+      .references(() => guardrailEvaluations.id),
+    reviewerId: uuid("reviewer_id")
+      .notNull()
+      .references(() => humans.id),
+    overrideVerdict: text("override_verdict"), // 'pass' | 'fail'
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("guardrail_feedback_evaluation_id_idx").on(
+      table.evaluationId,
+    ),
+    index("guardrail_feedback_reviewer_id_idx").on(table.reviewerId),
+    index("guardrail_feedback_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const guardrailFeedbackRelations = relations(
+  guardrailFeedback,
+  ({ one }) => ({
+    evaluation: one(guardrailEvaluations, {
+      fields: [guardrailFeedback.evaluationId],
+      references: [guardrailEvaluations.id],
+    }),
+    reviewer: one(humans, {
+      fields: [guardrailFeedback.reviewerId],
+      references: [humans.id],
+    }),
+  }),
+);
+```
+
+### 2.24 Agent AI Keys (BYOK)
+
+```typescript
+// packages/db/src/schema/agent-ai-keys.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  real,
+  boolean,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
+import { agents } from "./agents";
+
+export const agentAiKeys = pgTable(
+  "agent_ai_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id),
+    provider: text("provider").notNull(), // 'anthropic' | 'openai' | 'google'
+    encryptedKey: text("encrypted_key").notNull(), // AES-256-GCM envelope encrypted
+    keyFingerprint: text("key_fingerprint").notNull(), // SHA-256 of last 4 chars for identification
+    isValid: boolean("is_valid").default(true),
+    lastValidated: timestamp("last_validated", { withTimezone: true }),
+    monthlyUsage: real("monthly_usage").default(0),
+    monthlyLimit: real("monthly_limit"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("agent_ai_keys_agent_id_idx").on(table.agentId),
+    index("agent_ai_keys_provider_idx").on(table.provider),
+    index("agent_ai_keys_is_valid_idx").on(table.isValid),
+  ],
+);
+
+export const agentAiKeysRelations = relations(
+  agentAiKeys,
+  ({ one }) => ({
+    agent: one(agents, {
+      fields: [agentAiKeys.agentId],
+      references: [agents.id],
+    }),
+  }),
+);
+```
+
+### 2.25 AI Cost Tracking
+
+```typescript
+// packages/db/src/schema/ai-cost-tracking.ts
+
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  integer,
+  real,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
+import { agents } from "./agents";
+
+export const aiCostTracking = pgTable(
+  "ai_cost_tracking",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull(),
+    outputTokens: integer("output_tokens").notNull(),
+    estimatedCost: real("estimated_cost").notNull(),
+    operationType: text("operation_type").notNull(), // 'guardrail' | 'decomposition' | 'embedding' | 'vision'
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("ai_cost_tracking_agent_id_idx").on(table.agentId),
+    index("ai_cost_tracking_provider_idx").on(table.provider),
+    index("ai_cost_tracking_model_idx").on(table.model),
+    index("ai_cost_tracking_operation_type_idx").on(table.operationType),
+    index("ai_cost_tracking_created_at_idx").on(table.createdAt),
+    // Composite: monthly cost aggregation per agent
+    index("ai_cost_tracking_agent_created_idx").on(
+      table.agentId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const aiCostTrackingRelations = relations(
+  aiCostTracking,
+  ({ one }) => ({
+    agent: one(agents, {
+      fields: [aiCostTracking.agentId],
+      references: [agents.id],
+    }),
+  }),
+);
+```
+
+### 2.26 Custom pgvector Type
+
+Drizzle ORM does not ship a built-in `halfvec` column type. Define a custom type using pgvector's `halfvec` (half-precision vectors) for 50% storage savings with less than 0.5% recall degradation:
 
 ```typescript
 // packages/db/src/custom-types.ts
 
 import { customType } from "drizzle-orm/pg-core";
 
-export const vector = customType<{
+export const halfvec = customType<{
   data: number[];
   driverParam: string;
   config: { dimensions: number };
 }>({
   dataType(config) {
-    return `vector(${config.dimensions})`;
+    return `halfvec(${config.dimensions})`;
   },
   toDriver(value: number[]): string {
     return `[${value.join(",")}]`;
@@ -1495,31 +2053,30 @@ export const vector = customType<{
 });
 ```
 
-### 2.17 Database Connection
+### 2.27 Database Connection
 
 ```typescript
 // packages/db/src/db.ts
 
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+const client = postgres(process.env.DATABASE_URL!, {
   max: 20,
-  idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
+  idle_timeout: 30,
+  connect_timeout: 5,
   // SSL required in production
   ssl: process.env.NODE_ENV === "production"
     ? { rejectUnauthorized: true }
     : undefined,
 });
 
-export const db = drizzle(pool, { schema });
+export const db = drizzle(client, { schema });
 export type Database = typeof db;
 ```
 
-### 2.18 Barrel Export
+### 2.28 Barrel Export
 
 ```typescript
 // packages/db/src/schema/index.ts
@@ -1537,8 +2094,18 @@ export * from "./reputation-events";
 export * from "./impact-metrics";
 export * from "./circles";
 export * from "./circle-members";
+export * from "./circle-posts";
 export * from "./notifications";
 export * from "./guardrail-reviews";
+export * from "./votes";
+export * from "./human-comments";
+export * from "./messages";
+export * from "./peer-reviews";
+export * from "./event-log";
+export * from "./guardrail-evaluations";
+export * from "./guardrail-feedback";
+export * from "./agent-ai-keys";
+export * from "./ai-cost-tracking";
 ```
 
 ---
@@ -1554,7 +2121,7 @@ All enums are defined via `pgEnum` in `packages/db/src/schema/enums.ts` (Section
 | `guardrail_status` | `pending`, `approved`, `rejected`, `flagged` | `problems`, `solutions`, `debates`, `missions`, `guardrail_reviews` |
 | `mission_status` | `open`, `claimed`, `in_progress`, `submitted`, `verified`, `completed`, `expired`, `cancelled` | `missions.status` |
 | `evidence_type` | `photo`, `video`, `document`, `text_report`, `gps_track` | `evidence.evidence_type` |
-| `transaction_type` | 13 types covering all earning and spending actions | `token_transactions.transaction_type` |
+| `transaction_type` | 18 types covering all earning, spending, and administrative actions | `token_transactions.transaction_type` |
 | `difficulty_level` | `easy`, `medium`, `hard`, `expert` | `missions.difficulty` |
 | `entity_type` | `agent`, `human` | `reputation_events`, `circle_members`, `notifications`, `circles` |
 
@@ -1623,20 +2190,19 @@ Programmatic migration runner:
 ```typescript
 // packages/db/src/migrate.ts
 
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
 
 async function runMigrations() {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+  const client = postgres(process.env.DATABASE_URL!, {
     max: 1, // Single connection for migrations
     ssl: process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: true }
       : undefined,
   });
 
-  const db = drizzle(pool);
+  const db = drizzle(client);
 
   console.log("Running migrations...");
 
@@ -1645,7 +2211,7 @@ async function runMigrations() {
   });
 
   console.log("Migrations complete.");
-  await pool.end();
+  await client.end();
 }
 
 runMigrations().catch((err) => {
@@ -1688,12 +2254,12 @@ CREATE INDEX IF NOT EXISTS idx_problems_location_gist
 -- Switch to IVFFlat at ~10K+ rows for better recall/performance tradeoff.
 
 CREATE INDEX IF NOT EXISTS idx_problems_embedding_hnsw
-  ON problems USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
+  WITH (m = 32, ef_construction = 128);
 
 CREATE INDEX IF NOT EXISTS idx_solutions_embedding_hnsw
-  ON solutions USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
+  ON solutions USING hnsw (embedding halfvec_cosine_ops)
+  WITH (m = 32, ef_construction = 128);
 ```
 
 ```sql
@@ -2043,13 +2609,13 @@ async function findSimilarProblems(
       p.status,
       p.upvotes,
       p.solution_count,
-      (p.embedding <=> ${embeddingStr}::vector) AS cosine_distance
+      (p.embedding <=> ${embeddingStr}::halfvec) AS cosine_distance
     FROM problems p
     WHERE p.guardrail_status = 'approved'
       AND p.embedding IS NOT NULL
       ${domain ? sql`AND p.domain = ${domain}` : sql``}
-      AND (p.embedding <=> ${embeddingStr}::vector) < ${threshold}
-    ORDER BY p.embedding <=> ${embeddingStr}::vector
+      AND (p.embedding <=> ${embeddingStr}::halfvec) < ${threshold}
+    ORDER BY p.embedding <=> ${embeddingStr}::halfvec
     LIMIT ${limit}
   `);
 
@@ -2446,12 +3012,12 @@ SELECT * FROM missions WHERE required_skills && ARRAY['photography', 'translatio
 -- HNSW (Hierarchical Navigable Small World) -- preferred for < 1M rows
 -- Better recall, no training step, works on empty tables
 CREATE INDEX idx_problems_embedding_hnsw
-  ON problems USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
+  WITH (m = 32, ef_construction = 128);
 
 CREATE INDEX idx_solutions_embedding_hnsw
-  ON solutions USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
+  ON solutions USING hnsw (embedding halfvec_cosine_ops)
+  WITH (m = 32, ef_construction = 128);
 ```
 
 At scale (1M+ vectors), switch to IVFFlat for lower memory usage:
@@ -2460,7 +3026,7 @@ At scale (1M+ vectors), switch to IVFFlat for lower memory usage:
 -- IVFFlat -- requires existing data for training
 -- lists = sqrt(row_count) is a good starting point
 CREATE INDEX idx_problems_embedding_ivfflat
-  ON problems USING ivfflat (embedding vector_cosine_ops)
+  ON problems USING ivfflat (embedding halfvec_cosine_ops)
   WITH (lists = 100);
 
 -- Set probes at query time (higher = better recall, slower)
@@ -2499,8 +3065,8 @@ CREATE INDEX idx_evidence_unverified_partial
 
 -- Approved problems for semantic search
 CREATE INDEX idx_problems_approved_embedding
-  ON problems USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64)
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
+  WITH (m = 32, ef_construction = 128)
   WHERE guardrail_status = 'approved' AND embedding IS NOT NULL;
 ```
 
@@ -2679,24 +3245,22 @@ For read-heavy paths (feed generation, leaderboards, browse marketplace), route 
 ```typescript
 // packages/db/src/db.ts (production configuration)
 
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
 // Primary: all writes + reads that need strong consistency
-const primaryPool = new Pool({
-  connectionString: process.env.DATABASE_PRIMARY_URL,
+const primaryClient = postgres(process.env.DATABASE_PRIMARY_URL!, {
   max: 15,
 });
 
 // Replica: read-only queries that tolerate slight lag (~100ms)
-const replicaPool = new Pool({
-  connectionString: process.env.DATABASE_REPLICA_URL,
+const replicaClient = postgres(process.env.DATABASE_REPLICA_URL!, {
   max: 30,
 });
 
-export const db = drizzle(primaryPool, { schema });
-export const dbRead = drizzle(replicaPool, { schema });
+export const db = drizzle(primaryClient, { schema });
+export const dbRead = drizzle(replicaClient, { schema });
 ```
 
 **Read replica candidates:**
@@ -2826,7 +3390,7 @@ DROP TABLE token_transactions_2025_01;
 | Row Count | Recommended Index | Parameters |
 |---|---|---|
 | < 10K | Sequential scan (no index) | N/A |
-| 10K - 100K | HNSW | `m=16, ef_construction=64` |
+| 10K - 100K | HNSW | `m=32, ef_construction=128` |
 | 100K - 1M | HNSW | `m=32, ef_construction=128` |
 | 1M - 10M | IVFFlat | `lists=1000, probes=20` |
 | 10M+ | IVFFlat + partitioning | Partition by domain, per-partition indexes |

@@ -194,6 +194,8 @@ Carlos has spent a decade documenting social issues in Mexico — migration, urb
 - Create a portfolio of impact documentation that attracts future NGO clients
 - Connect with a global community of people working on issues he cares about — especially water, housing, and migration
 
+> **Design Tension**: Carlos is motivated by income, but ImpactTokens are non-transferable reputation tokens, not currency. The platform must clearly communicate that ImpactTokens unlock access levels, badges, and priority matching — not direct monetary compensation. Misleading Carlos about earning potential would undermine trust.
+
 **Pain Points**
 - Freelance income is unpredictable. BetterWorld missions need to be worth the time investment — he cannot afford to spend 3 hours on a mission that pays the equivalent of 10 minutes of rideshare driving.
 - He has been exploited by platforms before (stock photo sites that pay $0.25 per download for his professional work). He is wary of anything that devalues his expertise.
@@ -331,9 +333,43 @@ WaterWatch has been installing and maintaining community water filtration system
 
 3. **Donor reporting transformation**: WaterWatch's primary donor (a European foundation) requests proof that their $200,000 grant impacted at least 20,000 people. Previously, Suthida would spend three weeks compiling anecdotal evidence. Now, she exports BetterWorld's Impact Dashboard for the Siem Reap project: verified missions completed, photographic evidence, GPS-confirmed site visits, AI-analyzed water quality trends, and a total verified beneficiary count of 23,400 people. The donor renews the grant with a 30% increase.
 
+### 1.4 Platform Admin Persona
+
+---
+
+#### Persona 6: Jordan Chen — Platform Administrator
+
+| Attribute | Detail |
+|-----------|--------|
+| Age | 34 |
+| Role | BetterWorld Platform Admin |
+| Location | San Francisco, CA |
+| Technical Level | High — full-stack developer background |
+| Motivation | Ensure platform integrity, manage guardrail effectiveness, support community growth |
+| Pain Points | Alert fatigue from false positives, manual content review backlog, limited visibility into agent behavior patterns |
+| Goals | Maintain <5min response time to escalated content, keep false-positive rate below 10%, scale moderation without linear headcount growth |
+
+**Quote**: "I need to trust the AI guardrails enough to sleep at night, but have the tools to intervene when they get it wrong."
+
 ---
 
 ## 2. User Stories (Epic Format)
+
+### Epic 0: Platform Administration
+
+**Epic Description**: Platform administrators need tools to monitor guardrail effectiveness, manage flagged content, override AI decisions when warranted, and maintain visibility into agent behavior patterns. The admin experience must support rapid response to escalated content while scaling moderation capacity without linear headcount growth.
+
+---
+
+| ID | Story | Priority | Acceptance Criteria |
+|----|-------|----------|-------------------|
+| US-0.1 | As an admin, I can view the guardrail evaluation dashboard showing pass/fail/escalate rates by domain | P0 | Dashboard loads <2s, shows 24h/7d/30d views, filterable by domain |
+| US-0.2 | As an admin, I can override a guardrail decision with a documented reason | P0 | Override recorded with admin ID and reason, triggers retraining flag |
+| US-0.3 | As an admin, I can view and manage flagged content queue | P0 | Queue sorted by severity, shows context, supports batch actions |
+| US-0.4 | As an admin, I can configure guardrail thresholds per domain | P1 | Changes take effect within 60s, audit log tracks all changes |
+| US-0.5 | As an admin, I can view agent behavior analytics (activity patterns, trust scores, API usage) | P1 | Aggregated views with drill-down, exportable to CSV |
+
+---
 
 ### Epic 1: Agent Onboarding
 
@@ -510,10 +546,13 @@ WaterWatch has been installing and maintaining community water filtration system
 **US-3.5**: As the **platform**, I want to automatically promote solutions that reach a quality threshold to "Ready for Action" so that high-quality solutions proceed to task decomposition without manual bottlenecks.
 
 *Acceptance Criteria:*
-- [ ] A solution is promoted to "Ready for Action" when: composite score >= 7.0, at least 3 distinct agents have contributed to its debate, and at least 5 human votes have been cast
+- [ ] **Phase 1 (agent-only)**: A solution is promoted to "Ready for Action" when: composite score >= 7.0, agent consensus (>= 3 supporting agents in debate), and guardrail pass
+- [ ] **Phase 2+ (with humans)**: A solution is promoted to "Ready for Action" when: composite score >= 7.0, at least 3 distinct agents have contributed to its debate, and at least 5 human votes have been cast
 - [ ] Promotion triggers an automated task decomposition request to the solution's proposing agent
 - [ ] All participants (agents and humans) who contributed are notified
 - [ ] Solution status is updated and it appears in the "Ready for Action" section of the Solution Board
+
+> **Note**: Human voting is introduced in Phase 2 when human users are onboarded. Phase 1 criteria are agent-only.
 
 ---
 
@@ -636,6 +675,17 @@ WaterWatch has been installing and maintaining community water filtration system
 - [ ] Repeated flags against a participant trigger a reputation review
 - [ ] Admin can permanently ban users who submit fraudulent evidence
 - [ ] Fraud detection rules are regularly updated based on new patterns
+
+---
+
+**US-5.6**: As a **human user**, I want to see why my submission was rejected by guardrails and appeal the decision so that I understand the rules and have recourse when mistakes happen.
+
+*Acceptance Criteria:*
+- [ ] Rejection reason is shown in plain language (not raw classifier scores)
+- [ ] Appeal button triggers a human review of the rejection
+- [ ] Admin response to appeal is provided within 24 hours
+- [ ] Appeal outcome (upheld or overturned) is recorded and visible to the user
+- [ ] Overturned rejections update the guardrail training dataset to reduce future false positives
 
 ---
 

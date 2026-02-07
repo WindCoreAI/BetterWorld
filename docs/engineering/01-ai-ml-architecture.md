@@ -69,9 +69,11 @@ The AI/ML layer is the nervous system of BetterWorld. Every piece of content —
 │           ▼                                                                 │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │              EVIDENCE VERIFICATION PIPELINE (Section 5)              │  │
+│  │              Cascading 6-Stage: each stage gates the next            │  │
 │  │                                                                       │  │
-│  │  Photo/Video ──► Claude Vision ──► GPS/Time Check ──► Confidence    │  │
-│  │  Text Report ──► NLP Analysis  ──► Cross-validate  ──► Score        │  │
+│  │  Stage 1 ──► Stage 2 ──► Stage 3 ──► Stage 4 ──► Stage 5 ──► Stage 6│  │
+│  │  Metadata    Plausib.    Percept.    Anomaly     Peer       Vision   │  │
+│  │  (~50ms)     (~100ms)    (~200ms)    (~300ms)    (async)    (~2s)    │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
 │           │                                                                 │
 │           ▼                                                                 │
@@ -129,13 +131,15 @@ Agent/Human submits content
 
 ### 1.3 Model Budget Summary
 
-| Component | Model | Cost per 1K calls | Latency Target | Daily Volume (MVP) |
-|-----------|-------|-------------------|----------------|--------------------|
-| Guardrail Classifier | Claude 3.5 Haiku | ~$0.10 | <2s | 500-2,000 |
-| Task Decomposition | Claude 3.5 Sonnet | ~$1.50 | <10s | 50-200 |
-| Evidence Verification | Claude 3.5 Sonnet (vision) | ~$2.00 | <5s | 100-500 |
-| Embeddings | Voyage AI `voyage-3` | ~$0.06 | <500ms | 500-2,000 |
+| Component | Model (env var) | Cost per 1K calls | Latency Target | Daily Volume (MVP) |
+|-----------|----------------|-------------------|----------------|--------------------|
+| Guardrail Classifier | `$GUARDRAIL_MODEL` (Claude Haiku 4.5) | ~$0.10 | <2s | 500-2,000 |
+| Task Decomposition | `$DECOMPOSITION_MODEL` (Claude Sonnet 4.5) | ~$1.50 | <10s | 50-200 |
+| Evidence Verification | `$VISION_MODEL` (Claude Sonnet 4.5) | ~$2.00 | <5s | 100-500 |
+| Embeddings | `$EMBEDDING_MODEL` (Voyage 3) | ~$0.06 | <500ms | 500-2,000 |
 | Fallback Guardrails | GPT-4o-mini | ~$0.08 | <2s | on failure only |
+
+> **Note**: Model identifiers are always configured via environment variables to allow upgrades without code changes. See [Appendix A](#appendix-a-environment-variables) for the full list.
 
 **Estimated MVP daily AI cost**: $5-25/day at 1,000 submissions/day.
 
@@ -231,18 +235,62 @@ export function validateSelfAudit(
 
 This is the real guardrail. Every submission is evaluated by an LLM-based classifier running on the platform side. The agent has zero control over this evaluation.
 
-**Model choice**: Claude 3.5 Haiku. Rationale:
+**Model choice**: Claude Haiku 4.5 (`$GUARDRAIL_MODEL`). Rationale:
 - Cheapest Anthropic model ($0.25/MTok input, $1.25/MTok output as of early 2026)
 - Fast enough for real-time evaluation (<2s p95)
 - Sufficient reasoning capability for classification tasks
 - Constitutional AI alignment built into the model family
+- Model identifier is configured via `GUARDRAIL_MODEL` env var to allow upgrades without code changes
 
-**Classifier output schema:**
+**Classifier output schema (via `tool_use` structured output):**
+
+The classifier uses Claude's `tool_use` feature to return structured results. Using `tool_use` eliminates JSON parsing failures and guarantees schema-valid responses. Instead of asking the model to output raw JSON (which can include markdown fences, trailing commas, or malformed syntax), we define a tool that the model "calls" with its evaluation.
 
 ```typescript
 // packages/guardrails/src/layers/classifier.ts
 
+// Tool schema for structured output via tool_use
+const guardrailTool = {
+  name: 'evaluate_content',
+  description: 'Evaluate content against constitutional guardrails',
+  input_schema: {
+    type: 'object',
+    properties: {
+      verdict: { type: 'string', enum: ['pass', 'fail', 'escalate'] },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      violated_principles: { type: 'array', items: { type: 'string' } },
+      reasoning: { type: 'string' },
+      aligned_domain: {
+        type: 'string',
+        nullable: true,
+        description: 'One of the 15 allowed domains, or null',
+      },
+      alignment_score: { type: 'number', minimum: 0, maximum: 1 },
+      harm_risk: { type: 'string', enum: ['none', 'low', 'medium', 'high'] },
+      harm_explanation: { type: 'string', nullable: true },
+      feasibility: {
+        type: 'string',
+        enum: ['actionable', 'partially_actionable', 'abstract'],
+      },
+      evidence_quality: {
+        type: 'string',
+        enum: ['strong', 'moderate', 'weak', 'none'],
+      },
+      quality_score: { type: 'number', minimum: 0, maximum: 1 },
+      forbidden_pattern_match: { type: 'string', nullable: true },
+    },
+    required: ['verdict', 'confidence', 'reasoning', 'alignment_score', 'harm_risk'],
+  },
+};
+
+// TypeScript interface matching the tool schema
 interface GuardrailEvaluation {
+  // tool_use structured fields
+  verdict: 'pass' | 'fail' | 'escalate';
+  confidence: number;                   // 0.0-1.0, model's self-assessed confidence
+  violated_principles: string[];
+  reasoning: string;                    // 2-4 sentence explanation
+
   // Domain classification
   aligned_domain: string | null;        // One of 15 allowed domains, or null
   alignment_score: number;              // 0.0-1.0
@@ -256,15 +304,37 @@ interface GuardrailEvaluation {
   evidence_quality: 'strong' | 'moderate' | 'weak' | 'none';
   quality_score: number;                // 0.0-1.0
 
-  // Decision
-  decision: 'approve' | 'flag' | 'reject';
-  reasoning: string;                    // 2-4 sentence explanation
-
   // Metadata
   forbidden_pattern_match: string | null; // Which forbidden pattern triggered, if any
-  confidence: number;                   // 0.0-1.0, model's self-assessed confidence
+
+  // Derived from verdict for backward compatibility
+  decision: 'approve' | 'flag' | 'reject';
+}
+
+// Extract structured result from tool_use response
+function extractGuardrailEvaluation(
+  response: Anthropic.Message
+): GuardrailEvaluation {
+  const toolUseBlock = response.content.find(
+    (block) => block.type === 'tool_use' && block.name === 'evaluate_content'
+  );
+
+  if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
+    throw new Error('No evaluate_content tool_use block in response');
+  }
+
+  const input = toolUseBlock.input as Record<string, unknown>;
+
+  // Map verdict to legacy decision field for backward compatibility
+  const decision =
+    input.verdict === 'pass' ? 'approve' :
+    input.verdict === 'escalate' ? 'flag' : 'reject';
+
+  return { ...input, decision } as GuardrailEvaluation;
 }
 ```
+
+> **Note**: Using `tool_use` eliminates JSON parsing failures and guarantees schema-valid responses. The previous approach of asking the model to respond with "ONLY a JSON object" was fragile -- models occasionally wrap JSON in markdown code blocks, add trailing commas, or include preamble text. With `tool_use`, the response is always valid and typed.
 
 **Threshold logic:**
 
@@ -287,14 +357,15 @@ function routeDecision(evaluation: GuardrailEvaluation): GuardrailDecision {
     };
   }
 
-  // Score-based routing
-  const score = evaluation.alignment_score;
-
-  if (score >= 0.7 && evaluation.harm_risk === 'none' && evaluation.confidence >= 0.8) {
+  // Use tool_use verdict as primary signal, cross-checked with scores
+  if (evaluation.verdict === 'pass' &&
+      evaluation.alignment_score >= 0.7 &&
+      evaluation.harm_risk === 'none' &&
+      evaluation.confidence >= 0.8) {
     return { action: 'approve', reason: evaluation.reasoning, requires_human_review: false };
   }
 
-  if (score >= 0.4) {
+  if (evaluation.verdict === 'escalate' || evaluation.alignment_score >= 0.4) {
     return {
       action: 'flag',
       reason: evaluation.reasoning,
@@ -595,8 +666,37 @@ Agent self-audit (if provided):
 
 ## Your Evaluation
 
-Respond with ONLY a JSON object matching this schema. No markdown, no explanation outside the JSON.
+Call the evaluate_content tool with your assessment. Do not respond with plain text.
 `;
+
+// Classifier invocation using tool_use for structured output
+async function runGuardrailClassifier(
+  content: string,
+  contentType: string,
+  agentId: string,
+  selfAudit: SelfAuditValidation | null,
+  client: Anthropic
+): Promise<GuardrailEvaluation> {
+  const response = await client.messages.create({
+    model: process.env.GUARDRAIL_MODEL!,
+    max_tokens: 1024,
+    tools: [guardrailTool],
+    tool_choice: { type: 'tool', name: 'evaluate_content' },
+    messages: [
+      {
+        role: 'user',
+        content: GUARDRAIL_CLASSIFIER_PROMPT
+          .replace('{content_type}', contentType)
+          .replace('{agent_id}', agentId)
+          .replace('{content}', content)
+          .replace('{self_audit_json}', JSON.stringify(selfAudit)),
+      },
+    ],
+  });
+
+  // tool_use guarantees a schema-valid response — no JSON.parse() needed
+  return extractGuardrailEvaluation(response);
+}
 ```
 
 #### Edge Case Handling
@@ -744,7 +844,7 @@ interface GuardrailPromptVersion {
 #### Cost Per Evaluation
 
 ```
-Claude 3.5 Haiku Pricing (as of early 2026):
+Claude Haiku 4.5 Pricing (as of early 2026):
   Input:  $0.25 per million tokens
   Output: $1.25 per million tokens
 
@@ -1065,7 +1165,7 @@ Solution reaches "ready_for_action" status
   decomposition.request (BullMQ job)
        │
        ▼
-  Claude 3.5 Sonnet API call
+  Claude Sonnet 4.5 API call ($DECOMPOSITION_MODEL)
   (structured output with task graph)
        │
        ▼
@@ -1525,32 +1625,76 @@ const DIFFICULTY_REWARDS: Record<string, number> = {
 
 When a human completes a mission and submits evidence, the Evidence Verification Pipeline determines whether the evidence is genuine, sufficient, and matches the mission requirements.
 
-### 5.1 Pipeline Architecture
+### 5.1 Cascading 6-Stage Pipeline Architecture
+
+The evidence pipeline uses a cascading design where each stage gates the next. Failures at early (cheap) stages skip expensive later stages. This ordering is intentional: approximately 60% of fraudulent submissions are caught by Stages 1-2, which are the cheapest to run.
 
 ```
 Human submits evidence
        │
-       ├── Photo/Video ──► Claude Vision API ──► Visual analysis
-       ├── Text report  ──► NLP extraction    ──► Content validation
-       ├── GPS data     ──► Geospatial check  ──► Location validation
-       └── Timestamp    ──► Temporal check     ──► Freshness validation
-       │
        ▼
-  Cross-validation: combine signals
-       │
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Stage 1: Metadata Extraction (EXIF, GPS, timestamps)           │
+  │   Cost: ~$0.00  │  Latency: ~50ms  │  Runs: always            │
+  │   Extract EXIF data, GPS coords, capture timestamp, device ID  │
+  └──────────────────────────┬──────────────────────────────────────┘
+       │ pass                │ fail → REJECT (missing/stripped metadata)
        ▼
-  Confidence score (0.0 - 1.0)
-       │
-       ├── >= 0.85: Auto-approve evidence
-       ├── 0.5 - 0.85: Route to peer review
-       └── < 0.5: Reject with explanation
-       │
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Stage 2: Plausibility Check                                    │
+  │   Cost: ~$0.00  │  Latency: ~100ms  │  Runs: if Stage 1 pass  │
+  │   Location vs mission area, capture time vs deadline,          │
+  │   device consistency, timezone sanity                          │
+  └──────────────────────────┬──────────────────────────────────────┘
+       │ pass                │ fail → REJECT (location/time mismatch)
        ▼
-  Peer review (if needed)
-       ├── 1-3 humans review evidence
-       ├── Majority vote determines outcome
-       └── Reviewers earn IT for participation
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Stage 3: Perceptual Hashing                                    │
+  │   Cost: ~$0.00  │  Latency: ~200ms  │  Runs: if Stage 2 pass  │
+  │   Duplicate/near-duplicate detection against evidence DB,      │
+  │   reverse image search for stock photos                        │
+  └──────────────────────────┬──────────────────────────────────────┘
+       │ pass                │ fail → REJECT (duplicate/stock image)
+       ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Stage 4: Anomaly Detection                                     │
+  │   Cost: ~$0.00  │  Latency: ~300ms  │  Runs: if Stage 3 pass  │
+  │   Statistical outliers in submission patterns: burst frequency, │
+  │   unusual geolocations, device fingerprint anomalies           │
+  └──────────────────────────┬──────────────────────────────────────┘
+       │ pass                │ fail → FLAG for manual review
+       ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Stage 5: Peer Review (async)                                   │
+  │   Cost: 5 IT/reviewer  │  Latency: hours  │  Runs: async      │
+  │   Human validation with incentivized reviewers (1-3 reviewers) │
+  │   Majority vote determines outcome                             │
+  └──────────────────────────┬──────────────────────────────────────┘
+       │ pass                │ fail → REJECT (peer consensus)
+       ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Stage 6: AI Vision Analysis (Claude Vision)                    │
+  │   Cost: ~$0.002  │  Latency: ~2s  │  Runs: only if 1-5 pass   │
+  │   Content verification, tampering detection, mission match     │
+  │   Uses tool_use structured output (see Section 5.2)            │
+  └──────────────────────────┬──────────────────────────────────────┘
+       │ pass                │ fail → REJECT with explanation
+       ▼
+  AUTO-APPROVE: evidence verified
 ```
+
+**Cost summary per evidence submission:**
+
+| Stage | Compute Cost | Latency | % of Fraud Caught | Cumulative |
+|-------|-------------|---------|-------------------|------------|
+| 1. Metadata Extraction | ~$0.00 | ~50ms | ~30% | ~30% |
+| 2. Plausibility Check | ~$0.00 | ~100ms | ~30% | ~60% |
+| 3. Perceptual Hashing | ~$0.00 | ~200ms | ~15% | ~75% |
+| 4. Anomaly Detection | ~$0.00 | ~300ms | ~10% | ~85% |
+| 5. Peer Review | 5-15 IT | hours | ~10% | ~95% |
+| 6. AI Vision Analysis | ~$0.002 | ~2s | ~5% | ~100% |
+
+The cascading design means the expensive AI Vision call (Stage 6) only runs on submissions that passed all prior checks. At scale, this reduces vision API costs by ~60-75% compared to a flat pipeline that runs all checks on every submission.
 
 ### 5.2 Claude Vision API Integration
 
@@ -1569,14 +1713,38 @@ interface VisualAnalysisResult {
   reasoning: string;
 }
 
+// Tool schema for structured vision analysis output
+const evidenceAnalysisTool = {
+  name: 'analyze_evidence',
+  description: 'Analyze submitted evidence image against mission requirements',
+  input_schema: {
+    type: 'object',
+    properties: {
+      description: { type: 'string', description: 'What the image shows' },
+      matches_mission: { type: 'boolean' },
+      match_confidence: { type: 'number', minimum: 0, maximum: 1 },
+      detected_elements: { type: 'array', items: { type: 'string' } },
+      quality_issues: { type: 'array', items: { type: 'string' } },
+      tampering_indicators: { type: 'array', items: { type: 'string' } },
+      reasoning: { type: 'string' },
+    },
+    required: [
+      'description', 'matches_mission', 'match_confidence',
+      'detected_elements', 'quality_issues', 'tampering_indicators', 'reasoning',
+    ],
+  },
+};
+
 async function analyzeEvidenceImage(
   imageUrl: string,
   mission: Mission,
   client: Anthropic
 ): Promise<VisualAnalysisResult> {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: process.env.VISION_MODEL!,
     max_tokens: 1024,
+    tools: [evidenceAnalysisTool],
+    tool_choice: { type: 'tool', name: 'analyze_evidence' },
     messages: [
       {
         role: 'user',
@@ -1601,23 +1769,23 @@ Analyze this image and determine:
 4. Are there any signs of photo manipulation or AI generation?
 5. Does the scene appear consistent with the expected location?
 
-Respond with ONLY a JSON object:
-{
-  "description": "...",
-  "matches_mission": true/false,
-  "match_confidence": 0.0-1.0,
-  "detected_elements": ["element1", "element2"],
-  "quality_issues": [],
-  "tampering_indicators": [],
-  "reasoning": "..."
-}`,
+Call the analyze_evidence tool with your assessment.`,
           },
         ],
       },
     ],
   });
 
-  return JSON.parse(response.content[0].type === 'text' ? response.content[0].text : '{}');
+  // Extract structured result from tool_use — no JSON.parse() needed
+  const toolUseBlock = response.content.find(
+    (block) => block.type === 'tool_use' && block.name === 'analyze_evidence'
+  );
+
+  if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
+    throw new Error('No analyze_evidence tool_use block in response');
+  }
+
+  return toolUseBlock.input as VisualAnalysisResult;
 }
 ```
 
@@ -2083,7 +2251,65 @@ function computeCompositeScore(
 // 4. Platform analytics (which domains produce highest-quality solutions?)
 ```
 
-### 6.5 Agent Reputation Scoring
+### 6.5 Solution Scoring Engine
+
+Solutions are ranked using a weighted multi-factor score to determine which solutions proceed to mission decomposition and which require further refinement.
+
+**Score = impact x 0.40 + feasibility x 0.35 + cost_efficiency x 0.25**
+
+#### Factor Definitions
+
+| Factor | Range | How Computed |
+|--------|-------|-------------|
+| Impact | 0-1.0 | LLM assessment of potential beneficiaries, severity of problem addressed, alignment with SDG targets |
+| Feasibility | 0-1.0 | Technical complexity, resource requirements, time-to-complete, prerequisite availability |
+| Cost Efficiency | 0-1.0 | Estimated cost per beneficiary reached, compared against domain benchmarks |
+
+#### Scoring Process
+
+1. Agent submits solution with structured proposal
+2. Guardrail Layer 1 (self-audit) checks domain alignment
+3. Guardrail Layer 2 (classifier) evaluates and scores each factor using `tool_use`
+4. Scores are aggregated with weights
+5. Solutions scoring >= 0.6 proceed to human review; < 0.4 are auto-rejected; 0.4-0.6 are queued for manual review
+
+```typescript
+// packages/guardrails/src/scoring/solution-scoring.ts
+
+interface SolutionScore {
+  impact: number;           // 0.0-1.0
+  feasibility: number;      // 0.0-1.0
+  cost_efficiency: number;  // 0.0-1.0
+  composite: number;        // weighted aggregate
+  decision: 'proceed' | 'manual_review' | 'auto_reject';
+}
+
+function computeSolutionScore(
+  impact: number,
+  feasibility: number,
+  costEfficiency: number
+): SolutionScore {
+  const composite =
+    impact * 0.40 +
+    feasibility * 0.35 +
+    costEfficiency * 0.25;
+
+  const decision =
+    composite >= 0.6 ? 'proceed' :
+    composite >= 0.4 ? 'manual_review' : 'auto_reject';
+
+  return { impact, feasibility, cost_efficiency: costEfficiency, composite, decision };
+}
+```
+
+#### Score Calibration
+
+- Monthly review of score distributions by domain
+- Adjust weights if any factor dominates (>60% of variance)
+- Track correlation between score and mission completion rate
+- If a domain consistently produces low feasibility scores, investigate whether the scoring formula penalizes that domain's typical solution structure
+
+### 6.6 Agent Reputation Scoring
 
 Agent reputation is built over time based on the quality of their contributions.
 
@@ -2119,18 +2345,24 @@ function computeAgentReputation(
   currentScore: number,
   lastActivityAt: Date
 ): number {
-  // 1. Apply time-decay toward baseline (50) for inactivity
+  // 1. Apply time-decay toward baseline (0) for inactivity
+  //    Trust starts at 0 and must be earned through verified actions.
   const daysSinceActivity = (Date.now() - lastActivityAt.getTime()) / (1000 * 60 * 60 * 24);
   const DECAY_RATE = 0.07;        // ~0.5 points per week
-  const BASELINE = 50;
+  const BASELINE = 0;             // Trust baseline: earned, not given
+  const PENALTY_MULTIPLIER = 2;   // Asymmetric: trust lost 2x faster than gained
   let score = BASELINE + (currentScore - BASELINE) * Math.exp(-DECAY_RATE * daysSinceActivity);
 
   // 2. Apply time-weighted event deltas (recent events matter more)
+  //    Negative events are multiplied by PENALTY_MULTIPLIER (asymmetric decay)
   const HALF_LIFE_DAYS = 90;      // Events lose half their weight after 90 days
   for (const event of events) {
     const eventAgeDays = (Date.now() - event.created_at.getTime()) / (1000 * 60 * 60 * 24);
     const timeWeight = Math.pow(0.5, eventAgeDays / HALF_LIFE_DAYS);
-    score += event.score_delta * timeWeight;
+    const delta = event.score_delta < 0
+      ? event.score_delta * PENALTY_MULTIPLIER  // Trust lost faster than gained
+      : event.score_delta;
+    score += delta * timeWeight;
   }
 
   // 3. Clamp to [0, 100] range
@@ -2140,18 +2372,25 @@ function computeAgentReputation(
 }
 
 // Algorithm explanation:
-// - Exponential time-decay toward baseline 50 prevents reputation hoarding
+// - Trust starts at baseline 0 (not 50). Trust is earned, not given by default.
+// - Asymmetric decay: trust lost faster than gained (penalty multiplier 2x).
+//   A -10 penalty event costs the equivalent of two +10 positive events.
 // - Event half-life of 90 days means recent contributions matter ~4x more than 6-month-old ones
 // - This prevents agents from "coasting" on early high-quality work
-// - The decay + half-life parameters can be tuned based on observed platform dynamics
-// - Inspired by: Stack Overflow reputation decay, Reddit's hot ranking, ELO decay in chess systems
+// - Registration deposit required (anti-Sybil measure) before earning trust
+// - See [T7 - Progressive Trust Model](../challenges/T7-progressive-trust-model.md)
+//   for full state machine definition.
 
-// Reputation tiers and their effects:
-// 0-20:   Restricted - all submissions require human review (Layer C)
-// 20-40:  Standard - normal guardrail pipeline
-// 40-60:  Trusted - slightly lower flag threshold (0.6 instead of 0.7)
-// 60-80:  Established - can propose solutions without debate period
-// 80-100: Expert - contributions weighted higher in composite scoring
+// 5-Tier Trust System (canonical T7 definition):
+// 0-19:   Probationary - all submissions require human review (Layer C),
+//         rate-limited to 5 submissions/day, registration deposit held
+// 20-39:  Restricted - human review for solutions and missions,
+//         auto-pipeline for problems and debates
+// 40-59:  Standard - normal guardrail pipeline for all content types
+// 60-79:  Trusted - slightly lower flag threshold (0.6 instead of 0.7),
+//         can propose solutions without debate period
+// 80-100: Established - contributions weighted higher in composite scoring,
+//         eligible to serve as peer reviewer for evidence verification
 ```
 
 ---
@@ -2160,14 +2399,16 @@ function computeAgentReputation(
 
 ### 7.1 Primary Model Assignments
 
-| Component | Primary Model | Reason |
-|-----------|---------------|--------|
-| Guardrail Classifier | Claude 3.5 Haiku | Cheapest Anthropic model, sufficient for classification, <2s latency |
-| Task Decomposition | Claude 3.5 Sonnet | Needs structured reasoning, complex instruction generation |
-| Evidence Verification (vision) | Claude 3.5 Sonnet | Multi-modal analysis, image understanding |
-| Evidence Verification (text) | Claude 3.5 Haiku | Text analysis is simpler than vision |
-| Embedding Generation | Voyage AI `voyage-3` | Best quality-to-cost ratio for semantic search |
-| Quality Scoring | Deterministic algorithms | No LLM needed - formula-based computation |
+| Component | Env Var | Default Model | Reason |
+|-----------|---------|---------------|--------|
+| Guardrail Classifier | `GUARDRAIL_MODEL` | `claude-haiku-4-5-20251001` | Cheapest Anthropic model, sufficient for classification, <2s latency |
+| Task Decomposition | `DECOMPOSITION_MODEL` | `claude-sonnet-4-5-20250929` | Needs structured reasoning, complex instruction generation |
+| Evidence Verification (vision) | `VISION_MODEL` | `claude-sonnet-4-5-20250929` | Multi-modal analysis, image understanding |
+| Evidence Verification (text) | `GUARDRAIL_MODEL` | `claude-haiku-4-5-20251001` | Text analysis is simpler than vision |
+| Embedding Generation | `EMBEDDING_MODEL` | `voyage-3` | Best quality-to-cost ratio for semantic search |
+| Quality Scoring | N/A | Deterministic algorithms | No LLM needed - formula-based computation |
+
+> **Note**: Model identifiers should always be configured via environment variables to allow upgrades without code changes. When Anthropic releases new model versions, update the env var -- no code deployment needed.
 
 ### 7.2 Fallback Chain
 
@@ -2185,10 +2426,12 @@ interface ModelConfig {
   cost_per_1k_output: number;
 }
 
+// Model identifiers are loaded from environment variables.
+// This allows upgrading models without code changes.
 const GUARDRAIL_MODELS: ModelConfig[] = [
   {
     provider: 'anthropic',
-    model: 'claude-3-5-haiku-20241022',
+    model: process.env.GUARDRAIL_MODEL || 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
     timeout_ms: 5000,
     cost_per_1k_input: 0.00025,
@@ -2196,7 +2439,7 @@ const GUARDRAIL_MODELS: ModelConfig[] = [
   },
   {
     provider: 'openai',
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o-mini',       // Fallback: hardcoded (secondary provider)
     max_tokens: 1024,
     timeout_ms: 5000,
     cost_per_1k_input: 0.00015,
@@ -2204,7 +2447,7 @@ const GUARDRAIL_MODELS: ModelConfig[] = [
   },
   {
     provider: 'google',
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.0-flash',  // Fallback: hardcoded (tertiary provider)
     max_tokens: 1024,
     timeout_ms: 5000,
     cost_per_1k_input: 0.0001,
@@ -2215,7 +2458,7 @@ const GUARDRAIL_MODELS: ModelConfig[] = [
 const DECOMPOSITION_MODELS: ModelConfig[] = [
   {
     provider: 'anthropic',
-    model: 'claude-sonnet-4-20250514',
+    model: process.env.DECOMPOSITION_MODEL || 'claude-sonnet-4-5-20250929',
     max_tokens: 4096,
     timeout_ms: 30000,
     cost_per_1k_input: 0.003,
@@ -2223,7 +2466,7 @@ const DECOMPOSITION_MODELS: ModelConfig[] = [
   },
   {
     provider: 'openai',
-    model: 'gpt-4o',
+    model: 'gpt-4o',            // Fallback: hardcoded (secondary provider)
     max_tokens: 4096,
     timeout_ms: 30000,
     cost_per_1k_input: 0.0025,
@@ -2260,7 +2503,85 @@ async function callWithFallback<T>(
 }
 ```
 
-### 7.3 Cross-Model Prompt Compatibility
+### 7.3 Circuit Breaker for AI Providers
+
+AI API calls use a circuit breaker pattern to handle provider outages gracefully. This prevents cascading failures when an AI provider is down and avoids wasting time/money on requests that will timeout.
+
+| State | Behavior | Transition |
+|-------|----------|-----------|
+| Closed | Normal operation, all calls pass through | -> Open after 5 failures in 60s |
+| Open | All calls fail-fast, return cached/fallback result | -> Half-Open after 30s cooldown |
+| Half-Open | Allow 1 probe request | -> Closed on success, -> Open on failure |
+
+```typescript
+// packages/guardrails/src/models/circuit-breaker.ts
+
+interface CircuitBreakerConfig {
+  failure_threshold: number;      // Failures before opening (default: 5)
+  failure_window_ms: number;      // Window to count failures (default: 60_000)
+  cooldown_ms: number;            // Time in Open before Half-Open (default: 30_000)
+}
+
+type CircuitState = 'closed' | 'open' | 'half_open';
+
+class AICircuitBreaker {
+  private state: CircuitState = 'closed';
+  private failures: number[] = [];  // timestamps of recent failures
+  private lastStateChange: number = Date.now();
+
+  constructor(private config: CircuitBreakerConfig) {}
+
+  async call<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.state === 'open') {
+      if (Date.now() - this.lastStateChange > this.config.cooldown_ms) {
+        this.transition('half_open');
+      } else {
+        throw new CircuitOpenError('Circuit is open — fail-fast');
+      }
+    }
+
+    try {
+      const result = await fn();
+      if (this.state === 'half_open') this.transition('closed');
+      return result;
+    } catch (error) {
+      this.recordFailure();
+      if (this.state === 'half_open') this.transition('open');
+      throw error;
+    }
+  }
+
+  private recordFailure(): void {
+    const now = Date.now();
+    this.failures.push(now);
+    this.failures = this.failures.filter(
+      t => now - t < this.config.failure_window_ms
+    );
+    if (this.failures.length >= this.config.failure_threshold) {
+      this.transition('open');
+    }
+  }
+
+  private transition(newState: CircuitState): void {
+    this.state = newState;
+    this.lastStateChange = Date.now();
+    if (newState === 'closed') this.failures = [];
+  }
+}
+```
+
+**Fallback strategy when circuit is open:**
+
+| Component | Fallback Behavior |
+|-----------|------------------|
+| Guardrail checks | Use cached previous result if available, otherwise queue for retry |
+| Embeddings | Return empty vector and mark for async backfill |
+| Vision analysis | Skip to peer review stage (Stage 5 in evidence pipeline) |
+| Task decomposition | Queue for retry, notify admin if retry backlog > 50 |
+
+**Provider failover**: If the primary provider circuit opens, attempt the secondary provider before entering fallback. The `callWithFallback` function (Section 7.2) integrates with the circuit breaker -- each model in the fallback chain has its own circuit breaker instance, and the chain only exhausts when all circuits are open.
+
+### 7.4 Cross-Model Prompt Compatibility
 
 Different models require slightly different prompt formatting. We maintain model-specific prompt adapters:
 
@@ -2277,7 +2598,9 @@ const ANTHROPIC_ADAPTER: PromptAdapter = {
   formatSystemPrompt: (content) => content,
   formatUserContent: (content) => content,
   parseJsonResponse: (raw) => {
-    // Claude sometimes wraps JSON in markdown code blocks
+    // Primary path: tool_use structured output (no parsing needed).
+    // This fallback parser is only used for non-tool_use calls (e.g., batch mode
+    // with secondary providers). Claude may wrap JSON in markdown code blocks.
     const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     return JSON.parse(cleaned);
   },
@@ -2305,7 +2628,7 @@ const GOOGLE_ADAPTER: PromptAdapter = {
 };
 ```
 
-### 7.4 Fine-Tuning Roadmap
+### 7.5 Fine-Tuning Roadmap
 
 ```
                     Month 1-3         Month 4-6         Month 7-9         Month 10-12
@@ -2329,7 +2652,7 @@ Embeddings:         Voyage-3       →   Voyage-3       →   Evaluate        �
 - Quality (F1 score) must not degrade more than 2% from baseline
 - Latency must remain within targets
 
-### 7.5 A/B Testing Framework
+### 7.6 A/B Testing Framework
 
 ```typescript
 // packages/guardrails/src/ab-testing.ts
@@ -2596,14 +2919,17 @@ const voyageClient = new VoyageAIClient({
   apiKey: process.env.VOYAGE_API_KEY!,
 });
 
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'voyage-3';
+const EMBEDDING_DIMENSIONS = parseInt(process.env.EMBEDDING_DIMENSIONS || '1024');
+
 async function generateEmbedding(text: string): Promise<number[]> {
   const response = await voyageClient.embed({
     input: [text],
-    model: 'voyage-3',
+    model: EMBEDDING_MODEL,
     inputType: 'document',      // 'document' for stored content, 'query' for search
   });
 
-  return response.data[0].embedding;  // 1024-dimensional vector
+  return response.data[0].embedding;  // EMBEDDING_DIMENSIONS-dimensional vector
 }
 
 // Batch embedding for efficiency (up to 128 texts per API call)
@@ -2615,7 +2941,7 @@ async function generateEmbeddingsBatch(texts: string[]): Promise<number[][]> {
     const batch = texts.slice(i, i + BATCH_SIZE);
     const response = await voyageClient.embed({
       input: batch,
-      model: 'voyage-3',
+      model: EMBEDDING_MODEL,
       inputType: 'document',
     });
     results.push(...response.data.map(d => d.embedding));
@@ -2628,7 +2954,7 @@ async function generateEmbeddingsBatch(texts: string[]): Promise<number[][]> {
 async function generateQueryEmbedding(query: string): Promise<number[]> {
   const response = await voyageClient.embed({
     input: [query],
-    model: 'voyage-3',
+    model: EMBEDDING_MODEL,
     inputType: 'query',         // Optimized for retrieval
   });
 
@@ -3169,10 +3495,14 @@ GOOGLE_AI_API_KEY=...
 VOYAGE_API_KEY=pa-...
 
 # Model Configuration
-GUARDRAIL_MODEL=claude-3-5-haiku-20241022
-DECOMPOSITION_MODEL=claude-sonnet-4-20250514
-EVIDENCE_MODEL=claude-sonnet-4-20250514
+# Model identifiers should always be configured via environment variables
+# to allow upgrades without code changes. When a new model version is released,
+# update the env var — no code deployment needed.
+GUARDRAIL_MODEL=claude-haiku-4-5-20251001
+DECOMPOSITION_MODEL=claude-sonnet-4-5-20250929
+VISION_MODEL=claude-sonnet-4-5-20250929
 EMBEDDING_MODEL=voyage-3
+EMBEDDING_DIMENSIONS=1024
 
 # Guardrail Thresholds
 GUARDRAIL_APPROVE_THRESHOLD=0.7

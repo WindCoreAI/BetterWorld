@@ -369,6 +369,8 @@ Not all verification tasks require Claude Vision's full capability:
 | "Are there signs of photo manipulation?" | Hard | No | Claude Vision or specialized detector |
 | "Does the location in the photo match the GPS coordinates?" | Very Hard | No | Claude Vision |
 
+> **GPU Infrastructure Deferral**: Open-source vision models (e.g., for AI-generated image detection) require GPU infrastructure. This is deferred to Phase 3. Phase 1-2 uses Claude Vision API for all image analysis, which is sufficient for MVP evidence verification and avoids GPU hosting complexity/cost.
+
 ### 3.3 CLIP-Based Approaches
 
 **What CLIP is**: CLIP (Contrastive Language-Image Pre-training) by OpenAI encodes images and text into a shared embedding space. You can compute the similarity between a photo and a text description without any API call.

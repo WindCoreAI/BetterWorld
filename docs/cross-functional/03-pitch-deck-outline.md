@@ -170,6 +170,7 @@ positive impact.
 - Pre-regulation: No major AI agent regulation exists yet. The window to establish the ethical standard is open.
 - Infrastructure ready: OpenClaw (114K GitHub stars), LangChain, CrewAI — the agent frameworks exist and are mature.
 - SDG urgency: The UN's 2030 deadline for Sustainable Development Goals is 4 years away. Progress is behind on all 17 goals.
+- **AI Regulation Tailwinds**: Growing regulatory frameworks (EU AI Act, US Executive Orders) favor transparent, auditable AI systems. BetterWorld's constitutional guardrails and human-in-the-loop design are naturally compliant with emerging responsible AI requirements.
 
 ### Visual Concept
 
@@ -596,7 +597,7 @@ W1-2      W3-4      W5-6      W7-8        W9-10     W11-12    W13-14    W15-16
 Infra     Agent     Guard-    Web UI +     Human     Mission   Token +   Reputation
 setup +   API +     rails     Problem &    profiles  Market-   Evidence  + Impact
 Database  Auth +    v1        Solution     + Onboard place     System    Dashboard
-          Heartbeat           Boards +                                   + PWA
+          Heartbeat           Boards +                                   + Dashboard
                               OpenClaw
                               Skill
 
@@ -630,6 +631,8 @@ revenue active, agent SDK ecosystem.        open-source, on-chain ready.
 | Week 20 | First paying NGO partner (Phase 2) | Revenue milestone |
 | Week 24 | 5,000+ agents, 50,000+ humans | Growth milestone |
 | Week 32 | Open-source release + on-chain token | Community ownership |
+
+> **PWA Note**: Progressive Web App capabilities (offline support, push notifications, home screen install) are Phase 3 features. Phase 1-2 delivers a responsive web application only.
 
 ### Visual Concept
 
@@ -752,6 +755,8 @@ Previously: [Company       Previously: [Company        Previously: [Organization
 [Personal quote — REPLACE] [Personal quote — REPLACE]  [Personal quote — REPLACE]
 ```
 
+> **ACTION REQUIRED**: Replace placeholder team bios with actual founding team profiles before any pitch. Include: name, photo, relevant experience, role, LinkedIn URL. Investors evaluate team first.
+>
 > **Pre-presentation checklist**: (1) Fill all team member names and bios above. (2) Add professional headshot photos. (3) Write authentic personal motivation quotes. (4) Update Appendix E executive summary with founder names. (5) Rehearse team intro section of speaker notes with real details.
 
 **Key roles — hiring now or soon** (below the bios):
@@ -991,6 +996,8 @@ are making impact.         Self-sustaining.           the world runs on
 | Embedding generation | $0.0001 | 100,000 calls ($10) | 500,000 calls ($50) | 1,000,000 calls ($100) |
 | **Total AI API cost** | | **$140/mo** | **$900/mo** | **$2,975/mo** |
 
+> **Cost Model Update**: Evidence verification uses a cascading pipeline where ~60% of submissions are resolved by cheap Stages 1-2 (~$0.001/item). Only ~20% reach the expensive AI Vision stage (~$0.01/item). Average cost per verification: ~$0.004, not the flat $0.01 used in earlier projections.
+
 **Cost optimization path:**
 - Month 6: Begin collecting guardrail evaluation data for fine-tuning.
 - Month 9: Fine-tune a Llama 3.x model for guardrail classification. Estimated 60-70% cost reduction on guardrail evaluations (the highest-volume call).
@@ -1026,6 +1033,18 @@ are making impact.         Self-sustaining.           the world runs on
 | **Total ARR** | **$0** | **$204K** | **$960K** | **$2.88M** |
 
 **Path to profitability**: At $80K MRR (Month 18), the platform covers estimated monthly burn of $60K-$80K (team of 6-8 + infrastructure + AI API). Break-even expected at Month 15-18.
+
+#### Conservative Scenario
+
+| Metric | Month 6 | Month 12 | Month 18 |
+|--------|---------|----------|----------|
+| Registered Agents | 100 | 500 | 2,000 |
+| Monthly Active Humans | 200 | 2,000 | 10,000 |
+| Completed Missions/Month | 50 | 500 | 3,000 |
+| Monthly Revenue | $0 | $2K (pilot partnerships) | $15K |
+| Monthly Burn Rate | $8K | $15K | $25K |
+
+> **Note**: Conservative scenario assumes 50% slower growth than base case. Runway planning should use this scenario, not the optimistic base case.
 
 ---
 

@@ -1164,6 +1164,69 @@ Post-action:
   - All actions logged to immutable audit trail
 ```
 
+### Flow 7: GDPR Account Management
+
+**Trigger**: User navigates to Settings → Privacy & Data
+
+#### 7.1 Data Export
+1. User clicks "Export My Data"
+2. System shows scope: profile, activity history, submissions, messages, token balance
+3. User confirms export request
+4. System queues export job (BullMQ)
+5. Notification sent when export ready (ZIP file, available 7 days)
+6. Download link sent via email + in-app notification
+
+#### 7.2 Account Deletion
+1. User clicks "Delete My Account"
+2. Warning screen shows:
+   - What will be deleted: profile, preferences, session data
+   - What will be anonymized: contributions (retained for platform integrity, attributed to "Anonymous User")
+   - What cannot be undone: deletion is permanent after 30-day grace period
+3. User must type "DELETE" to confirm
+4. 30-day grace period begins (user can log in to cancel)
+5. After 30 days: PII purged, contributions anonymized, tokens burned
+6. Confirmation email sent
+
+#### 7.3 Data Retention Policy Display
+- Settings page shows retention periods for each data category
+- Link to full privacy policy
+- Last data access log (who accessed your data and when)
+
+**Edge cases**:
+- User with active missions: Must complete or forfeit before deletion
+- User with pending evidence reviews: Reviews anonymized immediately
+
+### Flow 8: Dispute Resolution
+
+**Trigger**: User disagrees with guardrail rejection, evidence verdict, or trust score change
+
+#### 8.1 Dispute Initiation
+1. User clicks "Dispute" on rejected item (visible on rejection notice)
+2. Dispute form:
+   - Dispute type: Guardrail rejection / Evidence rejection / Trust penalty / Other
+   - Description (required, 50-500 chars)
+   - Supporting evidence (optional file upload)
+3. System creates dispute ticket, assigns priority based on type
+
+#### 8.2 Resolution Process
+1. **Auto-review** (immediate): System re-runs guardrail with fresh context
+   - If auto-review overturns: Resolved automatically, user notified
+   - If auto-review upholds: Escalate to human review
+2. **Human review** (target: 24h for P0, 72h for P1):
+   - Admin sees original content, guardrail reasoning, user dispute, and AI re-evaluation
+   - Admin verdict: Overturn / Uphold / Partial (with explanation)
+3. **User notification**: Result with explanation, regardless of outcome
+
+#### 8.3 Dispute Dashboard (Admin)
+- Queue sorted by priority and age
+- Bulk actions for similar disputes
+- Analytics: dispute rate by domain, overturn rate, average resolution time
+
+**Guard rails**:
+- Max 3 disputes per user per week (prevents abuse)
+- Repeat disputes on same item require new evidence
+- Dispute outcomes feed back into guardrail training data
+
 ### 2.9 Notification Preferences Flow (/profile/settings)
 
 ```

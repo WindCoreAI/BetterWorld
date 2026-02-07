@@ -1,6 +1,7 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
+> **Last Review**: 2026-02-06 (v3.0 — 68 findings addressed)
 > **Source**: [proposal.md](../proposal.md)
 > **Status**: Complete documentation suite for Phase 1-3 development and marketing
 
@@ -12,6 +13,8 @@
 |---|----------|-------------|
 | 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v2.0 — refined) |
 | 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
+
+> **Note**: Line counts are approximate and may vary after the v3.0 review update.
 
 ---
 
@@ -66,6 +69,8 @@ Deep research documents for each of the 7 core technical challenges identified i
 | T5 | [Hono Framework Maturity](challenges/T5-hono-framework-maturity-risk.md) | Hono vs Fastify, WebSocket support, middleware ecosystem | Revised risk 6/25 (down from 9); keep Hono with service-layer abstraction |
 | T6 | [pgvector Performance at Scale](challenges/T6-pgvector-performance-at-scale.md) | HNSW tuning, memory consumption, migration triggers | Use `halfvec(1024)` for 50% savings; migrate to Qdrant at 500K+ vectors |
 | T7 | [Progressive Trust Model](challenges/T7-progressive-trust-model.md) | Trust tiers, Sybil prevention, patient attacker detection, reputation scoring | 5-tier state machine, reputation starts at 0, asymmetric decay, registration deposit |
+
+> **Note**: Additional challenge documents may be added as new technical risks are identified during implementation.
 
 ---
 

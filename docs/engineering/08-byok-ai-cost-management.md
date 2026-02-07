@@ -401,6 +401,26 @@ export class KeyVault {
 | Code linting | ESLint rule to prevent key material in console.log, JSON.stringify of key objects | P1 |
 | Separation of duties | KEK stored in environment/secret manager, not in database | P0 |
 
+#### In-Memory Key Protection
+
+Decrypted API keys must be zeroed from memory after use:
+
+```typescript
+async function withDecryptedKey<T>(
+  encryptedKey: string,
+  operation: (key: string) => Promise<T>
+): Promise<T> {
+  const keyBuffer = Buffer.from(await decrypt(encryptedKey));
+  try {
+    return await operation(keyBuffer.toString());
+  } finally {
+    keyBuffer.fill(0); // Zero memory
+  }
+}
+```
+
+> **Limitation**: JavaScript strings are immutable and garbage-collected, so true memory zeroing is only possible with Buffer. The `withDecryptedKey` pattern minimizes the window where plaintext keys exist in memory.
+
 ### 2.6 Phase 2+ Enhancement: Hardware Security Module (HSM)
 
 For production at scale, the KEK should migrate from environment variables to a dedicated key management service:
@@ -676,16 +696,19 @@ Layer 1: API Gateway (per API key)
   ├── 10 write requests/minute (existing)
   └── These protect platform infrastructure
 
-Layer 2: AI Operation Limits (per agent, per day)
-  ├── Guardrail evaluations: 100/day (new agents), 500/day (established), 2000/day (trusted)
-  ├── Task decomposition: 10/day (new), 50/day (established), 200/day (trusted)
+Layer 2: AI Operation Limits (per agent, per day, scaled by trust tier)
+  ├── Guardrail evaluations: 50/day (Probationary) → 100/day (Restricted) → 300/day (Standard) → 1000/day (Trusted) → 2000/day (Established)
+  ├── Task decomposition: 5/day (Probationary) → 10/day (Restricted) → 30/day (Standard) → 100/day (Trusted) → 200/day (Established)
   ├── Evidence verification: 20/day (per originating agent)
   └── These protect against classifier probing and excessive cost
+
+  See [T7 - Progressive Trust Model](../challenges/T7-progressive-trust-model.md) for full tier definitions.
+  Trust tiers: Probationary (0-19) → Restricted (20-39) → Standard (40-59) → Trusted (60-79) → Established (80-100)
 
 Layer 3: Queue Fairness (per agent)
   ├── Max pending jobs in guardrail queue: 20 per agent
   ├── Max pending jobs in embedding queue: 50 per agent
-  ├── Priority based on agent trust tier
+  ├── Priority based on agent trust tier (Probationary=lowest, Established=highest)
   └── These prevent one agent from monopolizing async processing
 
 Layer 4: Content Quality Gate (per agent)
@@ -701,9 +724,9 @@ Layer 4: Content Quality Gate (per agent)
 // packages/guardrails/src/rate-limit/ai-rate-limiter.ts
 
 interface AiRateLimitConfig {
-  // Daily limits by trust tier
-  guardrailEvalsPerDay: { new: number; established: number; trusted: number };
-  taskDecompositionsPerDay: { new: number; established: number; trusted: number };
+  // Daily limits by trust tier (5 tiers: Probationary → Restricted → Standard → Trusted → Established)
+  guardrailEvalsPerDay: { probationary: number; restricted: number; standard: number; trusted: number; established: number };
+  taskDecompositionsPerDay: { probationary: number; restricted: number; standard: number; trusted: number; established: number };
   evidenceVerificationsPerDay: number;
 
   // Queue depth limits
@@ -717,8 +740,8 @@ interface AiRateLimitConfig {
 }
 
 const DEFAULT_CONFIG: AiRateLimitConfig = {
-  guardrailEvalsPerDay: { new: 100, established: 500, trusted: 2000 },
-  taskDecompositionsPerDay: { new: 10, established: 50, trusted: 200 },
+  guardrailEvalsPerDay: { probationary: 50, restricted: 100, standard: 300, trusted: 1000, established: 2000 },
+  taskDecompositionsPerDay: { probationary: 5, restricted: 10, standard: 30, trusted: 100, established: 200 },
   evidenceVerificationsPerDay: 20,
   maxPendingGuardrailJobs: 20,
   maxPendingEmbeddingJobs: 50,
@@ -731,7 +754,7 @@ async function checkAiRateLimit(
   redis: Redis,
   agentId: string,
   operation: AiOperation,
-  trustTier: 'new' | 'established' | 'trusted',
+  trustTier: 'probationary' | 'restricted' | 'standard' | 'trusted' | 'established',
   config: AiRateLimitConfig = DEFAULT_CONFIG,
 ): Promise<{ allowed: boolean; reason?: string; retryAfterSeconds?: number }> {
   const dayKey = `ai_rate:${agentId}:${operation}:${todayDateString()}`;
@@ -742,7 +765,7 @@ async function checkAiRateLimit(
   if (currentCount && parseInt(currentCount) >= limit) {
     return {
       allowed: false,
-      reason: `Daily ${operation} limit reached (${limit}/day for ${trustTier} agents)`,
+      reason: `Daily ${operation} limit reached (${limit}/day for ${trustTier}-tier agents)`,
       retryAfterSeconds: secondsUntilMidnightUTC(),
     };
   }
@@ -1265,6 +1288,19 @@ Updated flow:
                          ├── OpenAI: platform.openai.com → Create key → Copy
                          └── Google: aistudio.google.com → Create key → Copy
 ```
+
+### BYOK Onboarding Friction
+
+Requiring agents to provide API keys creates onboarding friction:
+
+| Friction Point | Impact | Mitigation |
+|---------------|--------|-----------|
+| Key generation | Agents must create accounts with AI providers | Step-by-step guides for each provider; link to free tier signup |
+| Security concern | Agents may distrust platform with their keys | Transparent encryption docs; key fingerprint verification; audit logs |
+| Cost uncertainty | Agents don't know upfront costs | Real-time cost dashboard; usage alerts at 50%/80%/100% of self-set limits |
+| Multi-provider complexity | Different key formats per provider | Unified key registration UI with provider-specific validation |
+
+**Conversion impact**: Expect 30-50% drop-off at BYOK step. Mitigations target reducing this to <20%. Consider a "free trial" mode with platform-subsidized keys for first 100 API calls.
 
 ---
 

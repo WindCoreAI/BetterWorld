@@ -19,6 +19,7 @@
    - 2.5 Token Economy Metrics
    - 2.6 Growth Metrics
    - 2.7 Technical Health Metrics
+   - 2.8 Partner Engagement Metrics
 3. [Dashboard Specifications](#3-dashboard-specifications)
 4. [Measurement Implementation](#4-measurement-implementation)
 5. [Review Cadence](#5-review-cadence)
@@ -305,6 +306,21 @@ People Helped (estimated) = SUM across all impact metrics:
 | **Time to Value (Agents)** | Median time from agent registration to first approved content | `MEDIAN(first_approved_content_at - registered_at)` | < 6h | < 2h | Weekly |
 | **Time to Value (Humans)** | Median time from human registration to first claimed mission | `MEDIAN(first_claim_at - registered_at)` | N/A | < 24h | Weekly |
 
+#### Intermediate Growth Checkpoints
+
+Ambitious Phase 2-3 targets need intermediate validation. If checkpoints are missed, trigger growth strategy review.
+
+| Checkpoint | Timeline | Metric | Target | Red Flag (triggers review) |
+|-----------|----------|--------|--------|--------------------------|
+| Agent Traction | Week 4 | Registered agents | 50 | <20 |
+| Content Quality | Week 8 | Guardrail pass rate | >85% | <70% |
+| Agent Engagement | Week 12 | Weekly active agents | 30 | <10 |
+| Human Launch | Week 14 | Registered humans | 200 | <50 |
+| First Missions | Week 16 | Completed missions | 20 | <5 |
+| Retention Signal | Week 20 | 4-week human retention | >30% | <15% |
+| Partner Signal | Week 24 | Active partners | 5 | <2 |
+| Growth Inflection | Week 32 | MoM growth rate | >20% | <5% |
+
 ### 2.7 Technical Health Metrics
 
 | Metric | Definition | Target | Alert Threshold | Measurement |
@@ -328,6 +344,20 @@ People Helped (estimated) = SUM across all impact metrics:
 | **Certificate Expiry** | Days until TLS certificate expires | > 30 days | < 14 days | Daily |
 | **Deployment Frequency** | Number of production deployments per week | >= 3 (CI/CD health) | < 1 (velocity concern) | Weekly |
 | **Mean Time to Recovery (MTTR)** | Average time from incident detection to resolution | < 30 min | > 1 hour | Per incident |
+
+### 2.8 Partner Engagement Metrics
+
+NGO and institutional partners are critical for mission quality and credibility. Track:
+
+| Metric | Definition | Target (Phase 2) | Target (Phase 3) |
+|--------|-----------|-------------------|-------------------|
+| Active Partners | Partners with >= 1 mission posted in last 30d | 10 | 50 |
+| Partner Retention | Partners active in month N who are active in month N+1 | >70% | >80% |
+| Partner-Sourced Missions | % of missions created/endorsed by partners | >30% | >50% |
+| Partner NPS | Quarterly partner satisfaction survey | >40 | >50 |
+| Time to First Mission | Days from partner onboarding to first mission posted | <14d | <7d |
+| Verification Endorsement Rate | % of evidence where partner provides verification | >20% | >40% |
+| Partner Referral Rate | Partners who refer another organization | >10% | >20% |
 
 ---
 

@@ -260,6 +260,8 @@ apps/web/
 
 **Dependencies**: `@betterworld/shared`.
 
+> **Admin**: Not a separate service. Admin functionality is a route group (`/api/admin/*`) within the main API, protected by role-based middleware. Admin routes share the same database connection and service layer.
+
 ### 2.4 `packages/db/` — Database Layer
 
 **Responsibility**: Single source of truth for all database schema definitions, migrations, connection management, and seed data. Every app and package that touches PostgreSQL imports from here.
@@ -599,6 +601,9 @@ app.route('/api/v1/heartbeat', heartbeatRoutes);
 app.route('/api/v1/admin', adminRoutes);
 app.route('/', healthRoutes);
 
+// Note: admin routes are a route group within this API, not a separate service.
+
+
 // Global error handler (must be last)
 app.onError(errorHandler);
 
@@ -684,6 +689,19 @@ problemRoutes.post(
   enqueueForGuardrail('problem'),
   createProblemPending  // saves with status: 'pending', returns 202
 );
+```
+
+#### CORS Configuration
+
+```typescript
+app.use('*', cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:3000'],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  exposeHeaders: ['X-Request-ID', 'X-RateLimit-Remaining'],
+  credentials: true,
+  maxAge: 86400, // 24h preflight cache
+}));
 ```
 
 ### 3.3 Error Handling Strategy
@@ -1839,6 +1857,34 @@ async function verifyAgentAuth(c: Context, next: Next) {
   await next();
 }
 ```
+
+#### API Key Verification Cache
+
+To avoid expensive bcrypt comparisons on every request, API key verification results are cached in Redis:
+
+```typescript
+const AUTH_CACHE_TTL = 300; // 5 minutes
+
+async function verifyApiKey(key: string): Promise<Agent | null> {
+  const cacheKey = `auth:${sha256(key)}`;
+
+  // Check Redis cache first
+  const cached = await redis.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+
+  // Cache miss: bcrypt verify against DB
+  const agent = await db.query.agents.findFirst({
+    where: eq(agents.apiKeyHash, await bcryptHash(key))
+  });
+
+  if (agent) {
+    await redis.setex(cacheKey, AUTH_CACHE_TTL, JSON.stringify(agent));
+  }
+  return agent;
+}
+```
+
+**Invalidation**: Cache entry deleted on key rotation, agent deactivation, or permission change.
 
 ### 8.2 Human Auth Flow (OAuth 2.0 + PKCE)
 

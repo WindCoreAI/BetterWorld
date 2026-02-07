@@ -37,6 +37,8 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 
 **Sprint 0 Exit**: All 6 decisions documented in an ADR (Architecture Decision Record) file.
 
+> **Owner**: Tech Lead. Sign-off required from Tech Lead + Product Lead before Sprint 1 begins.
+
 ---
 
 ## Phase 1: Foundation MVP (Weeks 1-8)
@@ -205,6 +207,12 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 - [ ] Full pipeline working: problem → solution → mission → evidence → tokens
 - [ ] Fraud detection: honeypot missions catching >50% of test fraud attempts
 
+#### Marketing & Growth Tasks
+- Community Discord/Slack setup and moderation plan
+- Developer blog: 2 technical posts per month (guardrails, architecture, learnings)
+- Partnership outreach: 10 NGO targets identified and contacted
+- Social media: Twitter/X account with weekly updates on platform metrics
+
 ---
 
 ## Phase 3: Scale & Ecosystem (Weeks 17-24)
@@ -227,6 +235,8 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 23-24 | **Infrastructure migration** (Railway → Fly.io) | DevOps | Multi-region, read replicas, PgBouncer |
 | 23-24 | **i18n foundation** (Spanish, Mandarin) | FE | Mission marketplace in 3 languages |
 | 23-24 | **Evaluate pgvector → dedicated vector DB** | BE + DevOps | If >500K vectors or p95 vector search >500ms, migrate to Qdrant |
+| 23-24 | **Backup & Disaster Recovery** | DevOps | Automated daily PG backups (pg_dump to S3-compatible storage), tested restore procedure, documented RTO <4h / RPO <1h |
+| 23-24 | **Legal & Terms of Service** | PM + Legal | Draft ToS, Privacy Policy, and acceptable use policy. Legal review required before public launch. Include GDPR data processing agreement template for EU users. |
 
 ### Infrastructure Scaling Plan
 
@@ -237,6 +247,8 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 10K agents | Week 22 | Add 3rd API instance, dedicated worker scaling |
 | 50K humans | Week 24 | Full Fly.io multi-region (iad + lhr + nrt) |
 | 500K vectors | Any | Evaluate migration from pgvector to Qdrant |
+
+> Sprint-level detail for Phase 3 will be developed during Phase 2, Sprint 3 (approximately Month 5). Exact scope depends on Phase 2 metrics.
 
 ---
 
@@ -278,6 +290,8 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 - Phase 4: Fine-tuned model handles 60%+ of evaluations, reducing API costs = ~$1.5K/mo
 - **Hard daily cap**: Set at 2x the daily budget. When hit, all content queues for human review.
 
+> **Budget assumes**: 2-3 person core team, cloud hosting on Railway ($50-100/month Phase 1), no paid marketing until seed funding. Total Phase 1 estimated burn: $15-25K (primarily labor).
+
 ---
 
 ## Risk-Gated Milestones
@@ -301,12 +315,23 @@ These are the hardest problems we'll face. Status should be updated at each spri
 | ID | Challenge | First Active | Risk Score | Status | Mitigation Summary |
 |----|-----------|-------------|------------|--------|---------------------|
 | T1 | Guardrail reliability (prompt injection) | Sprint 3 | 20 | Not started | Single classifier → red team → iterate. Ensemble only if false negatives >5% |
-| T2 | Evidence verification pipeline | Sprint 7 | 16+20 | Not started | GPS + timestamp + Vision + peer review + honeypots. Accept some gaming, focus on detection |
+| T2 | Evidence verification pipeline | Sprint 7 | 16+20 (SEC-05 + INT-01) | Not started | GPS + timestamp + Vision + peer review + honeypots. Accept some gaming, focus on detection |
 | T3 | Cold start / marketplace bootstrap | Sprint 1 | 16 | Not started | 50+ seeded problems, 2-3 pilot cities, consider allowing human problem submission |
 | T4 | AI API cost management | Sprint 3 | 16 | Not started | Hard daily cap, semantic caching, per-agent cost tracking, write rate limits |
 | T5 | Hono framework maturity | Sprint 1 | 9 | Not started | Keep Fastify as documented fallback. Build WebSocket as swappable layer |
 | T6 | pgvector performance at scale | Phase 3 | 9 | Not started | 1024-dim vectors, monitor p95, plan Qdrant migration trigger at 500K vectors |
-| T7 | Progressive trust model | Sprint 3 | 16+20 | Not started | Simplified for Phase 1: threshold-based (0.85 for new agents), not mandatory human review |
+| T7 | Progressive trust model | Sprint 3 | 16+20 (SEC-04 + AIS-01) | Not started | Simplified for Phase 1: threshold-based (0.85 for new agents), not mandatory human review |
+
+---
+
+### Growth Validation Checkpoints
+
+| Checkpoint | When | Key Metric | Go/No-Go Threshold |
+|-----------|------|-----------|-------------------|
+| Agent Traction | End Sprint 2 | Registered agents | ≥30 (go) / <10 (pause & diagnose) |
+| Content Quality | End Sprint 4 | Guardrail pass rate | ≥85% (go) / <70% (recalibrate guardrails) |
+| Human Interest | End Phase 1 | Waitlist signups | ≥500 (go) / <100 (rethink positioning) |
+| Mission Viability | Phase 2 Sprint 2 | Completed missions | ≥20 (go) / <5 (revisit mission design) |
 
 ---
 
@@ -337,10 +362,10 @@ These doc improvements should be completed alongside development:
 | Critical | Reconcile pagination model (cursor vs offset) across API + SDK | BE1 | Week 2 | From v1 |
 | Critical | Complete pitch deck appendices (C, D, E) | PM | Week 3 | From v1 |
 | Critical | Fill team bios in pitch deck | PM | Week 1 | From v1 |
-| **High** | Define scoring engine algorithm (weights, inputs, LLM vs deterministic) | AI Lead + PM | Week 4 | **NEW** |
+| **High** | Define scoring engine algorithm (weights, inputs, LLM vs deterministic) | AI Lead + PM | Week 4 | **DONE** |
 | **High** | Define reputation scoring algorithm (signals, weighting, decay) | PM + BE1 | Week 6 | Moved earlier |
-| **High** | Add agent verification fallback methods to PRD + protocol docs | PM + BE1 | Week 2 | **NEW** |
-| High | Create testing strategy doc (`engineering/07-testing-strategy.md`) | BE1 | Week 4 | From v1 |
+| **High** | Add agent verification fallback methods to PRD + protocol docs | PM + BE1 | Week 2 | **DONE** |
+| High | Create testing strategy doc (`engineering/07-testing-strategy.md`) | BE1 | Week 4 | **DONE** |
 | High | Create security & compliance doc (`cross-functional/04-security-compliance.md`) | BE2 | Week 6 | From v1 |
 | High | Add Python SDK section to agent integration doc | BE2 | Week 12 | From v1 |
 | Medium | Add `messages` table to `03-database-design.md` | BE1 | Week 10 | **NEW** |

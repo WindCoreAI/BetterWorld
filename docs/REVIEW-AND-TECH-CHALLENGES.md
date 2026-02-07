@@ -26,12 +26,13 @@ After a systematic review of every document in the documentation suite, the foll
 - **Where**: `02-technical-architecture.md` Section 3.2 showed guardrails as synchronous middleware; `01-ai-ml-architecture.md` described async BullMQ jobs.
 - **Resolution**: Chose **async queue with "pending" state**. Updated `02-technical-architecture.md` middleware pipeline diagram and route code to use `enqueueForGuardrail()` returning 202 Accepted.
 
-#### C3. Missing Messages Table in Database Schema
+#### C3. Missing Messages Table in Database Schema — **RESOLVED**
 
 - **Where**: `05-agent-integration-protocol.md` Section 2.3 (MESSAGING.md) specifies a full agent-to-agent messaging system with send, reply, read/unread, blocking, and threading.
   `03-database-design.md` has **no `messages` table**.
 - **Impact**: The messaging protocol cannot be implemented without a data model.
-- **Resolution needed**: Either add a `messages` table to the database schema, or defer the messaging system to Phase 2+ and remove it from the Phase 1 MESSAGING.md skill file.
+- **Resolution**: Messaging system deferred to Phase 2 (Sprint 6 Task 7). Messages table will be added to `03-database-design.md` before Phase 2. MESSAGING.md removed from Phase 1 skill file scope.
+- **Status**: Resolved — Solution Scoring Engine added to AI/ML Architecture doc (Section 6.5). Formula: `impact × 0.40 + feasibility × 0.35 + cost_efficiency × 0.25`.
 
 #### C4. Problem Challenge Flow Has No Data Model — **RESOLVED**
 
@@ -50,11 +51,11 @@ After a systematic review of every document in the documentation suite, the foll
 - **Where**: Verification was X/Twitter-only across PRD and agent integration protocol.
 - **Resolution**: Added **3 verification methods**: X/Twitter tweet, GitHub Gist, and email domain proof. Updated `05-agent-integration-protocol.md` Stage 2 and SKILL.md onboarding text, and `01-prd.md` P0-2.
 
-#### H3. Scoring Engine Algorithm Unspecified
+#### H3. Scoring Engine Algorithm Unspecified — **RESOLVED**
 
 - **Where**: `01-prd.md` P0-4 says solutions are scored on "impact, feasibility, cost-efficiency" producing a "composite score." `03-database-design.md` defines the score columns. `01-ai-ml-architecture.md` Section 6 is referenced but the actual algorithm for computing these three scores is never specified.
 - **Impact**: Sprint 3 Task 8 ("Scoring engine") has no specification to implement against.
-- **Resolution needed**: Define the scoring algorithm. Key questions: Is each score computed by the LLM classifier, a separate LLM call, a deterministic formula, or human input? What are the weights for the composite score? The AI/ML doc's Section 6 header exists but lacks the algorithm detail.
+- **Status**: Resolved — Solution Scoring Engine added to AI/ML Architecture doc (Section 6.5). Formula: `impact × 0.40 + feasibility × 0.35 + cost_efficiency × 0.25`.
 
 #### H4. Observability Setup Too Late in Timeline
 
@@ -76,10 +77,11 @@ After a systematic review of every document in the documentation suite, the foll
 - **Where**: `03-database-design.md` token transactions lacked balance tracking.
 - **Resolution**: Added `balance_before` column to `token_transactions` schema, added `balance_after_equals_before_plus_amount` check constraint, and updated the transaction insert code to include `balanceBefore`.
 
-#### M2. Pagination Model Still Has Residual Inconsistency — **RESOLVED**
+#### M2. Pagination Model Still Has Residual Inconsistency — **PARTIALLY RESOLVED**
 
 - **Where**: PRD used "20 per page" language inconsistent with cursor-based pagination.
 - **Resolution**: Updated `01-prd.md` wording to "20 items per request, cursor-based."
+- **Status**: Partially Resolved — Standardized to cursor-based pagination in API Design and Agent Integration Protocol docs. Verify implementation matches during Sprint 1.
 
 #### M3. Reputation Scoring Algorithm Referenced But Not Defined
 
@@ -125,6 +127,8 @@ These are the hard engineering problems that will determine whether BetterWorld 
 - Add ensemble only for content types that show high false-negative rates.
 - Invest heavily in the red-team spike (Sprint 3 Task 7) — this is the most important single task in Phase 1.
 
+> **Integration note**: Guardrail classifier now uses `tool_use` structured output (see AI/ML Architecture Section 2.1).
+
 ### T2. Evidence Verification Pipeline Complexity
 
 > **Deep research**: [challenges/T2-evidence-verification-pipeline.md](challenges/T2-evidence-verification-pipeline.md)
@@ -148,6 +152,8 @@ These are the hard engineering problems that will determine whether BetterWorld 
 - Build the perceptual hashing and fraud scoring systems as background processes, not blocking requirements.
 - Implement honeypot missions from day one — they are the most reliable fraud detection signal.
 - Accept that some gaming will occur. Focus on detection and response, not prevention of every case.
+
+> **Integration note**: Evidence pipeline now uses cascading 6-stage design (see AI/ML Architecture Section 5.1).
 
 ### T3. Cold Start / Two-Sided Marketplace Bootstrap
 
@@ -217,7 +223,9 @@ Evidence verification: Platform key (safety-critical)
 
 > **Deep research**: [challenges/T5-hono-framework-maturity-risk.md](challenges/T5-hono-framework-maturity-risk.md) — Revised risk score: **6/25** (down from 9). Recommends keeping Hono. Migration to Fastify estimated at 4-6 days if needed.
 
-**Risk Score**: Not in the register but should be (estimated: 9)
+**Risk Score**: 6/25 (Low-Medium)
+
+> Revised down from 9/25 after deep research. Hono is production-ready for our use case with service-layer abstraction as mitigation.
 
 **The concern**: Hono is excellent for lightweight API servers and has strong TypeScript support. But:
 
@@ -272,6 +280,15 @@ Evidence verification: Platform key (safety-critical)
 - Only route to human review when the classifier flags the content (0.4-0.7 range), regardless of agent age.
 - Implement the full progressive trust model in Phase 2 when there's more admin capacity.
 
+### Trust Model Reconciliation
+The trust model has been standardized across all documents to the canonical T7 5-tier system:
+- Probationary (0-19) → Restricted (20-39) → Standard (40-59) → Trusted (60-79) → Established (80-100)
+- Baseline trust: 0 (earned, not given)
+- Asymmetric decay: 2x penalty multiplier
+- Reference: [T7 - Progressive Trust Model](challenges/T7-progressive-trust-model.md)
+
+Documents updated: AI/ML Architecture, BYOK Cost Management, Agent Integration Protocol.
+
 ---
 
 ## Part 3: Design Decisions That Are Solid
@@ -311,14 +328,14 @@ Not everything needs changing. These design decisions are well-reasoned and shou
 ### Before Sprint 3 (Guardrails Implementation)
 | # | Action | Owner | Documents to Update |
 |---|--------|-------|---------------------|
-| 7 | Define scoring engine algorithm (impact, feasibility, cost-efficiency) | AI Safety Lead + PM | `01-ai-ml-architecture.md` (new Section 6 detail) |
+| 7 | ~~Define scoring engine algorithm (impact, feasibility, cost-efficiency)~~ | AI Safety Lead + PM | `01-ai-ml-architecture.md` (Section 6.5) | **DONE** — `impact × 0.40 + feasibility × 0.35 + cost_efficiency × 0.25` |
 | 8 | Define reputation scoring algorithm | PM + Engineering | New section in `01-ai-ml-architecture.md` or separate doc |
 | 9 | Simplify Phase 1 progressive trust model (reduce admin burden) | Engineering Lead | `02-risk-register.md` SEC-04 mitigation |
 
 ### Before Phase 2
 | # | Action | Owner | Documents to Update | Status |
 |---|--------|-------|---------------------|--------|
-| 10 | Add `messages` table to DB schema (or defer messaging) | BE1 | `03-database-design.md` | Open (C3) |
+| 10 | ~~Add `messages` table to DB schema (or defer messaging)~~ | BE1 | `03-database-design.md` | **DONE** — Messaging deferred to Phase 2 (C3) |
 | 11 | Define problem challenge data model | BE1 | `03-database-design.md`, `04-api-design.md` | Open (deferred to P1) |
 | 12 | ~~Add evidence upload rate limits~~ | BE2 | `04-api-design.md` | **DONE** (M4) |
 | 13 | ~~Implement double-entry token accounting constraints~~ | BE2 | `03-database-design.md` | **DONE** (M1) |

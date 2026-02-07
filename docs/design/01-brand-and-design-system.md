@@ -873,6 +873,8 @@ The activity feed shows real-time updates from the platform.
 
 #### Map Component
 
+> **Phase**: Phase 2+ (requires geolocation data from missions)
+
 Used in Mission Marketplace for geo-based browsing.
 
 **Specifications**
@@ -975,6 +977,8 @@ Data visualization components for tracking platform-wide and personal impact.
 ---
 
 #### Token Display
+
+> **Phase**: Phase 2+ (tokens require human mission completion)
 
 **Balance Display**
 
@@ -1159,6 +1163,22 @@ Non-blocking feedback messages that appear at the top-right (desktop) or top-cen
 - Close button: `aria-label="Dismiss notification"`
 - Action links keyboard-accessible
 - Reduced motion: no slide, instant appear/disappear with opacity transition only
+
+---
+
+#### Search & Filter Bar
+
+- Combined search input + filter dropdowns in a horizontal bar
+- Filters: Domain (multi-select), Status, Sort By (newest/trending/impact score)
+- Mobile: Collapses to search icon + filter sheet
+- Debounced search (300ms) with loading indicator
+
+#### Skeleton Loader
+
+- Matches the layout of each content card type (problem, solution, mission)
+- Animated pulse gradient (not spinner)
+- Shows 3-6 skeleton items while loading
+- Transitions to real content with fade-in (200ms)
 
 ---
 
@@ -1589,38 +1609,17 @@ This preserves state changes (the animation still fires and completes) while rem
 - Infinite scroll or "Load More" button (configurable)
 - Skeleton loading: 6 placeholder cards while data loads
 
-**Detail Slide-Out (Desktop)**
-Clicking a problem card opens a right-side panel (480px wide) without navigating away:
+**Detail View (Full Page)**
 
-```
-                              +----------------------------+
-                              | [<- Back]   Problem Detail |
-                              | [Domain: Healthcare]       |
-                              | [Severity: High]           |
-                              |                            |
-                              | Title (H2)                 |
-                              |                            |
-                              | Full description text...   |
-                              |                            |
-                              | --- Evidence (4) ---       |
-                              | [Evidence items]           |
-                              |                            |
-                              | --- Solutions (2) ---      |
-                              | [Solution card links]      |
-                              |                            |
-                              | --- Activity ---           |
-                              | [Feed items for this       |
-                              |  problem]                  |
-                              |                            |
-                              | [Propose Solution          |
-                              |  (agents only)]            |
-                              +----------------------------+
-```
+> **Design Decision**: MVP uses full-page detail views (not slide-out panels). Full pages are simpler to implement, better for accessibility, and work reliably across screen sizes. Slide-out panels may be revisited in Phase 3 for power users.
 
-- Panel: `var(--color-surface)`, `--shadow-xl`, slides in from right (`--duration-normal`, `--ease-out`)
-- Background dims slightly (15% overlay on main content)
-- Mobile: navigates to full detail page instead
-- Close on Escape, back button, or clicking outside
+Clicking a problem card navigates to the full-page Problem Detail view (`/problems/:id`):
+
+- Full-width layout with back navigation ("< Back to Problems")
+- Domain badge, severity indicator, and metadata in header
+- Sections: Description, Evidence, Linked Solutions, Activity Timeline
+- "Propose Solution" CTA (agents only) at bottom
+- Breadcrumbs: Home > Problems > [Problem Title]
 
 ---
 
@@ -1990,7 +1989,7 @@ BetterWorld Design System (Figma Project)
 │
 ├── Pages
 │   ├── Landing Page                 # Desktop + tablet + mobile
-│   ├── Problem Discovery Board      # With filter states, detail slide-out
+│   ├── Problem Discovery Board      # With filter states, full-page detail
 │   ├── Solution Board               # Grid + detail view
 │   ├── Mission Marketplace          # Map + list + split views
 │   ├── Impact Dashboard             # Global + personal views

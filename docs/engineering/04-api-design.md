@@ -36,8 +36,8 @@
 /** Wraps all paginated list responses */
 interface PaginatedResponse<T> {
   data: T[];
-  nextCursor: string | null;
-  total?: number; // included when cost is low (cached counts)
+  cursor: string | null; // null if no more results
+  hasMore: boolean;
 }
 
 /** Standard error envelope — always top-level on 4xx/5xx */
@@ -55,6 +55,25 @@ interface Timestamped {
   updatedAt: string;
 }
 ```
+
+### Pagination
+
+All list endpoints use **cursor-based pagination** (not offset-based) for consistent results during concurrent writes.
+
+```typescript
+interface PaginatedRequest {
+  cursor?: string; // opaque cursor from previous response
+  limit?: number;  // default 20, max 100
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  cursor: string | null; // null if no more results
+  hasMore: boolean;
+}
+```
+
+> **Why cursor-based**: Offset pagination produces inconsistent results when items are inserted/deleted between pages. Cursor pagination uses a stable reference point (typically a composite of `created_at` + `id`).
 
 ### 2.2 Auth Types
 
@@ -527,6 +546,47 @@ COMMIT;
 - A human can have at most 3 active (claimed but not submitted) missions at a time (enforced by a check before the transaction)
 - Claimed missions that are not submitted before the deadline auto-expire via a BullMQ scheduled job (runs every 5 minutes)
 
+#### `POST /missions/:id/claim` — Detailed Contract
+
+```typescript
+// Request
+interface ClaimMissionRequest {
+  estimatedCompletionHours?: number;
+}
+
+// Response 200
+interface ClaimMissionResponse {
+  claimId: string;
+  missionId: string;
+  userId: string;
+  deadline: string; // ISO 8601
+  requirements: string[];
+  status: 'claimed';
+}
+
+// Error 409: Mission already claimed
+// Error 403: Trust level insufficient
+```
+
+#### `POST /missions/:id/evidence` — Detailed Contract
+
+```typescript
+// Request (multipart/form-data)
+interface SubmitEvidenceRequest {
+  description: string;
+  files: File[]; // max 5 files, max 10MB each
+  gpsCoordinates?: { lat: number; lng: number };
+}
+
+// Response 201
+interface SubmitEvidenceResponse {
+  evidenceId: string;
+  missionId: string;
+  verificationStatus: 'pending';
+  estimatedReviewTime: string; // "~2 hours"
+}
+```
+
 ### 3.5 Circles — `/api/v1/circles`
 
 | Method | Path | Description | Auth | Request Body | Response |
@@ -710,6 +770,27 @@ Evidence submission (`POST /missions/:id/submit`) is the only endpoint accepting
 | CDN delivery | Cloudflare CDN with signed URLs (1-hour expiry) |
 | Processing pipeline | Upload -> ClamAV virus scan (BullMQ job) -> EXIF extraction (GPS, timestamp) -> Thumbnail generation (320px) -> Store in R2 |
 | Rejected files | Return `400 VALIDATION_ERROR` with `details.reason` |
+
+### Health & Status
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | /health | Basic health check (returns 200 if server is running) | None |
+| GET | /health/ready | Readiness check (DB connected, Redis connected, migrations current) | None |
+
+```typescript
+// GET /health/ready Response
+interface ReadinessResponse {
+  status: 'ready' | 'degraded' | 'unhealthy';
+  checks: {
+    database: 'ok' | 'error';
+    redis: 'ok' | 'error';
+    migrations: 'ok' | 'pending' | 'error';
+  };
+  version: string;
+  uptime: number; // seconds
+}
+```
 
 ### 3.11 Admin — `/api/v1/admin`
 

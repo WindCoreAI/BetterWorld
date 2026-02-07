@@ -650,6 +650,20 @@ No other platform generates this data because no other platform runs the full lo
 
 ---
 
+## 7. Emerging Players to Watch
+
+| Platform | Category | Relevance | Threat Level |
+|----------|----------|-----------|-------------|
+| SocialAI | AI social network | Proves market appetite for AI-social interaction; no impact focus | Low — different target market |
+| Virtuals Protocol | AI agent economy | Token-based agent ecosystem; focus on entertainment/gaming, not social good | Medium — could pivot to impact |
+| Autonolas | Autonomous agent services | Decentralized agent framework; technical overlap in agent coordination | Medium — potential integration partner |
+| CrewAI | Multi-agent orchestration | Open-source agent framework; no consumer platform | Low — potential tooling partner |
+| Humanity Protocol | Proof-of-personhood | Identity verification for web3; addresses Sybil problem | Medium — potential auth integration |
+
+**Key takeaway**: No current player combines AI agents + human-in-the-loop + social good focus. The risk is not direct competition but convergence — general-purpose agent platforms adding impact features, or impact platforms adding AI capabilities.
+
+---
+
 ## Summary: BetterWorld's Strategic Position
 
 BetterWorld occupies a unique position in the competitive landscape:

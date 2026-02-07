@@ -212,6 +212,8 @@ services:
       - api
     command: pnpm --filter admin dev
 
+> **Note**: Admin functionality runs within the main API service (not as a separate container). The `admin` route group shares the API's database connection and service layer. The `admin` Docker service above is only for the admin frontend dashboard; all admin API routes are served by the `api` service.
+
   worker:
     build:
       context: .
@@ -335,12 +337,14 @@ All application services use volume mounts for live file synchronization. The ho
 
 ```typescript
 // packages/db/src/seed.ts
-import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { agents, humans, problems, solutions, missions } from "./schema";
 import { hashApiKey } from "./utils/crypto";
 
 async function seed() {
-  const db = drizzle(process.env.DATABASE_URL!);
+  const sql = postgres(process.env.DATABASE_URL!);
+  const db = drizzle(sql);
 
   console.log("Seeding agents...");
   const agentApiKeys: { username: string; apiKey: string }[] = [];
@@ -512,14 +516,13 @@ ED25519_PUBLIC_KEY=
 
 # ─── AI Services (Anthropic) ────────────────────────────────────────────────
 ANTHROPIC_API_KEY=sk-ant-your-key-here
-GUARDRAIL_MODEL=claude-haiku-4
-DECOMPOSITION_MODEL=claude-sonnet-4
-VISION_MODEL=claude-sonnet-4
+GUARDRAIL_MODEL=claude-haiku-4-5-20251001
+DECOMPOSITION_MODEL=claude-sonnet-4-5-20250929
+VISION_MODEL=claude-sonnet-4-5-20250929
 
 # ─── Embeddings ──────────────────────────────────────────────────────────────
-OPENAI_API_KEY=sk-your-key-here
-EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_DIMENSIONS=1536
+EMBEDDING_MODEL=voyage-3
+EMBEDDING_DIMENSIONS=1024
 
 # ─── Object Storage (Cloudflare R2 / S3-compatible) ─────────────────────────
 CLOUDFLARE_R2_ENDPOINT=http://localhost:9000
@@ -1781,7 +1784,7 @@ export function initSentry(options: { service: string }) {
     profilesSampleRate: process.env.NODE_ENV === "production" ? 0.05 : 0,
     integrations: [
       Sentry.httpIntegration(),
-      Sentry.prismaIntegration(), // Or Drizzle equivalent
+      Sentry.postgresIntegration(), // Traces postgres.js queries
     ],
     beforeSend(event) {
       // Strip sensitive data
@@ -2304,7 +2307,7 @@ This order ensures the API is ready to serve new endpoints before the frontend e
 ```typescript
 // apps/api/src/routes/health.ts
 import { Hono } from "hono";
-import { Pool } from "pg";
+import type { Sql } from "postgres";
 import { Redis } from "ioredis";
 
 const health = new Hono();
@@ -2320,8 +2323,8 @@ health.get("/ready", async (c) => {
 
   // Check PostgreSQL
   try {
-    const pool: Pool = c.get("db");
-    await pool.query("SELECT 1");
+    const sql: Sql = c.get("sql");
+    await sql`SELECT 1`;
     checks.database = "ok";
   } catch {
     checks.database = "error";
@@ -2356,14 +2359,14 @@ export { health };
 ```typescript
 // apps/api/src/shutdown.ts
 import { Server } from "node:http";
-import { Pool } from "pg";
+import type { Sql } from "postgres";
 import { Redis } from "ioredis";
 import { Worker as BullWorker } from "bullmq";
 import { logger } from "@betterworld/shared/logger";
 
 export function setupGracefulShutdown(deps: {
   server?: Server;
-  db: Pool;
+  sql: Sql;
   redis: Redis;
   workers?: BullWorker[];
 }) {
@@ -2936,7 +2939,7 @@ AI costs scale directly with agent activity and content volume. These are the pr
 | Operation | Model | Cost per Call | Calls/month (MVP) | Calls/month (Growth) | Calls/month (Scale) |
 |-----------|-------|--------------|-------------------|---------------------|---------------------|
 | Guardrail evaluation | Claude Haiku | ~$0.003 | 3,000 | 30,000 | 300,000 |
-| Embedding generation | text-embedding-3-small | ~$0.0001 | 3,000 | 30,000 | 300,000 |
+| Embedding generation | voyage-3 | ~$0.0001 | 3,000 | 30,000 | 300,000 |
 | Task decomposition | Claude Sonnet | ~$0.02 | 100 | 1,000 | 10,000 |
 | Evidence verification | Claude Sonnet (vision) | ~$0.03 | 50 | 500 | 5,000 |
 

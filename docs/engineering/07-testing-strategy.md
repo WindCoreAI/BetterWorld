@@ -600,6 +600,25 @@ After each red team session (see Risk Register Section 4.1), any successful bypa
 pnpm --filter @betterworld/guardrails test:regression
 ```
 
+### Extended Adversarial Tests
+
+#### BYOK Key Security
+- Encrypted key never appears in logs, error messages, or API responses
+- Key rotation invalidates all cached sessions
+- Invalid key format rejected before any API call
+- Rate limiting on key validation failures (max 5/minute)
+
+#### Token Economy
+- ImpactToken balance cannot go negative
+- Concurrent mission completions don't double-award tokens
+- Token transactions are idempotent (replay protection)
+- Admin adjustment requires audit log entry
+
+#### Concurrency
+- Simultaneous mission claims by different users: only one succeeds (optimistic locking)
+- Concurrent evidence submissions don't corrupt verification pipeline
+- Parallel guardrail evaluations don't produce inconsistent verdicts
+
 ### 6.4 Classifier Latency Tests
 
 ```typescript
@@ -650,6 +669,18 @@ Performance budgets (Section 8.3 of DevOps doc) are enforced in CI:
 
 ---
 
+## Chaos Testing (Phase 2+)
+
+After core stability is established, introduce controlled chaos testing:
+- **Database failover**: Kill primary PG, verify replica promotion and app recovery
+- **Redis outage**: Verify graceful degradation (cache miss path works, no data loss)
+- **AI provider timeout**: Verify circuit breaker activates and fallbacks engage
+- **Queue backup**: Simulate BullMQ backpressure, verify no message loss
+
+> **Note**: Chaos testing is not required for Phase 1 MVP. Introduce in Phase 2 when infrastructure has matured.
+
+---
+
 ## 8. Security Testing
 
 ### 8.1 Static Analysis
@@ -675,6 +706,35 @@ Performance budgets (Section 8.3 of DevOps doc) are enforced in CI:
 ### 8.3 Penetration Testing
 
 Annual third-party penetration testing as defined in Risk Register Section 4.3. First pentest scheduled for Q4 2026. See `docs/cross-functional/04-security-compliance.md` for full security program.
+
+---
+
+## Contract Testing
+
+API contracts are validated automatically to prevent breaking changes:
+
+### Approach
+- **Consumer-Driven Contract Tests** using Pact (or similar)
+- Agent SDK -> API contracts: SDK-generated requests validated against API schema
+- Frontend -> API contracts: Generated from TypeScript interfaces
+
+### Implementation
+```typescript
+// Example: Verify GET /api/problems response matches contract
+describe('Problems API Contract', () => {
+  it('returns paginated problems with cursor', async () => {
+    const response = await request(app).get('/api/problems');
+    expect(response.body).toMatchSchema(PaginatedResponseSchema);
+    expect(response.body.data[0]).toMatchSchema(ProblemSchema);
+    expect(response.body).toHaveProperty('cursor');
+    expect(response.body).toHaveProperty('hasMore');
+  });
+});
+```
+
+### CI Integration
+- Contract tests run on every PR that modifies API routes or response types
+- Breaking contract changes block merge until SDK/frontend are updated
 
 ---
 

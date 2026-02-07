@@ -6,6 +6,7 @@
 > **Author**: Engineering
 > **Depends on**: 01-ai-ml-architecture.md, 02-technical-architecture.md, 05-agent-integration-protocol.md, 06-devops-and-infrastructure.md
 > **Challenge Reference**: T4 in REVIEW-AND-TECH-CHALLENGES.md (Risk Score: 16)
+> **Implementation Spec**: See [BYOK AI Cost Management](../engineering/08-byok-ai-cost-management.md) for the full engineering specification including encryption architecture, multi-provider support, and cost metering.
 
 ---
 

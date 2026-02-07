@@ -38,6 +38,8 @@
 
 ## Sprint 1: Project Setup & Core Infrastructure (Weeks 1-2)
 
+> **Ownership**: Sprint 0 is owned by the Tech Lead. All infrastructure, tooling, and CI/CD setup must be completed before Sprint 1 kickoff. Sign-off required from Tech Lead + Product Lead.
+
 **Sprint Goal**: Every engineer can run `pnpm dev` and have all services (API, web, database, Redis) running locally. CI catches regressions on every PR. The database schema for core entities exists and migrates cleanly.
 
 ### Engineering Tasks
@@ -348,6 +350,8 @@
 
 #### S2-09: WebSocket Basic Setup
 
+> **Note**: WebSocket implementation (real-time notifications, live updates) is deferred to Sprint 3-4. Sprint 1-2 uses polling-based updates. This reduces Sprint 1-2 complexity and allows focus on core API stability.
+
 | Attribute | Detail |
 |-----------|--------|
 | **Description** | Set up Hono WebSocket support using `@hono/node-ws` or native WebSocket upgrade. Create a basic WebSocket server at `ws://localhost:3001/ws/feed` that broadcasts events. Implement: connection management (track connected clients), authentication on upgrade (verify API key or JWT in query param or first message), heartbeat ping/pong for connection health, basic event broadcasting (`{type: "new_problem", data: {...}}`). This is the foundation -- specific channels come in Sprint 4. |
@@ -387,6 +391,14 @@
 | **Assigned Role** | D1 |
 | **Dependencies** | S1-D2 (Badge component), S1-D1 (design tokens) |
 | **Acceptance Criteria** | Card design for list and grid layouts. All metadata fields visible without expanding. Domain badge colors are distinct and accessible. Severity uses intuitive visual coding (green/yellow/orange/red). Works at narrow (320px) and wide (1440px) widths. |
+
+### Frontend Tasks
+
+| Task ID | Task | Description | Priority |
+|---------|------|-------------|----------|
+| S2-FE1 | Problem List Page | React page with search/filter bar, problem cards, pagination (cursor-based). Connects to GET /api/problems endpoint. | P0 |
+| S2-FE2 | Problem Detail Page | Full-page view showing problem description, related solutions, agent activity, voting (Phase 2 placeholder). | P0 |
+| S2-FE3 | Solution Submission Flow | Multi-step form for agents to submit solutions via UI (alternative to API). Includes guardrail feedback display. | P1 |
 
 ### Sprint 2 Definition of Done
 
@@ -577,6 +589,14 @@
 | **Dependencies** | S1-D2 (Input component), S2-D3 (Problem card) |
 | **Acceptance Criteria** | Form layout handles all required fields without feeling overwhelming. Domain selector uses icons or colors for quick scanning. Preview section shows the problem as it would appear on the board. Validation states (error messages) are designed. Responsive layout (single column on mobile, two columns on desktop). |
 
+### Frontend Tasks
+
+| Task ID | Task | Description | Priority |
+|---------|------|-------------|----------|
+| S3-FE1 | Mission Board Page | Grid/list view of available missions with status filters, domain filters, deadline sorting. | P0 |
+| S3-FE2 | Mission Detail & Claim Flow | Detail page with claim button, requirements checklist, evidence upload area (Phase 2 placeholder). | P0 |
+| S3-FE3 | Agent Profile Page | Public profile showing agent's problems, solutions, trust score, activity timeline. | P1 |
+
 ### Sprint 3 Definition of Done
 
 - [ ] Content submitted via API is queued for guardrail evaluation
@@ -635,7 +655,9 @@
 | **Estimated Hours** | 10h |
 | **Assigned Role** | BE1 |
 | **Dependencies** | S3-04 (guardrail pipeline), S1-04 (problems table), S1-07 (auth) |
-| **Acceptance Criteria** | Agent creates problem -> guardrails evaluate -> approved problem appears in `GET /problems/`. Rejected problem returns 200 on create but does not appear in listings. Pagination: `?page=1&limit=20` works. Filters: `?domain=healthcare_improvement&severity=high` returns only matching. Evidence can be added to existing problems. Challenge creates a linked challenge entry. All input validated with descriptive error messages. |
+| **Acceptance Criteria** | Agent creates problem -> guardrails evaluate -> approved problem appears in `GET /problems/`. Rejected problem returns 200 on create but does not appear in listings. Pagination: `?page=1&limit=20` works. Filters: `?domain=healthcare_improvement&severity=high` returns only matching. Evidence can be added to existing problems. All input validated with descriptive error messages. |
+
+> **Deferred to Phase 2**: Agent challenge/debate endpoints require the full deliberation framework. Sprint 4 focuses on dashboard, analytics, and polish.
 
 #### S4-02: Solution CRUD API with Guardrail Integration
 
@@ -1059,6 +1081,19 @@ Run this checklist at the end of every sprint:
 - [ ] TypeScript strict mode passes (`pnpm typecheck`)
 - [ ] Acceptance criteria verified
 - [ ] No known regressions introduced
+
+### Design Handoff Protocol
+
+Each sprint has a design handoff checkpoint to prevent frontend rework:
+
+| Sprint | Handoff Deadline | Deliverables |
+|--------|-----------------|-------------|
+| Sprint 1 | Day 1 | Wireframes for auth flow, dashboard shell, navigation |
+| Sprint 2 | Sprint 1 Day 8 | High-fidelity mocks for problem/solution pages, component specs |
+| Sprint 3 | Sprint 2 Day 8 | Mission board, agent profile, evidence upload designs |
+| Sprint 4 | Sprint 3 Day 5 | Admin dashboard, analytics views, final polish specs |
+
+**Process**: Designs reviewed in sprint planning → dev questions resolved within 48h → no design changes after sprint day 3 (unless P0 bug).
 
 ---
 
