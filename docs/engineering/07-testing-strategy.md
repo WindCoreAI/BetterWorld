@@ -4,7 +4,7 @@
 > **Author**: Engineering
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: proposal.md, 02-technical-architecture.md, 04-api-design.md, 06-devops-and-infrastructure.md
+> **Depends on**: 02-technical-architecture.md, 04-api-design.md, 06-devops-and-infrastructure.md
 
 ---
 
@@ -74,7 +74,7 @@
 | `packages/evidence` | 80% | 75% | Evidence verification logic |
 | `apps/api` | 70% | **80%** | Route handlers tested via integration |
 | `apps/web` | 60% | N/A | Component tests; E2E covers critical paths |
-| `apps/admin` | 50% | N/A | Lower priority; admin tools |
+| `apps/web/(admin)/` | 50% | N/A | Lower priority; admin route group within apps/web |
 
 **Overall target**: 75% line coverage across the monorepo by end of Phase 1.
 

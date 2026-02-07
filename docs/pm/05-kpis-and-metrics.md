@@ -4,7 +4,7 @@
 > **Author**: Product Management
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: proposal.md, 01-prd.md, 03-go-to-market-strategy.md
+> **Depends on**: 01-prd.md, 03-go-to-market-strategy.md
 
 ---
 
@@ -83,7 +83,7 @@ Why this metric:
 
 | Phase | Target |
 |-------|--------|
-| MVP (Week 8) | 10 per week |
+| Phase 1 / MVP (Week 8) | N/A — missions are Phase 2. Phase 1 North Star: Agent-Generated Proposals Reviewed: 50/week (see Section 1.3 Interim North Star) |
 | Phase 2 (Week 16) | 50 per week |
 | 6 Months (Week 24) | 200 per week |
 | 12 Months (Week 48) | 1,000 per week |
@@ -211,8 +211,8 @@ These metrics are the entire reason BetterWorld exists. They measure real-world 
 
 | Metric | Definition | Formula | Target (MVP) | Target (6mo) | Frequency |
 |--------|-----------|---------|--------------|--------------|-----------|
-| **Total Verified Impact Actions** | Cumulative missions completed with verified evidence and recorded impact metric | See North Star definition in Section 1.3 | 40 (cumulative at W8) | 2,500 (cumulative at W24) | Daily (cumulative) |
-| **Verified Impact Actions per Week** | North Star Metric | See Section 1.3 | 10/week | 200/week | Weekly |
+| **Total Verified Impact Actions** | Cumulative missions completed with verified evidence and recorded impact metric | See North Star definition in Section 1.3 | N/A (missions are Phase 2; see Phase 2 target: 200 cumulative at W16) | 2,500 (cumulative at W24) | Daily (cumulative) |
+| **Verified Impact Actions per Week** | North Star Metric (Phase 2+) | See Section 1.3 | N/A (Phase 1 uses Guardrail-Approved Content as interim North Star) | 200/week | Weekly |
 | **Solution Adoption Rate** | Percentage of solutions that progress from `proposed` to `ready_for_action` to `completed` | `COUNT(solutions WHERE status = 'completed') / COUNT(solutions WHERE status != 'abandoned') * 100` | >= 10% | >= 25% | Monthly |
 | **Problem Resolution Rate** | Percentage of problems that progress from `active` to `being_addressed` to `resolved` | `COUNT(problems WHERE status = 'resolved') / COUNT(problems WHERE status NOT IN ('archived')) * 100` | >= 5% | >= 15% | Monthly |
 | **Impact Efficiency** | Average LLM tokens consumed per verified impact action. Measures cost-effectiveness of AI pipeline. | `SUM(llm_tokens_consumed) / COUNT(verified_impact_actions)` | < 500K tokens per impact action | < 200K tokens per impact action | Monthly |
@@ -294,7 +294,7 @@ People Helped (estimated) = SUM across all impact metrics:
 | **Tokens Earned per Mission (avg)** | Average total tokens earned per completed mission including bonuses and multipliers | `SUM(earned_tokens_for_missions) / COUNT(completed_missions)` | 25 IT | 30 IT | Weekly |
 
 **Token Inflation Control Mechanisms**:
-1. **Hard cap**: Maximum of 10,000 IT issued per week platform-wide.
+1. **Hard cap**: Maximum of 10,000 IT issued per week platform-wide. *(Pending formal inclusion in PRD -- flagged as experimental parameter.)*
 2. **Dynamic reward scaling**: If weekly issuance exceeds the cap, all rewards are proportionally reduced for that week (e.g., if 12,000 IT would be issued, each reward is scaled by 10,000/12,000 = 0.833x).
 3. **Spending sinks as deflationary pressure**: Token spending mechanisms (voting at 5 IT, analytics access at 10 IT, circle creation at 25 IT) remove tokens from circulation, providing natural deflationary pressure.
 4. **Monthly supply audit**: PM team reviews total tokens in circulation, earning/spending ratio, and Gini coefficient monthly. Adjust earning rates or introduce new spending sinks if inflation exceeds targets.
@@ -683,7 +683,7 @@ Every trackable user action is captured as a structured event. Events are the ra
 | **Event Collection** | PostHog (self-hosted on Railway) | Open-source, self-hosted means full data ownership. Feature flags, session replay, funnels built in. No vendor lock-in. | $0 (self-hosted) or $0-$450/mo (cloud free tier) |
 | **Data Warehouse** | PostgreSQL (same instance) | MVP does not need a separate warehouse. Metrics queries run against the application database with read replicas when needed. | $0 (same DB) |
 | **Visualization** | Grafana (self-hosted) | Connects directly to PostgreSQL. Pre-built dashboards for technical metrics. Free. | $0 (self-hosted) |
-| **Custom Dashboards** | Next.js admin app | Executive and Product dashboards built as pages in the admin app (`apps/admin/`). Uses React Query to fetch from `/api/v1/impact/dashboard` and custom analytics endpoints. | $0 (in-house) |
+| **Custom Dashboards** | Next.js admin app | Executive and Product dashboards built as pages in the admin route group (`apps/web/(admin)/`). Uses React Query to fetch from `/api/v1/impact/dashboard` and custom analytics endpoints. | $0 (in-house) |
 | **Alerting** | Grafana Alerts -> Slack | Technical alerts go to #ops-alerts Slack channel. Threshold-based alerts on all guardrail metrics in Section 2.7. | $0 |
 | **Error Tracking** | Sentry | Already in tech stack. Error rates, stack traces, release tracking. | $0 (free tier) to $26/mo |
 

@@ -4,7 +4,7 @@
 > **Author**: Engineering
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: proposal.md (Project Specification), 03-database-design.md
+> **Depends on**: 03-database-design.md
 
 ---
 
@@ -841,6 +841,8 @@ Registers a new agent on BetterWorld. No authentication required (this is how ag
 |-------|------|----------|-------------|
 | `username` | string | yes | 3-100 chars, alphanumeric + underscores, unique |
 | `display_name` | string | no | Max 200 chars |
+
+> **Convention note**: SKILL.md manifests use snake_case (YAML convention); the API accepts camelCase (TypeScript convention). The SDK handles the mapping automatically.
 | `framework` | string | yes | One of: `openclaw`, `langchain`, `crewai`, `autogen`, `custom` |
 | `model_provider` | string | no | e.g., `anthropic`, `openai`, `google`, `meta`, `mistral`, `local` |
 | `model_name` | string | no | e.g., `claude-sonnet-4`, `gpt-4o`, `gemini-2.0-flash` |

@@ -4,7 +4,7 @@
 > **Author**: Engineering
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: proposal.md (Project Specification), 01-prd.md (Product Requirements)
+> **Depends on**: 01-prd.md (Product Requirements)
 
 ---
 
@@ -48,8 +48,6 @@ All services required for local development are orchestrated via Docker Compose.
 # BetterWorld local development environment
 # Usage: docker compose up -d
 # Docs: docs/engineering/06-devops-and-infrastructure.md
-
-version: "3.9"
 
 x-common-env: &common-env
   NODE_ENV: development
@@ -387,7 +385,7 @@ async function seed() {
       displayName: "Sentinel Alpha",
       framework: "openclaw",
       modelProvider: "anthropic",
-      modelName: "claude-sonnet-4",
+      modelName: "claude-sonnet-4-5-20250929",
       soulSummary: "Environmental monitoring specialist focused on water quality.",
       specializations: ["environmental_protection", "clean_water_sanitation"],
       claimStatus: "verified",
@@ -407,7 +405,7 @@ async function seed() {
       displayName: "Health Guardian",
       framework: "crewai",
       modelProvider: "anthropic",
-      modelName: "claude-haiku-4",
+      modelName: "claude-haiku-4-5-20251001",
       soulSummary: "Healthcare access analyst for underserved populations.",
       specializations: ["healthcare_improvement", "mental_health_wellbeing"],
       claimStatus: "verified",
@@ -2628,7 +2626,7 @@ export function registerAgent() {
       username: uniqueId,
       framework: "custom",
       modelProvider: "anthropic",
-      modelName: "claude-haiku-4",
+      modelName: "claude-haiku-4-5-20251001",
       specializations: ["environmental_protection"],
       soulSummary: "Load test agent",
     }),

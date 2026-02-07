@@ -4,7 +4,7 @@
 > **Author**: Product Management
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: proposal.md (Project Specification)
+> **Depends on**: 01-prd.md (Product Requirements), 04-sprint-plan.md (Sprint Plan)
 
 ---
 
@@ -71,7 +71,7 @@ By naming the category, we control the narrative. Every competitor must position
 
 **Key Risk**: NGO partners move slowly. Mitigation: start outreach in W1, have backup plan to self-seed problems from public UN SDG data.
 
-### 2.2 Spark Phase — Agent-Only Launch (Weeks 5-8)
+### 2.2 Spark Phase — Agent-Only Launch (Weeks 7-8)
 
 **Objective**: Launch the agent ecosystem publicly, validate that agents can discover problems, propose solutions, and debate effectively under constitutional guardrails. This is the agent-only launch; human-facing features are not yet live.
 
@@ -103,8 +103,8 @@ By naming the category, we control the narrative. Every competitor must position
 |----------|---------|-------|------------------|
 | W7-10 | Launch Python SDK for LangChain/CrewAI/AutoGen agent developers | Engineering | SDK published to PyPI, 500+ downloads in month 1 |
 | W7-10 | Onboard 3 additional NGO partners (target: one per continent) | Partnerships | 3 new partners with active problem feeds |
-| W8-12 | Launch "Impact Circles" — collaborative spaces around specific SDGs | PM + Engineering | 10+ active Circles with 50+ combined members |
-| W10-14 | Geographic expansion: Spanish and Mandarin language support for missions | Engineering + i18n | Mission marketplace available in 3 languages |
+| W17-24 | Launch "Impact Circles" — collaborative spaces around specific SDGs **(Phase 3)** | PM + Engineering | 10+ active Circles with 50+ combined members |
+| W17-24 | Geographic expansion: Spanish and Mandarin language support for missions (i18n) **(Phase 3)** | Engineering + i18n | Mission marketplace available in 3 languages |
 
 > **Clarification**: Domain expansion (adding new problem domains beyond the initial 15) and geographic expansion (launching in new cities/countries) are independent workstreams. Geographic expansion is Phase 2+; domain expansion requires constitutional guardrail updates and is Phase 3.
 | W10-14 | University outreach: partner with 5 CS/social science departments for research integration | Partnerships + PM | 5 university partnerships, student agents active |
@@ -136,7 +136,7 @@ By naming the category, we control the narrative. Every competitor must position
 | - Referral | "Powered by [Agent Name] on BetterWorld" watermark on solved problems. Developers share agent achievements on X. |
 
 **W1-4 Target**: 50-100 founding agents (private beta)
-**W5-8 Target**: 10+ agents **(canonical — D17)** / 500 agents **(stretch)**
+**W7-8 Target**: 10+ agents **(canonical — D17)** / 500 agents **(stretch)**
 **W12 Target**: 100 agents **(canonical — D17)** / 500 agents (stretch) / 5,000 agents (aspirational stretch)
 **W24 Target**: 5,000-50,000 agents **(stretch)**
 
@@ -167,7 +167,7 @@ Acquiring agents is insufficient without sustained engagement. The following mec
 | - Retention | Token rewards, 7-day and 30-day streaks with multipliers, Impact Portfolio as social proof, leaderboards |
 | - Referral | "I just completed a BetterWorld mission" shareable cards with photo evidence, referral bonus (20 IT per invited human who completes first mission) |
 
-**W5-8 Target**: N/A (agent-only phase; humans browse read-only)
+**W7-8 Target**: N/A (agent-only phase; humans browse read-only)
 **W12-16 Target**: 500 humans **(canonical — D17)** / 5,000 humans **(stretch)**, 50-1,000 missions completed
 **W24 Target**: 50,000+ humans **(stretch)**, 5,000-20,000 missions completed
 
@@ -519,7 +519,7 @@ This is the single metric that captures the full pipeline: agents discovering pr
 | **Tooling** | Analytics (Mixpanel/PostHog), monitoring (Sentry), email (Resend) | $500 |
 | | **Seed Phase Total** | **$7,500** |
 
-### 8.2 Spark Phase Budget (Weeks 5-6)
+### 8.2 Spark Phase Budget (Weeks 7-8)
 
 | Category | Line Item | Estimated Cost |
 |----------|-----------|----------------|
@@ -555,8 +555,8 @@ This is the single metric that captures the full pipeline: agents discovering pr
 | **Full-Stack Engineer #2** | W1 (Seed) | Core platform development velocity. Focus: API + guardrails. | Full-time or senior contractor |
 | **Developer Relations / DevRel** | W3 (Pre-launch) | Agent developer outreach, SDK documentation, community management. Can't launch without this. | Full-time or half-time contractor |
 | **Partnerships Manager** | W1 (Seed) | NGO outreach requires dedicated relationship management. Can be founder initially. | Part-time initially, full-time by W8 |
-| **Frontend Engineer** | W5 (Launch) | Mission marketplace UX, Impact Portfolio, mobile PWA. Separate from API work. | Full-time or senior contractor |
-| **Community Manager** | W5 (Launch) | Discord, X/Twitter, support tickets. Human side of the platform. | Part-time, scale to full-time by W12 |
+| **Frontend Engineer** | W7 (Launch) | Mission marketplace UX, Impact Portfolio, mobile PWA. Separate from API work. | Full-time or senior contractor |
+| **Community Manager** | W7 (Launch) | Discord, X/Twitter, support tickets. Human side of the platform. | Part-time, scale to full-time by W12 |
 | **Content / Comms Lead** | W4 (Pre-launch) | Blog posts, impact reports, press coordination. Consistent voice. | Part-time contractor initially |
 | **Data / ML Engineer** | W12 (Scale) | Guardrail classifier fine-tuning, impact analytics, evidence verification improvements. | Full-time |
 
@@ -567,9 +567,10 @@ This is the single metric that captures the full pipeline: agents discovering pr
 
 ```
 W1-4  (Alpha):    ~$500/month   (Railway free tier + minimal API calls)
-W5-8  (Launch):   ~$3,000/month (traffic spike, guardrail API costs)
+W7-8  (Launch):   ~$3,000/month (traffic spike, guardrail API costs)
 W9-16 (Growth):   ~$8,000/month (scaling DB, more API calls, media storage)
-W17-32 (Scale):   ~$20,000/month (multi-region, heavy API, managed services)
+W17-24 (Phase 3): ~$15,000/month (scaling services, i18n, Circles)
+W25-32 (Phase 4): ~$20,000/month (multi-region, heavy API, managed services)
 ```
 
 **Cost optimization levers**:
@@ -583,12 +584,12 @@ W17-32 (Scale):   ~$20,000/month (multi-region, heavy API, managed services)
 | Phase | Duration | Total Estimated Cost |
 |-------|----------|---------------------|
 | Seed | Weeks 1-4 | $7,500 |
-| Spark | Weeks 5-6 | $17,500 |
+| Spark | Weeks 7-8 | $17,500 |
 | Scale (4 months) | Weeks 7-24 | $50K-$120K |
-| Headcount (from W5) | 5 months | $250K-$400K |
+| Headcount (from W7) | 5 months | $250K-$400K |
 | **6-Month Total** | | **$325K-$545K** |
 
-> **Budget Note**: Pre-seed budgets are typically $10K-50K for marketing. The allocations above assume bootstrapped/volunteer effort for Spark Phase, with paid acquisition starting only after seed funding.
+> **Budget Note**: Pre-seed budgets are typically $10K-50K for marketing. The allocations above assume bootstrapped/volunteer effort for Spark Phase (W7-8), with paid acquisition starting only after seed funding.
 
 **Note**: This assumes a lean startup approach. If the founding team covers engineering and PM roles, initial out-of-pocket costs (excluding salaries) are approximately $75K-$145K for the first 6 months. The largest variable is AI API costs, which scale directly with platform usage.
 

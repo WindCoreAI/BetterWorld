@@ -1,9 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-06 (v6.0 — systematic review: 16 critical issues fixed, 33 major issues addressed)
-> **Source**: [proposal.md](../proposal.md)
-> **Status**: Complete documentation suite for Phase 1-3 development and marketing
+> **Last Review**: 2026-02-07 (v7.1 — systematic review with cross-doc consistency methodology)
+> **Status**: Complete documentation suite for Phase 1-4 development and marketing
 
 ---
 
@@ -13,7 +12,7 @@
 |---|----------|-------------|
 | 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v2.0 — refined) |
 | 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
-| 3 | [Decisions Needed](DECISIONS-NEEDED.md) | 22 decisions requiring human stakeholder input before implementation — prioritized by sprint dependency |
+| 3 | [Decisions Needed](DECISIONS-NEEDED.md) | 23 decisions (20 resolved, 2 pending, 1 superseded) — prioritized by sprint dependency |
 
 > **Note**: Line counts are approximate and may vary after the v3.0 review update.
 
@@ -113,7 +112,10 @@ Deep research documents for each of the 7 core technical challenges identified i
 
 ## Key Cross-References
 
-- **Proposal** ([proposal.md](../proposal.md)) is the source of truth for all decisions
+- **Each document is authoritative for its domain** — engineering docs define technical decisions, PM docs define product scope, etc.
+- **Proposal** ([proposal.md](archive/proposal.md)) is the original vision document; detailed design docs may have intentionally evolved beyond it
+- **Decisions** are tracked in [DECISIONS-NEEDED.md](DECISIONS-NEEDED.md) — 23 decisions, 20 resolved
 - **Open Questions** are tracked in the PRD (Section 9) — 15 decisions to resolve before/during implementation
 - **Domain list** (15 approved domains aligned with UN SDGs) is defined in the PRD Appendix 10.1
-- **Token economics** are detailed in the proposal (Section 10) and referenced across PRD, KPIs, and Sprint Plan
+- **Token economics** are referenced across PRD, KPIs, and Sprint Plan
+- **Review Report** ([REVIEW-REPORT-v7.md](archive/REVIEW-REPORT-v7.md)) tracks cross-doc consistency status

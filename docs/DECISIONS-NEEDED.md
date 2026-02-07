@@ -1,7 +1,7 @@
 # Decisions Needed Before Implementation
 
 > **Generated**: 2026-02-06 (Systematic Review Round 2)
-> **Status**: ALL 22 DECISIONS RESOLVED
+> **Status**: 20 of 22 DECISIONS RESOLVED
 > **Resolved**: 2026-02-06
 
 ---
@@ -25,7 +25,7 @@
 
 50% storage savings, purpose-built for retrieval. T6 challenge doc validates this choice.
 
-**Propagation needed**: Update `proposal.md`, `02-tech-arch`, sprint plan S1-04 and S4-05 to use `halfvec(1024)` consistently. `03-database` is already correct.
+**Propagation needed**: Update `02-tech-arch`, sprint plan S1-04 and S4-05 to use `halfvec(1024)` consistently. `03-database` is already correct.
 
 ---
 
@@ -84,6 +84,8 @@ Explicit, testable, consistent with Drizzle patterns. Easier to debug.
 ## Scope & Prioritization Decisions
 
 ### D7. MVP Scope Reduction [P0-BLOCKER] — RESOLVED
+
+**Status: SUPERSEDED by ROADMAP v2.0** — The ROADMAP Sprint 2-3 includes the full feature set. This decision's scope cuts are no longer in effect.
 
 **Decision**: **(B) Cut to 5 core P0 features for 8 weeks**
 
@@ -243,6 +245,16 @@ Same core narrative, different emphasis per audience. Social impact version for 
 
 ---
 
+### D23. Auth Library: better-auth (replaces lucia-auth) [P0-BLOCKER] — RESOLVED
+
+**Decision**: Use **better-auth** instead of lucia-auth for authentication.
+
+**Rationale**: better-auth provides a more complete auth solution with built-in OAuth providers, session management, and TypeScript-first API. Selected during detailed technical architecture design (see `engineering/02-technical-architecture.md`).
+
+**Impact**: All auth-related code uses better-auth APIs. No migration needed (greenfield project).
+
+---
+
 ## Quick Reference: Decision Summary
 
 | # | Decision | Choice |
@@ -253,7 +265,7 @@ Same core narrative, different emphasis per audience. Social impact version for 
 | D4 | API envelope | { ok, data, meta, requestId } |
 | D5 | Guardrails | Async BullMQ, p95 < 5s |
 | D6 | updated_at | Application-managed |
-| D7 | MVP scope | Cut to 5 core P0 features |
+| D7 | MVP scope | Cut to 5 core P0 features (SUPERSEDED by ROADMAP v2.0) |
 | D8 | Team size | 3 engineers |
 | D9 | Messaging | Defer to Phase 2 |
 | D10 | Python SDK | Defer to Phase 2 |
@@ -269,6 +281,7 @@ Same core narrative, different emphasis per audience. Social impact version for 
 | D20 | Valuation | Deferred |
 | D21 | Pitch positioning | Two deck variants |
 | D22 | Demo strategy | Deferred (depends on pitch timing) |
+| D23 | Auth library | better-auth (replaces lucia-auth) |
 
 ---
 

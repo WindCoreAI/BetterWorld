@@ -576,7 +576,7 @@ export const problems = pgTable(
       table.domain,
       table.createdAt,
     ),
-    // IVFFlat vector index (applied via raw SQL, see Section 4.3)
+    // HNSW vector index (applied via raw SQL, see Section 4.3)
     // Partial index for approved-only semantic search
     check(
       "alignment_score_range",
@@ -1940,6 +1940,11 @@ export const agentAiKeys = pgTable(
     provider: text("provider").notNull(), // 'anthropic' | 'openai' | 'google'
     encryptedKey: text("encrypted_key").notNull(), // AES-256-GCM envelope encrypted
     keyFingerprint: text("key_fingerprint").notNull(), // SHA-256 of last 4 chars for identification
+    // Envelope encryption fields — see engineering/08-byok-ai-cost-management.md for architecture details
+    encryptedDek: text("encrypted_dek").notNull(), // KEK-encrypted DEK (base64)
+    iv: text("iv").notNull(), // Initialization vector (base64)
+    authTag: text("auth_tag").notNull(), // GCM authentication tag (base64)
+    kekVersion: integer("kek_version").notNull().default(1), // Which KEK version encrypted this DEK
     isValid: boolean("is_valid").default(true),
     lastValidated: timestamp("last_validated", { withTimezone: true }),
     monthlyUsage: real("monthly_usage").default(0),
@@ -2262,10 +2267,9 @@ CREATE INDEX IF NOT EXISTS idx_problems_location_gist
   ON problems USING gist (ll_to_earth(latitude::float8, longitude::float8))
   WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 
--- IVFFlat vector indexes for semantic similarity search
--- Note: IVFFlat requires data to be present for training.
--- For initial empty database, use HNSW instead (no training needed).
--- Switch to IVFFlat at ~10K+ rows for better recall/performance tradeoff.
+-- HNSW vector indexes for semantic similarity search
+-- Note: HNSW does not require data to be present for training.
+-- Recommended per T6 challenge research for all scale ranges.
 
 CREATE INDEX IF NOT EXISTS idx_problems_embedding_hnsw
   ON problems USING hnsw (embedding halfvec_cosine_ops)
@@ -2989,7 +2993,7 @@ SELECT * FROM humans WHERE skills @> ARRAY['photography', 'translation'];
 SELECT * FROM missions WHERE required_skills && ARRAY['photography', 'translation'];
 ```
 
-### 6.4 IVFFlat / HNSW Indexes (Vector Similarity)
+### 6.4 HNSW Indexes (Vector Similarity)
 
 ```sql
 -- HNSW (Hierarchical Navigable Small World) -- preferred for < 1M rows
@@ -3003,17 +3007,16 @@ CREATE INDEX idx_solutions_embedding_hnsw
   WITH (m = 32, ef_construction = 128);
 ```
 
-At scale (1M+ vectors), switch to IVFFlat for lower memory usage:
+At scale (1M+ vectors), tune HNSW parameters for better throughput:
 
 ```sql
--- IVFFlat -- requires existing data for training
--- lists = sqrt(row_count) is a good starting point
-CREATE INDEX idx_problems_embedding_ivfflat
-  ON problems USING ivfflat (embedding halfvec_cosine_ops)
-  WITH (lists = 100);
+-- For large datasets, increase m and ef_construction for better recall
+CREATE INDEX idx_problems_embedding_hnsw_large
+  ON problems USING hnsw (embedding halfvec_cosine_ops)
+  WITH (m = 48, ef_construction = 200);
 
--- Set probes at query time (higher = better recall, slower)
-SET ivfflat.probes = 10;
+-- Increase ef_search at query time for better recall (default 40)
+SET hnsw.ef_search = 200;
 ```
 
 ### 6.5 Partial Indexes
@@ -3375,8 +3378,8 @@ DROP TABLE token_transactions_2025_01;
 | < 10K | Sequential scan (no index) | N/A |
 | 10K - 100K | HNSW | `m=32, ef_construction=128` |
 | 100K - 1M | HNSW | `m=32, ef_construction=128` |
-| 1M - 10M | IVFFlat | `lists=1000, probes=20` |
-| 10M+ | IVFFlat + partitioning | Partition by domain, per-partition indexes |
+| 1M - 10M | HNSW | `m=48, ef_construction=200` |
+| 10M+ | HNSW + partitioning | Partition by domain, per-partition indexes |
 
 **Query-time tuning:**
 
@@ -3384,8 +3387,8 @@ DROP TABLE token_transactions_2025_01;
 -- HNSW: increase ef_search for better recall (default 40)
 SET hnsw.ef_search = 100;
 
--- IVFFlat: increase probes for better recall (default 1)
-SET ivfflat.probes = 20;
+-- For large datasets, increase ef_search further
+SET hnsw.ef_search = 200;
 ```
 
 **Monitoring index health:**

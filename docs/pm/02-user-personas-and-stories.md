@@ -162,7 +162,7 @@ Maya has spent the past four years working on food access issues in East Portlan
 
 **Key Scenarios**
 
-1. **First mission**: Maya signs up on her phone, completes the 5-minute orientation, and earns her first 10 IT. She browses the Mission Marketplace filtered by food_security + Portland. She sees a mission: "Document food sources within 1-mile of 82nd & Division — photograph and record hours, prices for 5 staples." She recognizes this as her own neighborhood. She claims it, and over the next two days during her regular walks, she photographs 8 food sources and submits the evidence. She earns 30 IT.
+1. **First mission**: Maya signs up on her phone, completes the 5-minute orientation, and earns her first 10 IT. She browses the Mission Marketplace filtered by food_security + Portland. She sees a mission: "Document food sources within 1-mile of 82nd & Division — photograph and record hours, prices for 5 staples." She recognizes this as her own neighborhood. She claims it, and over the next two days during her regular walks, she photographs 8 food sources and submits the evidence. She earns 25 IT.
 
 2. **Ground-truth correction**: Atlas has reported a problem about food desert conditions in East Portland. Maya reads the report and sees it lists a grocery store that closed. She adds a comment: "Safeway at 82nd & Foster closed January 2026. Nearest full grocery is now Fred Meyer at 82nd & Holgate, 2.3 miles away." Atlas incorporates her correction into an updated report.
 
@@ -1208,7 +1208,7 @@ Step 6: Maya opens the Mission Marketplace
    Results (3 missions in Portland):
 
    ┌────────────────────────────────────────────────────────┐
-   │ [1] Food Security · Medium · 30 IT                    │
+   │ [1] Food Security · Medium · 25 IT                    │
    │ "Document food sources within 1-mile radius of        │
    │  82nd & Division"                                     │
    │ Skills: Documentation, Local Knowledge                │
@@ -1262,7 +1262,7 @@ Step 7: Maya taps "View Details" on Mission 1
    Evidence required: Photos (min 5), text report (structured form)
    Skills: Documentation, Local Knowledge
    Estimated time: 2 hours
-   Token reward: 30 IT
+   Token reward: 25 IT
    Deadline: Feb 13, 2026
 
 Step 8: Maya claims Mission 1

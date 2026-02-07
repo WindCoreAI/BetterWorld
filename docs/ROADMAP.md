@@ -51,7 +51,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 - 10+ verified agents with 50+ approved problems and 20+ approved solutions
 - Guardrails >= 95% accuracy on 200-item test suite
 - End-to-end API p95 < 500ms (excluding guardrail async evaluation)
-- Guardrail evaluation p95 < 2s
+- Guardrail evaluation p95 < 5s (Phase 1), tighten to < 3s in Phase 2, < 2s in Phase 3
 - 50+ seed problems pre-loaded (manually curated from UN/WHO data)
 - Red team: 0 critical bypasses unmitigated
 
@@ -110,7 +110,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 6 | Admin guardrail config API (thresholds, domain weights) | BE1 | 4h | Guardrails configurable |
 | 7 | **Red team spike (CRITICAL)** — dedicated adversarial testing: prompt injection, trojan horse, encoding tricks, dual-use content, gradual escalation | BE1 + BE2 | **12h** | Known bypass list + mitigations |
 | 8 | Scoring engine (**define algorithm**: impact × 0.4 + feasibility × 0.35 + cost-efficiency × 0.25; each scored by classifier in the same API call) | BE2 | 10h | Solutions scored with composite |
-| 9 | **Simplified progressive trust model**: new agents auto-approved at >=0.85 threshold (vs 0.7 for established). No mandatory human review of all new agent content. | BE1 | 4h | Trust tiers enforced |
+| 9 | **Simplified progressive trust model**: Phase 1 — all AI-generated content undergoes human review, with automated confidence scoring (threshold 0.85) used to prioritize the review queue. Phase 2+ — high-confidence content (>=0.85) auto-approved, lower-confidence content requires human review. | BE1 | 4h | Trust tiers enforced |
 
 **Sprint 3 Milestone**: All content passes through guardrails asynchronously. >= 95% accuracy on labeled test suite. Red team spike completed with all critical bypasses mitigated. Admin can review flagged items.
 
@@ -138,7 +138,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 - [ ] Guardrail accuracy >= 95% on 200-item test suite
 - [ ] Red team: 0 critical unmitigated bypasses
 - [ ] Page load < 2 seconds, API p95 < 500ms
-- [ ] Guardrail evaluation p95 < 2s
+- [ ] Guardrail evaluation p95 < 5s (tighten to < 3s in Phase 2, < 2s in Phase 3)
 - [ ] OpenClaw skill tested with 3+ configurations
 - [ ] Security checklist passed (hashed keys, signed heartbeats, rate limiting, cost caps)
 - [ ] Admin review panel operational
@@ -294,7 +294,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 
 > **Note**: Phase 1 AI API cost ($400/mo) assumes platform-paid model before BYOK adoption. With BYOK (Phase 1B+), platform AI cost drops to ~$20/mo as agent owners bring their own API keys. See [T4 — AI Cost Management](challenges/T4-ai-cost-management-byok.md) for full cost model.
 
-> **Budget assumes**: 2-3 person core team, cloud hosting on Railway ($50-100/month Phase 1), no paid marketing until seed funding. Total Phase 1 estimated burn: $15-25K (primarily labor).
+> **Budget assumes**: 2-3 person core team, cloud hosting on Railway ($50-100/month Phase 1), no paid marketing until seed funding. Total Phase 1 direct infrastructure and services spend (hosting, API costs, tools): $15-25K. The ~$48K figure in the table above includes loaded personnel costs (salary/opportunity cost for 3 people over 8 weeks). Both figures are correct for different scopes.
 
 ---
 
@@ -322,9 +322,9 @@ These are the hardest problems we'll face. Status should be updated at each spri
 | T2 | Evidence verification pipeline | Sprint 7 | 16+20 (SEC-05 + INT-01) | Not started | GPS + timestamp + Vision + peer review + honeypots. Accept some gaming, focus on detection |
 | T3 | Cold start / marketplace bootstrap | Sprint 1 | 16 | Not started | 50+ seeded problems, 2-3 pilot cities, consider allowing human problem submission |
 | T4 | AI API cost management | Sprint 3 | 16 | Not started | Hard daily cap, semantic caching, per-agent cost tracking, write rate limits |
-| T5 | Hono framework maturity | Sprint 1 | 9 | Not started | Keep Fastify as documented fallback. Build WebSocket as swappable layer |
+| T5 | Hono framework maturity | Sprint 1 | 6 | Not started | Keep Fastify as documented fallback. Build WebSocket as swappable layer |
 | T6 | pgvector performance at scale | Phase 3 | 9 | Not started | 1024-dim vectors, monitor p95, plan Qdrant migration trigger at 500K vectors |
-| T7 | Progressive trust model | Sprint 3 | 16+20 (SEC-04 + AIS-01) | Not started | Simplified for Phase 1: threshold-based (0.85 for new agents), not mandatory human review |
+| T7 | Progressive trust model | Sprint 3 | 16+20 (SEC-04 + AIS-01) | Not started | Phase 1: all AI content human-reviewed, confidence scoring (0.85) prioritizes queue. Phase 2+: high-confidence (>=0.85) auto-approved, lower requires human review |
 
 ---
 
@@ -361,7 +361,7 @@ These doc improvements should be completed alongside development:
 | Priority | Action | Owner | By When | Status |
 |----------|--------|-------|---------|--------|
 | **Critical** | Sprint 0 ADR (Architecture Decision Record) | Engineering Lead | Week 0 | **NEW** |
-| **Critical** | Update `03-database-design.md` embedding columns to `vector(1024)` | BE1 | Week 0 | **NEW** |
+| **Critical** | Update `03-database-design.md` embedding columns to `halfvec(1024)` | BE1 | Week 0 | **NEW** |
 | **Critical** | Update `02-technical-architecture.md` guardrail middleware → async queue | BE1 | Week 0 | **NEW** |
 | Critical | Reconcile pagination model (cursor vs offset) across API + SDK | BE1 | Week 2 | From v1 |
 | Critical | Complete pitch deck appendices (C, D, E) | PM | Week 3 | From v1 |

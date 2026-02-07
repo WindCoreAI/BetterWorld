@@ -87,11 +87,9 @@ positive impact.
 ### Design Direction
 
 - Neumorphic / soft-shadow aesthetic aligned with ZephyrOS design language
-- Primary palette: deep teal (#0D6E6E), warm white (#FAFAF8), accent amber (#E8A838)
+- Primary palette: Terracotta (#C4704B), Sage (#7A9B8D), Cream (#FAF7F2), Charcoal (#2D2D2D)
 - Typography: headings in a geometric sans-serif, body in a humanist sans-serif
 - Throughout the deck: generous whitespace, data visualizations over bullet lists, real photography over stock illustrations
-
-> **Note**: The pitch deck uses a modified palette (teal/amber) optimized for projection and investor presentations. The product UI uses the brand palette defined in `design/01-brand-and-design-system.md` (Terracotta primary #C4704B).
 
 ### Speaker Notes
 
@@ -237,9 +235,9 @@ positive impact.
 
 - The 4-step flow should be the visual centerpiece — a horizontal pipeline with icons and brief descriptions.
 - Use a subtle connecting arrow or line between steps to show the flow.
-- Each step could be a "card" with a distinct but harmonious color shade (e.g., progressively deeper teal).
+- Each step could be a "card" with a distinct but harmonious color shade (e.g., progressively deeper Sage tones).
 - The "Constitutional AI for Good" callout should be in a highlighted box with the shield icon.
-- Consider an actual thin gold/amber line running underneath all four steps labeled "Constitutional Guardrails" to show the guardrail layer is always present.
+- Consider an actual thin Terracotta line running underneath all four steps labeled "Constitutional Guardrails" to show the guardrail layer is always present.
 
 ### Speaker Notes
 
@@ -309,7 +307,7 @@ Applied to EVERY piece of content before publication. 15 approved domains. 12 fo
 
 ### Visual Concept
 
-- Two parallel vertical flowcharts, agent track on the left in teal, human track on the right in amber/warm.
+- Two parallel vertical flowcharts, agent track on the left in Sage, human track on the right in Terracotta.
 - They converge at "DECOMPOSE" (agent) and "BROWSE" (human) — show a connecting arrow between the two tracks.
 - The guardrail layer runs across the bottom as a continuous bar, like a foundation supporting both tracks.
 - Use simple, consistent iconography for each step.
@@ -603,30 +601,29 @@ Weeks 1-8                                  Weeks 9-16
 |----|----|----|----|----|----|----|----|   |----|----|----|----|----|----|----|----|
 W1-2      W3-4      W5-6      W7-8        W9-10     W11-12    W13-14    W15-16
 
-Infra     Agent     Guard-    Web UI +     Human     Mission   Token +   Reputation
+Infra     Agent     Guard-    Web UI +     Human     Mission + Token +   Reputation
 setup +   API +     rails     Problem &    profiles  Market-   Evidence  + Impact
-Database  Auth +    v1        Solution     + Onboard place     System    Dashboard
-          Heartbeat           Boards +                                   + Dashboard
-                              OpenClaw
-                              Skill
+Database  Auth +    v1        Solution     + Onboard place +   System    Dashboard
+          Heartbeat           Boards                 OpenClaw            + Dashboard
+                                                     Skill
 
 MILESTONE: Agents discover, propose,       MILESTONE: Full loop. Agents find
 debate — all through guardrails.           problems, humans solve them, tokens
 Humans can browse.                         earned, impact verified.
 
-PHASE 3: SCALE & ECOSYSTEM
-Weeks 17-32
-|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
-W17-20         W21-24         W25-28         W29-32
+PHASE 3: SCALE & ECOSYSTEM             PHASE 4: COMMUNITY OWNERSHIP
+Weeks 17-24                             Weeks 25-32
+|----|----|----|----|----|----|----|----|   |----|----|----|----|----|----|----|----|
+W17-20         W21-24                      W25-28         W29-32
 
-Multi-lang +   DAO governance  On-chain       Open-source
-NGO portal +   module +        token +        release +
-Agent SDKs     Advanced        Partner        Community
-(Py + TS)      analytics       integrations   contribution
-                                              framework
+Multi-lang +   DAO governance              On-chain       Open-source
+NGO portal +   module +                    token +        release +
+Agent SDKs     Advanced                    Partner        Community
+(Py + TS)      analytics                   integrations   contribution
+                                                          framework
 
-MILESTONE: Multi-language, partner          MILESTONE: Community-owned,
-revenue active, agent SDK ecosystem.        open-source, on-chain ready.
+MILESTONE: Multi-language, partner      MILESTONE: Community-owned,
+revenue active, agent SDK ecosystem.    open-source, on-chain ready.
 ```
 
 **Key milestones with dates:**
@@ -634,7 +631,7 @@ revenue active, agent SDK ecosystem.        open-source, on-chain ready.
 | Date | Milestone | Significance |
 |------|-----------|-------------|
 | Week 4 | Internal alpha: agents running end-to-end | Technical proof of concept |
-| Week 8 | Public MVP launch with OpenClaw skill | First agents on platform |
+| Week 8 | Public MVP launch: agents + guardrails + web UI | First agents on platform |
 | Week 12 | 500+ agents, 5,000+ humans, 50+ missions completed | Product-market fit signal (conservative: 100+ agents, stretch: 5,000) |
 | Week 16 | Full human-in-the-loop pipeline live | Complete platform |
 | Week 20 | First paying NGO partner (Phase 2) | Revenue milestone |
@@ -655,13 +652,13 @@ revenue active, agent SDK ecosystem.        open-source, on-chain ready.
 
 > "Here's where we are today. We have a complete 70-page technical specification. System architecture designed. Data models defined. Constitutional guardrails specified down to the prompt templates. Token economics modeled. Competitive analysis and go-to-market strategy complete. We are ready to build.
 >
-> Phase 1 is eight weeks. By the end of Week 8, we have a live platform where agents register, discover problems, propose and debate solutions — all passing through constitutional guardrails — and humans can browse the content. We ship the OpenClaw skill file so any of those 114,000 OpenClaw developers can have their agent on BetterWorld with one command.
+> Phase 1 is eight weeks. By the end of Week 8, we have a live platform where agents register, discover problems, propose and debate solutions — all passing through constitutional guardrails — and humans can browse the content.
 >
-> Phase 2 is the next eight weeks. This is where we add the human side: registration, profiles, the Mission Marketplace, the ImpactToken system, evidence submission and verification, reputation scoring, and the Impact Dashboard. By Week 16, we have the full loop running.
+> Phase 2 is the next eight weeks. This is where we add the human side: registration, profiles, the Mission Marketplace, the ImpactToken system, evidence submission and verification, reputation scoring, and the Impact Dashboard. We also ship the OpenClaw skill file so any of those 114,000 OpenClaw developers can have their agent on BetterWorld with one command. By Week 16, we have the full loop running.
 >
 > The key investor milestone is Week 12. Our conservative target is 500 active agents, 5,000 registered humans, and 50 verified missions with evidence — that's product-market fit signal. Our stretch target is 5,000 agents (matching our GTM plan). Either way, it's the proof point for a Series A conversation.
 >
-> Phase 3, Weeks 17 through 32, is scale: multi-language, NGO partner portal, agent SDKs for LangChain and CrewAI, DAO governance, and the open-source release. But Phases 1 and 2 are what your investment funds, and those are what we're here to talk about."
+> Phase 3, Weeks 17 through 24, is scale: multi-language, NGO partner portal, agent SDKs for LangChain and CrewAI, and DAO governance. Phase 4, Weeks 25 through 32, is community ownership: on-chain token migration, partner integrations, and the open-source release. But Phases 1 and 2 are what your investment funds, and those are what we're here to talk about."
 
 ---
 
@@ -1320,4 +1317,4 @@ Every question below is something we anticipate from investors. For each, we pro
 
 ---
 
-*End of Pitch Deck Outline. This document contains everything needed for a designer to create the actual slide deck and for a founder to deliver the pitch. For the full project specification, see `proposal.md`. For the competitive analysis, see `docs/pm/04-competitive-analysis.md`. For the go-to-market strategy, see `docs/pm/03-go-to-market-strategy.md`.*
+*End of Pitch Deck Outline. This document contains everything needed for a designer to create the actual slide deck and for a founder to deliver the pitch. For the competitive analysis, see `docs/pm/04-competitive-analysis.md`. For the go-to-market strategy, see `docs/pm/03-go-to-market-strategy.md`.*

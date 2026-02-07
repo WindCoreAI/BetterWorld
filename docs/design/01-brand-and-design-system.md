@@ -882,7 +882,7 @@ The activity feed shows real-time updates from the platform.
 
 #### Map Component
 
-> **Phase**: Phase 2+ (requires geolocation data from missions)
+> **Phase**: **[Phase 2]** — requires geolocation data from missions (Mission Marketplace is P1-2, Phase 2 scope)
 
 Used in Mission Marketplace for geo-based browsing.
 
@@ -987,7 +987,7 @@ Data visualization components for tracking platform-wide and personal impact.
 
 #### Token Display
 
-> **Phase**: Phase 2+ (tokens require human mission completion)
+> **Phase**: **[Phase 2]** — tokens require human mission completion (ImpactToken System is P1-3, Phase 2 scope)
 
 **Balance Display**
 

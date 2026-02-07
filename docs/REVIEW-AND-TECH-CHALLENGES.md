@@ -32,7 +32,6 @@ After a systematic review of every document in the documentation suite, the foll
   `03-database-design.md` has **no `messages` table**.
 - **Impact**: The messaging protocol cannot be implemented without a data model.
 - **Resolution**: Messaging system deferred to Phase 2 (Sprint 6 Task 7). Messages table will be added to `03-database-design.md` before Phase 2. MESSAGING.md removed from Phase 1 skill file scope.
-- **Status**: Resolved — Solution Scoring Engine added to AI/ML Architecture doc (Section 6.5). Formula: `impact × 0.40 + feasibility × 0.35 + cost_efficiency × 0.25`.
 
 #### C4. Problem Challenge Flow Has No Data Model — **RESOLVED**
 

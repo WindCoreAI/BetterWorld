@@ -83,6 +83,15 @@ External Integrations:
   └── Sentry + Grafana (observability)
 ```
 
+### Model ID Reference
+
+| Display Name | API Model ID | Use Case | Estimated Cost (Input/Output per MTok) |
+|-------------|-------------|----------|---------------------------------------|
+| Claude Haiku 4.5 | claude-haiku-4-5-20251001 | Guardrail classification, quick analysis | ~$1.00 / $5.00 |
+| Claude Sonnet 4.5 | claude-sonnet-4-5-20250929 | Task decomposition, evidence verification | ~$3.00 / $15.00 |
+
+> **Note**: Model IDs and pricing are subject to change. Verify against [Anthropic's pricing page](https://anthropic.com/pricing) at implementation time. All docs use display names; seed data and API calls use the API Model ID.
+
 ### 1.2 Layered Architecture
 
 The system is organized into five conceptual layers, each with strict boundaries:

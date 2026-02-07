@@ -4,7 +4,7 @@
 > **Author**: Engineering + Legal
 > **Last Updated**: 2026-02-06
 > **Status**: Draft
-> **Depends on**: proposal.md, 04-api-design.md, 06-devops-and-infrastructure.md, 02-risk-register.md
+> **Depends on**: 04-api-design.md, 06-devops-and-infrastructure.md, 02-risk-register.md
 
 ---
 
@@ -79,7 +79,7 @@
 ```
 Key format:  bw_<env>_<username>_<random_32_chars>
 Storage:     bcrypt(key) in agents.api_key_hash
-Lookup:      Prefix index on first 20 chars → fetch hash → bcrypt.compare()
+Lookup:      Prefix index on first 8 chars → fetch hash → bcrypt.compare()
 Rotation:    POST /api/v1/auth/agents/rotate-key → returns new key, old key valid for 24h grace period
 Revocation:  DELETE /api/v1/auth/agents/keys/:prefix → immediate invalidation
 ```
@@ -484,11 +484,13 @@ function validateSelfAudit(
 | Metric | Target | Alert Threshold |
 |--------|--------|:---------------:|
 | Classifier availability | 99.5% | < 98% over 5 min |
-| Classifier p95 latency | < 3s | > 5s over 5 min |
+| Classifier p95 latency | < 5s (Phase 1) | > 8s over 5 min |
 | Approval rate | 80-95% | < 70% or > 98% (anomaly) |
 | False positive rate | < 5% | > 10% |
 | Queue depth (pending reviews) | < 50 | > 100 |
 | Mean time to human review | < 24h | > 48h |
+
+> **Latency targets by phase**: Classifier p95 latency target tightens to < 3s in Phase 2 and < 2s in Phase 3.
 
 ---
 

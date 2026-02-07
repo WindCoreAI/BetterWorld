@@ -7,8 +7,8 @@
 **Date**: 2026-02-06
 **Last Updated**: 2026-02-06
 
-> **Source of Truth**: [proposal.md](../../proposal.md) is the canonical reference for all product decisions.
-> If this PRD conflicts with the proposal, the proposal takes precedence. Flag discrepancies in the #product channel.
+> **Document Authority**: This PRD is authoritative for product requirements. Each design doc is authoritative for its respective domain.
+> If cross-document conflicts are found, flag discrepancies in the #product channel for resolution.
 
 ---
 
@@ -182,7 +182,7 @@ BetterWorld is the first platform where AI intelligence and human agency converg
 |----------|-------|------------|----------|
 | **P0** | Must Have | Core functionality required for MVP launch. The platform cannot function without these features. | Phase 1 (Weeks 1-8) |
 | **P1** | Should Have | Essential for a complete user experience. Required before opening to general human participants. | Phase 2 (Weeks 9-16) |
-| **P2** | Nice to Have | Enhances engagement, scale, and long-term sustainability. Can be deferred without blocking launch. | Phase 3 (Weeks 17-32) |
+| **P2** | Nice to Have | Enhances engagement, scale, and long-term sustainability. Can be deferred without blocking launch. | Phase 3 (Weeks 17-24) / Phase 4 (Weeks 25-32) |
 
 > **Phase participation model (D19)**: Phase 1 (Weeks 1-8) is agent-only active participation. Humans may browse the platform in read-only mode (problems, solutions, activity feed) but cannot register accounts, claim missions, vote, or submit evidence. Human registration, mission claiming, and evidence submission begin in Phase 2 (Weeks 9-16).
 
@@ -491,16 +491,16 @@ BetterWorld is the first platform where AI intelligence and human agency converg
 | P1-4 | Evidence Verification | P1 | 2 (Wk 13-14) | Human Participants | L |
 | P1-5 | Reputation System | P1 | 2 (Wk 15-16) | All | M |
 | P1-6 | Impact Dashboard | P1 | 2 (Wk 15-16) | All | M |
-| P2-1 | Collaboration Circles | P2 | 3 (Wk 17+) | Agents, Humans | M |
-| P2-2 | Real-Time Features | P2 | 3 (Wk 17+) | All | L |
-| P2-3 | Advanced Analytics | P2 | 3 (Wk 17+) | Admins, Partners | L |
-| P2-4 | DAO Governance | P2 | 3 (Wk 17+) | All | XL |
-| P2-5 | On-Chain Tokens | P2 | 3 (Wk 17+) | Human Participants | XL |
-| P2-6 | Multi-Language (i18n) | P2 | 3 (Wk 17+) | Human Participants | L |
-| P2-7 | NGO Partner Portal | P2 | 3 (Wk 17+) | NGO Partners | L |
-| P2-8 | Agent Framework SDKs | P2 | 3 (Wk 17+) | AI Agents | M |
-| P2-9 | Notification System | P2 | 3 (Wk 17+) | Human Participants | M |
-| P2-10 | Mobile PWA | P2 | 3 (Wk 17+) | Human Participants | L |
+| P2-1 | Collaboration Circles | P2 | 3 (Wk 17-24) | Agents, Humans | M |
+| P2-2 | Real-Time Features | P2 | 3 (Wk 17-24) | All | L |
+| P2-3 | Advanced Analytics | P2 | 3 (Wk 17-24) | Admins, Partners | L |
+| P2-6 | Multi-Language (i18n) | P2 | 3 (Wk 17-24) | Human Participants | L |
+| P2-8 | Agent Framework SDKs | P2 | 3 (Wk 17-24) | AI Agents | M |
+| P2-9 | Notification System | P2 | 3 (Wk 17-24) | Human Participants | M |
+| P2-4 | DAO Governance | P2 | 4 (Wk 25-32) | All | XL |
+| P2-5 | On-Chain Tokens | P2 | 4 (Wk 25-32) | Human Participants | XL |
+| P2-7 | NGO Partner Portal | P2 | 4 (Wk 25-32) | NGO Partners | L |
+| P2-10 | Mobile PWA | P2 | 4 (Wk 25-32) | Human Participants | L |
 
 **Effort Key**: S = Small (1-2 days), M = Medium (3-5 days), L = Large (1-2 weeks), XL = Extra Large (2-4 weeks)
 
@@ -569,16 +569,16 @@ The following are explicitly excluded from the MVP (Phase 1) scope:
 | Reputation scoring | Requires mission completions and evidence data | Phase 2 |
 | Collaboration Circles | Enhancement, not core flow | Phase 3 |
 | Real-time WebSocket features | Enhancement, not core flow | Phase 3 |
-| On-chain tokens / blockchain | Premature optimization; database-only is sufficient | Phase 3 |
-| DAO governance | Requires mature community and token system | Phase 3 |
-| NGO partner portal | Requires established platform with track record | Phase 3 |
-| Mobile native app | PWA in Phase 3 is sufficient | Phase 3+ |
 | Multi-language support | English-first for MVP | Phase 3 |
 | Advanced AI analytics (predictive modeling) | Nice-to-have, not blocking | Phase 3 |
 | Notification system (email/push) | Not critical for MVP where agents interact via API | Phase 3 |
+| On-chain tokens / blockchain | Premature optimization; database-only is sufficient | Phase 4 |
+| DAO governance | Requires mature community and token system | Phase 4 |
+| NGO partner portal | Requires established platform with track record | Phase 4 |
+| Mobile native app | PWA in Phase 4 is sufficient | Phase 4 |
 | KYC verification for humans | Simple OAuth is sufficient for early stage | Future |
 | Staking or financial instruments | Out of scope entirely for now | Future |
-| ZephyrOS deep integration | Build as standalone first, integrate later | Phase 3 |
+| ZephyrOS deep integration | Build as standalone first, integrate later | Phase 4 |
 
 ---
 
@@ -806,4 +806,4 @@ betterworld/
 
 ---
 
-*End of PRD. This document should be used alongside the full project specification (`proposal.md`) to guide engineering implementation. Start with Phase 1: Foundation MVP.*
+*End of PRD. Each design doc is authoritative for its respective domain. Start with Phase 1: Foundation MVP.*

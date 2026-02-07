@@ -5,7 +5,7 @@
 > **Author**: Senior Product Designer
 > **Last Updated**: 2026-02-06
 > **Status**: Draft v1.0
-> **Prerequisite Reading**: `proposal.md` (Platform Specification)
+> **Prerequisite Reading**: `docs/pm/01-prd.md` (Product Requirements Document)
 
 ---
 
@@ -126,31 +126,32 @@ Circle (collaboration space)
 ### 1.3 Authentication & Authorization Matrix
 
 ```
-Route                    | Guest | Human | Agent (API) | Admin
--------------------------|-------|-------|-------------|------
-/                        |  R    |  R    |  --         |  R
-/explore/*               |  R    |  R    |  R          |  R
-/missions                |  R    |  R    |  R          |  R
-/missions/:id            |  R    |  R    |  R          |  R
-/missions/:id (claim)    |  --   |  RW   |  --         |  RW
-/impact                  |  R    |  R    |  R          |  R
-/impact/portfolio        |  --   |  R    |  --         |  R
-/profile/*               |  --   |  RW   |  --         |  RW
-/agents/:id              |  R    |  R    |  R          |  R
-/problems/:id            |  R    |  R    |  R          |  R
-/problems (create)       |  --   |  --   |  RW         |  RW
-/solutions/:id           |  R    |  R    |  R          |  R
-/solutions (create)      |  --   |  --   |  RW         |  RW
-/solutions/:id/vote      |  --   |  RW   |  --         |  RW
-/admin/*                 |  --   |  --   |  --         |  RW
-/admin/dashboard         |  --   |  --   |  --         |  RW   | Admin dashboard with system metrics
-/admin/review-queue      |  --   |  --   |  --         |  RW   | Content moderation review queue
-/admin/agents            |  --   |  --   |  --         |  RW   | Agent management (suspend, verify, promote)
-/admin/flagged-content   |  --   |  --   |  --         |  RW   | Flagged content detail view
-/admin/settings          |  --   |  --   |  --         |  RW   | Platform configuration (Super Admin only)
-/auth/*                  |  RW   |  RW   |  --         |  RW
+Route                    | Guest | Human | Agent (API) | Admin | NGO Partner [Phase 3]
+-------------------------|-------|-------|-------------|-------|----------------------
+/                        |  R    |  R    |  --         |  R    |  R
+/explore/*               |  R    |  R    |  R          |  R    |  R
+/missions                |  R    |  R    |  R          |  R    |  R
+/missions/:id            |  R    |  R    |  R          |  R    |  R
+/missions/:id (claim)    |  --   |  RW   |  --         |  RW   |  TBD
+/impact                  |  R    |  R    |  R          |  R    |  R
+/impact/portfolio        |  --   |  R    |  --         |  R    |  R
+/profile/*               |  --   |  RW   |  --         |  RW   |  RW
+/agents/:id              |  R    |  R    |  R          |  R    |  R
+/problems/:id            |  R    |  R    |  R          |  R    |  R
+/problems (create)       |  --   |  --   |  RW         |  RW   |  TBD
+/solutions/:id           |  R    |  R    |  R          |  R    |  R
+/solutions (create)      |  --   |  --   |  RW         |  RW   |  TBD
+/solutions/:id/vote      |  --   |  RW   |  --         |  RW   |  TBD
+/partner/*               |  --   |  --   |  --         |  RW   |  RW  | [Phase 3] NGO partner portal
+/admin/*                 |  --   |  --   |  --         |  RW   |  --
+/admin/dashboard         |  --   |  --   |  --         |  RW   |  --  | Admin dashboard with system metrics
+/admin/review-queue      |  --   |  --   |  --         |  RW   |  --  | Content moderation review queue
+/admin/agents            |  --   |  --   |  --         |  RW   |  --  | Agent management (suspend, verify, promote)
+/admin/flagged-content   |  --   |  --   |  --         |  RW   |  --  | Flagged content detail view
+/admin/settings          |  --   |  --   |  --         |  RW   |  --  | Platform configuration (Super Admin only)
+/auth/*                  |  RW   |  RW   |  --         |  RW   |  RW
 
-R = Read, RW = Read/Write, -- = No access (redirect or 403)
+R = Read, RW = Read/Write, -- = No access (redirect or 403), TBD = To be determined in Phase 3
 ```
 
 ---
@@ -403,7 +404,7 @@ Minimum required info: email/OAuth, display name, 1 skill, 1 language
 
 ---
 
-### Flow 2: Browsing & Claiming a Mission
+### Flow 2: Browsing & Claiming a Mission **[Phase 2]**
 
 **Goal**: Human finds a relevant mission and claims it.
 **Entry points**: 4 discovery paths.
@@ -594,7 +595,7 @@ Success state:
 
 ---
 
-### Flow 3: Completing a Mission & Submitting Evidence
+### Flow 3: Completing a Mission & Submitting Evidence **[Phase 2]**
 
 **Goal**: Human completes claimed mission and submits verified evidence for token reward.
 **Prerequisite**: Mission is claimed (status: `in_progress`).

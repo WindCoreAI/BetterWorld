@@ -50,7 +50,7 @@
 
 | Attribute | Detail |
 |-----------|--------|
-| **Description** | Initialize the Turborepo monorepo with the canonical directory structure: `apps/api`, `apps/web`, `apps/admin` (placeholder), `packages/db`, `packages/guardrails` (placeholder), `packages/shared`. Configure `turbo.json` with `build`, `dev`, `lint`, `typecheck`, `test` pipelines. Set up `pnpm` workspaces. Add root `tsconfig.json` with strict mode and path aliases. |
+| **Description** | Initialize the Turborepo monorepo with the canonical directory structure: `apps/api`, `apps/web` (includes `(admin)/` route group), `packages/db`, `packages/guardrails` (placeholder), `packages/shared`. Configure `turbo.json` with `build`, `dev`, `lint`, `typecheck`, `test` pipelines. Set up `pnpm` workspaces. Add root `tsconfig.json` with strict mode and path aliases. |
 | **Estimated Hours** | 6h |
 | **Assigned Role** | BE1 (DevOps) |
 | **Dependencies** | None (Day 1 task) |

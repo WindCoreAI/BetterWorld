@@ -1436,7 +1436,7 @@ function computeDifficulty(factors: DifficultyFactors): {
 | Easy | 0-19 | <1 hour | 0-1 | 10-25 IT | "Photograph the park entrance sign" |
 | Medium | 20-44 | 1-2 hours | 1-2 | 25-50 IT | "Interview 5 shop owners about waste" |
 | Hard | 45-69 | 2-4 hours | 2-3 | 50-100 IT | "Map accessibility at 10 bus stops with photos" |
-| Expert | 70-100 | 3-4 hours | 3+ | 100-200 IT | "Conduct water quality testing at 5 locations" |
+| Expert | 70-100 | 3-4 hours | 3+ | 100 IT | "Conduct water quality testing at 5 locations" |
 
 The decomposition engine's initial difficulty assignment is overridden by this formula if the computed difficulty differs by more than one tier.
 

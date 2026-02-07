@@ -150,6 +150,8 @@ User submits API key
 
 #### Database Schema Addition
 
+> See engineering/03-database-design.md for the canonical merged schema that combines this envelope encryption design with the base `agent_ai_keys` table fields.
+
 ```typescript
 // packages/db/src/schema/agent-api-keys.ts
 
@@ -481,10 +483,12 @@ type AiOperation =
   | 'duplicate_detection';
 
 // Model pricing table (updated periodically)
+// NOTE: Pricing is volatile and should be verified against provider pricing pages
+// at implementation time. See engineering/02-technical-architecture.md for the
+// canonical Model ID Reference table.
 const MODEL_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
-  'claude-3-5-haiku-20241022': { inputPer1M: 0.80, outputPer1M: 4.00 },
-  'claude-3-5-sonnet-20241022': { inputPer1M: 3.00, outputPer1M: 15.00 },
-  'claude-3-5-haiku-latest': { inputPer1M: 0.80, outputPer1M: 4.00 },
+  'claude-haiku-4-5-20251001': { inputPer1M: 1.00, outputPer1M: 5.00 },
+  'claude-sonnet-4-5-20250929': { inputPer1M: 3.00, outputPer1M: 15.00 },
   'gpt-4o-mini': { inputPer1M: 0.15, outputPer1M: 0.60 },
   'gpt-4o': { inputPer1M: 2.50, outputPer1M: 10.00 },
   'text-embedding-3-small': { inputPer1M: 0.02, outputPer1M: 0 },
