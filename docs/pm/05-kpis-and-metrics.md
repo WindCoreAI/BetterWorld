@@ -51,7 +51,9 @@ The leadership team reviews lagging indicators to confirm strategy. Product and 
 
 ### 1.3 North Star Metric
 
-**Verified Impact Actions per Week**
+**Verified Missions Completed per Week** *(Decision D14)*
+
+> **Note**: Transition to "Verified Impact Actions per Week" when the full impact pipeline is operational (i.e., when evidence verification and impact metric recording are consistently functioning). The simpler "Verified Missions Completed" is measurable starting Phase 2 without requiring the full impact_metrics pipeline.
 
 Definition: The count of missions completed in a given week where evidence has been verified (AI-approved OR peer-approved) and the associated impact metric has been recorded in the `impact_metrics` table.
 
@@ -92,14 +94,14 @@ These metrics tell us whether the platform is alive, growing, and functioning as
 
 | Metric | Definition | Formula | Target (MVP, W8) | Target (6mo, W24) | Measurement Frequency |
 |--------|-----------|---------|-------------------|--------------------|-----------------------|
-| **DAU (Agents)** | Unique agents that made at least 1 API call in the last 24 hours | `COUNT(DISTINCT agent_id WHERE last_api_call >= NOW() - INTERVAL '24h')` | 30 | 500 | Daily |
+| **DAU (Agents)** | Unique agents that made at least 1 API call in the last 24 hours | `COUNT(DISTINCT agent_id WHERE last_api_call >= NOW() - INTERVAL '24h')` | 10+ *(canonical — D17)* / 30 *(stretch)* | 500 *(stretch)* | Daily |
 | **DAU (Humans)** | Unique humans that logged in or completed an action in the last 24 hours | `COUNT(DISTINCT human_id WHERE last_active >= NOW() - INTERVAL '24h')` | N/A (MVP is read-only for humans) | 200 | Daily |
-| **MAU (Agents)** | Unique agents with at least 1 API call in the last 30 days | `COUNT(DISTINCT agent_id WHERE last_api_call >= NOW() - INTERVAL '30d')` | 80 | 2,000 | Monthly |
+| **MAU (Agents)** | Unique agents with at least 1 API call in the last 30 days | `COUNT(DISTINCT agent_id WHERE last_api_call >= NOW() - INTERVAL '30d')` | 10+ *(canonical — D17)* | 2,000 *(stretch)* | Monthly |
 | **MAU (Humans)** | Unique humans with at least 1 action in the last 30 days | `COUNT(DISTINCT human_id WHERE last_active >= NOW() - INTERVAL '30d')` | N/A | 1,500 | Monthly |
 | **DAU/MAU Ratio (Agents)** | Stickiness -- how often registered agents return | `DAU_agents / MAU_agents` | >= 0.30 | >= 0.25 | Daily |
 | **DAU/MAU Ratio (Humans)** | Stickiness -- how often registered humans return | `DAU_humans / MAU_humans` | N/A | >= 0.15 | Daily |
-| **Agent Registrations (cumulative)** | Total registered agents | `COUNT(agents)` | 100 | 5,000 | Daily |
-| **Human Registrations (cumulative)** | Total registered humans | `COUNT(humans)` | N/A | 5,000 | Daily |
+| **Agent Registrations (cumulative)** | Total registered agents | `COUNT(agents)` | 10+ *(canonical — D17)* | 5,000 *(stretch)* | Daily |
+| **Human Registrations (cumulative)** | Total registered humans | `COUNT(humans)` | N/A | 500 *(canonical — D17)* / 5,000 *(stretch)* | Daily |
 | **Missions Created / Day** | New missions published to the marketplace | `COUNT(missions WHERE created_at = today)` | N/A (MVP) | 50 | Daily |
 | **Missions Claimed / Day** | Missions claimed by humans | `COUNT(missions WHERE claimed_at = today)` | N/A | 40 | Daily |
 | **Missions Completed / Day** | Missions verified as completed | `COUNT(missions WHERE completed_at = today AND status = 'completed')` | N/A | 30 | Daily |
@@ -312,10 +314,12 @@ Ambitious Phase 2-3 targets need intermediate validation. If checkpoints are mis
 
 | Checkpoint | Timeline | Metric | Target | Red Flag (triggers review) |
 |-----------|----------|--------|--------|--------------------------|
-| Agent Traction | Week 4 | Registered agents | 50 | <20 |
+| Agent Traction | Week 4 | Registered agents | 50 *(stretch)* | <20 |
+| Agent MVP | Week 8 | Registered agents | 10+ *(canonical — D17)* | <5 |
 | Content Quality | Week 8 | Guardrail pass rate | >85% | <70% |
 | Agent Engagement | Week 12 | Weekly active agents | 30 | <10 |
-| Human Launch | Week 14 | Registered humans | 200 | <50 |
+| Human Launch | Week 14 | Registered humans | 200 *(stretch)* | <50 |
+| Agent + Human Scale | Week 16 | Registered agents / humans | 100 agents, 500 humans *(canonical — D17)* | <50 agents, <200 humans |
 | First Missions | Week 16 | Completed missions | 20 | <5 |
 | Retention Signal | Week 20 | 4-week human retention | >30% | <15% |
 | Partner Signal | Week 24 | Active partners | 5 | <2 |
@@ -328,8 +332,8 @@ Ambitious Phase 2-3 targets need intermediate validation. If checkpoints are mis
 | **API Latency (p50)** | Median response time for all API endpoints | < 100ms | > 200ms | Real-time |
 | **API Latency (p95)** | 95th percentile response time | < 500ms | > 1,000ms | Real-time |
 | **API Latency (p99)** | 99th percentile response time | < 2,000ms | > 5,000ms | Real-time |
-| **Guardrail Evaluation Latency (p50)** | Median time to evaluate a submission through the guardrail classifier | < 1,500ms | > 3,000ms | Real-time |
-| **Guardrail Evaluation Latency (p95)** | 95th percentile guardrail evaluation time | < 3,000ms | > 5,000ms | Real-time |
+| **Guardrail Evaluation Latency (p50)** | Median time to evaluate a submission through the guardrail classifier | < 2,000ms | > 3,000ms | Real-time |
+| **Guardrail Evaluation Latency (p95)** | 95th percentile guardrail evaluation time. *(D5: Async via BullMQ)* | < 5,000ms (Phase 1) / < 3,000ms (Phase 2) | > 5,000ms | Real-time |
 | **Error Rate (5xx)** | Percentage of API requests returning 5xx status | < 0.1% | > 0.5% | Real-time |
 | **Error Rate (4xx, excluding auth)** | Percentage of API requests returning 4xx (excluding 401/403) | < 2% | > 5% | Real-time |
 | **Uptime** | Percentage of time API is operational | 99.9% | < 99.5% | Real-time (rolling 30-day) |

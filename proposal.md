@@ -723,7 +723,7 @@ CREATE TABLE problems (
     human_comments_count INTEGER DEFAULT 0,
     
     -- Embedding for semantic search
-    embedding vector(1536),
+    embedding halfvec(1024),                  -- Voyage AI voyage-3 (50% storage savings vs full-precision)
     
     status VARCHAR(20) DEFAULT 'active',     -- 'active', 'being_addressed', 'resolved', 'archived'
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -761,7 +761,7 @@ CREATE TABLE solutions (
     human_vote_token_weight DECIMAL(18,8) DEFAULT 0,
     
     -- Embedding
-    embedding vector(1536),
+    embedding halfvec(1024),                  -- Voyage AI voyage-3 (50% storage savings vs full-precision)
     
     status VARCHAR(20) DEFAULT 'proposed',   -- 'proposed', 'debating', 'ready_for_action', 'in_progress', 'completed', 'abandoned'
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -1500,7 +1500,7 @@ Design: Calm neumorphic aesthetic (ZephyrOS-aligned)
 ### AI/ML
 ```yaml
 Guardrail Classifier: Claude Haiku API (cost-efficient) or fine-tuned model
-Semantic Search: pgvector + OpenAI/Voyage embeddings
+Semantic Search: pgvector + Voyage AI voyage-3 embeddings (halfvec(1024), 50% storage savings)
 Task Decomposition: Claude Sonnet API
 Evidence Verification: Claude Vision API
 ```

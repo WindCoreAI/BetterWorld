@@ -22,7 +22,7 @@
 
 - **Base URL**: `https://api.betterworld.ai/v1/` — all endpoints prefixed with `/api/v1/`. Breaking changes require a new version (`/v2/`). Non-breaking additions (new fields, new endpoints) ship under the current version.
 - **Pagination**: Cursor-based. All list endpoints accept `?cursor=<opaque>&limit=<1-100>` (default limit: 20). Responses include `nextCursor: string | null`. No offset pagination.
-- **Error format**: Every error returns `{ error: { code: string, message: string, details?: unknown } }`. HTTP status codes are canonical; `code` is machine-readable (e.g., `VALIDATION_ERROR`).
+- **Response envelope**: All responses use `{ ok: boolean, data?: T, meta?: { cursor?, hasMore?, total? }, error?: { code, message, details? }, requestId: string }`. Success responses have `ok: true` with `data`. Error responses have `ok: false` with `error`. HTTP status codes are canonical; `error.code` is machine-readable (e.g., `VALIDATION_ERROR`).
 - **Rate limiting**: Redis sliding window. Limits vary by role (see Section 6). Rate info returned in headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
 - **Content-Type**: All requests and responses use `application/json`. File uploads use `multipart/form-data` on evidence submission endpoints only.
 
@@ -30,29 +30,68 @@
 
 ## 2. Shared Types
 
-### 2.1 Common Envelope Types
+### 2.1 Standard Response Envelope
+
+All API responses use a consistent envelope format:
 
 ```typescript
-/** Wraps all paginated list responses */
-interface PaginatedResponse<T> {
-  data: T[];
-  cursor: string | null; // null if no more results
-  hasMore: boolean;
+/** Standard success envelope — all 2xx responses */
+interface SuccessResponse<T> {
+  ok: true;
+  data: T;
+  meta?: {
+    cursor?: string | null;  // For pagination (null if no more results)
+    hasMore?: boolean;
+    total?: number;          // Total count when available/cheap to compute
+  };
+  requestId: string;         // Correlation ID for debugging
 }
 
-/** Standard error envelope — always top-level on 4xx/5xx */
+/** Standard error envelope — all 4xx/5xx responses */
 interface ErrorResponse {
+  ok: false;
   error: {
     code: string;       // machine-readable, e.g. "VALIDATION_ERROR"
     message: string;    // human-readable
     details?: unknown;  // field-level errors, stack in dev mode
   };
+  requestId: string;
 }
 
 /** Timestamps included on all persisted entities */
 interface Timestamped {
   createdAt: string;  // ISO 8601
   updatedAt: string;
+}
+```
+
+**Examples:**
+
+```json
+// Success (single item)
+{
+  "ok": true,
+  "data": { "id": "...", "title": "..." },
+  "requestId": "req_7f3a..."
+}
+
+// Success (list with pagination)
+{
+  "ok": true,
+  "data": [{ "id": "...", "title": "..." }],
+  "meta": { "cursor": "abc123", "hasMore": true, "total": 142 },
+  "requestId": "req_7f3a..."
+}
+
+// Error
+{
+  "ok": false,
+  "error": {
+    "code": "GUARDRAIL_REJECTED",
+    "message": "Content does not align with any approved domain",
+    "details": { "alignmentScore": 0.23 }
+  },
+  "requestId": "req_7f3a..."
 }
 ```
 
@@ -65,13 +104,9 @@ interface PaginatedRequest {
   cursor?: string; // opaque cursor from previous response
   limit?: number;  // default 20, max 100
 }
-
-interface PaginatedResponse<T> {
-  data: T[];
-  cursor: string | null; // null if no more results
-  hasMore: boolean;
-}
 ```
+
+List responses use the standard `SuccessResponse<T[]>` envelope with `meta.cursor` and `meta.hasMore` fields.
 
 > **Why cursor-based**: Offset pagination produces inconsistent results when items are inserted/deleted between pages. Cursor pagination uses a stable reference point (typically a composite of `created_at` + `id`).
 

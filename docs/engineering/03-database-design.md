@@ -157,7 +157,7 @@
 
 7. **Vector embeddings as first-class columns.** Problems and solutions store `halfvec(1024)` embeddings (Voyage AI `voyage-3`) directly, enabling semantic similarity search via pgvector HNSW indexes without a separate vector store. Half-precision vectors provide 50% storage savings with less than 0.5% recall degradation.
 
-8. **Timestamps everywhere.** Every table has `created_at`; mutable tables add `updated_at` with auto-update triggers. All timestamps are `TIMESTAMPTZ` (UTC).
+8. **Timestamps everywhere.** Every table has `created_at`; mutable tables add `updated_at` which is application-managed (set explicitly in Drizzle update calls, not via database triggers). This keeps timestamp behavior explicit and testable. All timestamps are `TIMESTAMPTZ` (UTC).
 
 ---
 
@@ -2154,7 +2154,7 @@ migrations/
   0001_add_gist_indexes/
     migration.sql          # Manual: GiST + vector indexes (raw SQL)
   0002_add_triggers/
-    migration.sql          # Manual: auto-update triggers
+    migration.sql          # Manual: denormalized counter triggers (upvotes, solution_count, etc.)
   meta/
     _journal.json          # Migration journal (auto-managed)
 ```
@@ -2265,39 +2265,8 @@ CREATE INDEX IF NOT EXISTS idx_solutions_embedding_hnsw
 ```sql
 -- migrations/0002_add_triggers/migration.sql
 
--- Auto-update updated_at timestamp on row modification
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Apply to all mutable tables
-CREATE TRIGGER set_updated_at_agents
-  BEFORE UPDATE ON agents
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER set_updated_at_humans
-  BEFORE UPDATE ON humans
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER set_updated_at_problems
-  BEFORE UPDATE ON problems
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER set_updated_at_solutions
-  BEFORE UPDATE ON solutions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER set_updated_at_missions
-  BEFORE UPDATE ON missions
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER set_updated_at_circles
-  BEFORE UPDATE ON circles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- NOTE: updated_at is application-managed (set explicitly in Drizzle update calls),
+-- not via database triggers. This keeps timestamp behavior explicit and testable.
 
 -- Auto-increment solution_count on problems when a new solution is inserted
 CREATE OR REPLACE FUNCTION increment_problem_solution_count()
@@ -3123,13 +3092,13 @@ All triggers are defined in `migrations/0002_add_triggers/migration.sql` (see Se
 
 | Trigger | Table | Event | Action |
 |---|---|---|---|
-| `set_updated_at_*` | All mutable tables | BEFORE UPDATE | Sets `updated_at = NOW()` |
 | `incr_solution_count` | `solutions` | AFTER INSERT | Increments `problems.solution_count` |
 | `incr_debate_count` | `debates` | AFTER INSERT | Increments `solutions.agent_debate_count` |
 | `update_member_count` | `circle_members` | AFTER INSERT/DELETE | Updates `circles.member_count` |
 
-**Triggers intentionally NOT used for:**
+**Application-managed (not via triggers):**
 
+- `updated_at` timestamps — set explicitly in Drizzle update calls for explicit, testable behavior
 - Token balance updates (handled in application-level transaction to maintain atomicity with business logic validation)
 - Evidence count propagation (multi-hop: evidence -> mission -> solution -> problem; too deep for trigger chains)
 - Reputation score recalculation (requires application-level weighting logic)

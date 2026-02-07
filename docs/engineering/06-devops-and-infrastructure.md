@@ -27,7 +27,7 @@
 
 ### 1.1 Docker Compose Setup
 
-All services required for local development are orchestrated via Docker Compose. The stack mirrors production topology: PostgreSQL with pgvector, Redis, API server, web frontend, admin dashboard, and background worker.
+All services required for local development are orchestrated via Docker Compose. The stack mirrors production topology: PostgreSQL with pgvector, Redis, API server, web frontend (including admin route group), and background worker.
 
 **Service map:**
 
@@ -36,9 +36,10 @@ All services required for local development are orchestrated via Docker Compose.
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | Primary database with vector extension |
 | `redis` | `redis:7-alpine` | 6379 | Cache, sessions, rate limiting, BullMQ broker |
 | `api` | Build from `apps/api` | 4000 | Hono backend API |
-| `web` | Build from `apps/web` | 3000 | Next.js 15 frontend |
-| `admin` | Build from `apps/admin` | 3001 | Admin dashboard |
+| `web` | Build from `apps/web` | 3000 | Next.js 15 frontend (includes admin UI as route group) |
 | `worker` | Build from `apps/api` (worker entrypoint) | -- | BullMQ job processor |
+
+> **Note**: Admin UI is implemented as a route group within `apps/web/app/(admin)/`, not as a separate service. Admin API routes are served by the `api` service under `/api/v1/admin/*`.
 
 ### 1.2 docker-compose.yml
 
@@ -190,29 +191,9 @@ services:
       - api
     command: pnpm --filter web dev
 
-  admin:
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile
-      target: development
-    container_name: bw-admin
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-    environment:
-      <<: *common-env
-      NEXT_PUBLIC_API_URL: http://localhost:4000
-      PORT: "3001"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/apps/admin/node_modules
-      - /app/apps/admin/.next
-    depends_on:
-      - api
-    command: pnpm --filter admin dev
-
-> **Note**: Admin functionality runs within the main API service (not as a separate container). The `admin` route group shares the API's database connection and service layer. The `admin` Docker service above is only for the admin frontend dashboard; all admin API routes are served by the `api` service.
+  # Admin UI is a route group within apps/web (not a separate service).
+  # Access admin pages at http://localhost:3000/admin
+  # Admin API routes are served by the api service under /api/v1/admin/*
 
   worker:
     build:
@@ -250,6 +231,7 @@ volumes:
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";
 CREATE EXTENSION IF NOT EXISTS "cube";
+CREATE EXTENSION IF NOT EXISTS "fuzzystrmatch";
 CREATE EXTENSION IF NOT EXISTS "earthdistance";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 ```
@@ -280,8 +262,7 @@ pnpm --filter db seed      # Insert sample agents, problems, solutions
 pnpm dev                   # Runs all apps in parallel with hot reload
 
 # 7. Open in browser
-#    Web:   http://localhost:3000
-#    Admin: http://localhost:3001
+#    Web:   http://localhost:3000 (includes admin at /admin)
 #    API:   http://localhost:4000
 #    MinIO: http://localhost:9001 (admin: minioadmin/minioadmin)
 
@@ -296,8 +277,7 @@ All application services use volume mounts for live file synchronization. The ho
 | App | Tool | Config |
 |-----|------|--------|
 | `api` | `tsx watch` | Watches `apps/api/src/**/*.ts`, restarts on change |
-| `web` | Next.js Fast Refresh | Built-in HMR via webpack/turbopack |
-| `admin` | Next.js Fast Refresh | Built-in HMR via webpack/turbopack |
+| `web` | Next.js Fast Refresh | Built-in HMR via webpack/turbopack (includes admin pages) |
 | `worker` | `tsx watch` | Watches `apps/api/src/workers/**/*.ts` |
 
 **turbo.json dev pipeline:**
@@ -813,7 +793,6 @@ jobs:
           path: |
             apps/api/dist
             apps/web/.next
-            apps/admin/.next
           retention-days: 1
 ```
 
@@ -883,10 +862,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-      - name: Deploy Admin to Railway
-        run: railway up --service admin --environment staging --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      # Admin UI is served as part of the web app (route group in apps/web)
 
       # ── Run post-deploy migrations ────────────────────────────────────
       - name: Run database migrations
@@ -1124,10 +1100,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
 
-      - name: Deploy Admin
-        run: railway up --service admin --environment production --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+      # Admin UI is served as part of the web app (route group in apps/web)
 
       # ── Final health checks ───────────────────────────────────────────
       - name: Full health check

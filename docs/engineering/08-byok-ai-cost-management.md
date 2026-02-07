@@ -156,15 +156,15 @@ User submits API key
 import { pgTable, uuid, text, timestamp, boolean, pgEnum } from 'drizzle-orm/pg-core';
 
 export const aiProviderEnum = pgEnum('ai_provider', [
+  // Phase 1: 3 providers
   'anthropic',
   'openai',
-  'google',
-  'voyage',
-  'cohere',
-  'mistral',
-  'groq',
-  'together',
-  'custom_openai_compatible',
+  'openai_compatible',           // Covers Groq, Together, Fireworks, Ollama, any OpenAI-compatible endpoint
+  // Phase 2: additional providers (add via ALTER TYPE ... ADD VALUE migration)
+  // 'google',
+  // 'voyage',
+  // 'cohere',
+  // 'mistral',
 ]);
 
 export const agentAiKeys = pgTable('agent_ai_keys', {
@@ -969,7 +969,7 @@ Revenue needs = Infrastructure + Minimal AI + Headcount + Margin
 
 BetterWorld's AI operations currently assume specific providers (Claude Haiku for guardrails, Voyage AI for embeddings). With BYOK, agent owners may use different providers. The platform needs an abstraction layer that:
 
-1. Normalizes API calls across providers (Anthropic, OpenAI, Google, Groq, Together, custom)
+1. Normalizes API calls across providers. **Phase 1**: Anthropic, OpenAI, and OpenAI-compatible (covers Groq, Together, Fireworks, etc.). **Phase 2**: Google, Voyage, Cohere, Mistral as dedicated providers.
 2. Validates that the agent's key can access a model suitable for each operation
 3. Maps BetterWorld's operation types to provider-specific model recommendations
 4. Handles provider-specific response formats, error codes, and rate limit headers
@@ -992,14 +992,17 @@ BetterWorld's AI operations currently assume specific providers (Claude Haiku fo
 │  ┌──────────────────────────────▼───────────────────────────┐    │
 │  │               Provider SDK Layer                          │    │
 │  │                                                          │    │
-│  │  ┌───────────┐ ┌───────────┐ ┌──────────┐ ┌──────────┐ │    │
-│  │  │ Anthropic │ │  OpenAI   │ │  Google  │ │   Groq   │ │    │
-│  │  │    SDK    │ │   SDK     │ │ Gemini   │ │   SDK    │ │    │
-│  │  └───────────┘ └───────────┘ └──────────┘ └──────────┘ │    │
+│  │  Phase 1 Providers:                                    │    │
+│  │  ┌───────────┐ ┌───────────┐ ┌──────────────────────┐ │    │
+│  │  │ Anthropic │ │  OpenAI   │ │  OpenAI-compatible   │ │    │
+│  │  │    SDK    │ │   SDK     │ │ (Groq, Together,     │ │    │
+│  │  │           │ │           │ │  Fireworks, Ollama)  │ │    │
+│  │  └───────────┘ └───────────┘ └──────────────────────┘ │    │
+│  │                                                        │    │
+│  │  Phase 2 Providers:                                    │    │
 │  │  ┌───────────┐ ┌───────────┐ ┌──────────┐             │    │
-│  │  │ Together  │ │  Mistral  │ │  Custom  │             │    │
-│  │  │   SDK     │ │   SDK     │ │ OpenAI-  │             │    │
-│  │  │          │ │           │ │ compat.  │             │    │
+│  │  │  Google   │ │  Voyage   │ │  Cohere  │             │    │
+│  │  │  Gemini   │ │   AI      │ │          │             │    │
 │  │  └───────────┘ └───────────┘ └──────────┘             │    │
 │  └──────────────────────────────────────────────────────────┘    │
 │                                                                  │
@@ -1078,12 +1081,14 @@ interface AiProvider {
 
 ### 8.5 Provider Implementations (Outline)
 
+**Phase 1 Providers** (3 providers covering the vast majority of use cases):
+
 ```typescript
 // packages/guardrails/src/providers/anthropic.ts
 class AnthropicProvider implements AiProvider {
   // Uses @anthropic-ai/sdk
   // Supports: guardrail, reasoning, vision
-  // Does NOT support: embedding (use Voyage AI or OpenAI for embeddings)
+  // Does NOT support: embedding (use OpenAI or OpenAI-compatible for embeddings)
   // Special features: prompt caching, extended thinking
 }
 
@@ -1094,19 +1099,26 @@ class OpenAIProvider implements AiProvider {
   // All-in-one provider — only one key needed
 }
 
-// packages/guardrails/src/providers/google.ts
+// packages/guardrails/src/providers/openai-compatible.ts
+class OpenAICompatibleProvider implements AiProvider {
+  // Uses openai SDK with custom baseURL
+  // Supports: Groq, Together, Fireworks, Ollama, any OpenAI-compatible endpoint
+  // Capability varies by actual backend model
+  // This single provider covers all OpenAI-compatible services
+}
+```
+
+**Phase 2 Providers** (dedicated implementations for additional providers):
+
+```typescript
+// packages/guardrails/src/providers/google.ts — Phase 2
 class GoogleProvider implements AiProvider {
   // Uses @google/generative-ai SDK
   // Supports: guardrail, embedding, reasoning, vision
   // All-in-one provider
 }
 
-// packages/guardrails/src/providers/openai-compatible.ts
-class OpenAICompatibleProvider implements AiProvider {
-  // Uses openai SDK with custom baseURL
-  // Supports: Groq, Together, Fireworks, Ollama, any OpenAI-compatible endpoint
-  // Capability varies by actual backend model
-}
+// Additional Phase 2 providers: Voyage AI (embeddings), Cohere (embeddings), Mistral
 ```
 
 ### 8.6 Agent Key Configuration: Multi-Provider Support
@@ -1130,16 +1142,19 @@ POST /api/v1/agents/:id/ai-keys
 POST /api/v1/agents/:id/ai-keys
 
 {
-  "provider": "voyage",
-  "apiKey": "voyage-...",
-  "label": "Voyage for embeddings",
+  "provider": "openai_compatible",
+  "apiKey": "gsk_...",
+  "baseUrl": "https://api.groq.com/openai/v1",
+  "label": "Groq for fast inference",
   "operationMapping": {
-    "embedding": "voyage-3"
+    "guardrail": "llama-3.3-70b-versatile"
   }
 }
 ```
 
-**Single-key simplification**: If an agent owner uses OpenAI or Google, they only need one key for all operations. The platform auto-maps operations to appropriate models within that provider.
+> **Phase 1 providers**: Anthropic, OpenAI, and OpenAI-compatible (which covers Groq, Together, Fireworks, Ollama, and any OpenAI-compatible endpoint). Additional dedicated providers (Google, Voyage AI, Cohere, Mistral) are Phase 2.
+
+**Single-key simplification**: If an agent owner uses OpenAI, they only need one key for all operations (guardrails, embeddings, vision). The platform auto-maps operations to appropriate models within that provider.
 
 **Minimum viable configuration**: Agent owner only needs to provide one key that supports guardrail evaluation. Embeddings can fall back to a platform-provided embedding service (embeddings are cheap enough — $0.02/1M tokens — that the platform can subsidize this).
 
@@ -1171,7 +1186,7 @@ The BYOK system should be built incrementally, not as a Big Bang migration.
 
 | Task | Est. Hours | Owner | Dependencies |
 |------|-----------|-------|-------------|
-| Provider abstraction layer (Anthropic + OpenAI) | 12h | BE1 | Phase 1A |
+| Provider abstraction layer (Anthropic + OpenAI + OpenAI-compatible) | 12h | BE1 | Phase 1A |
 | BullMQ guardrail worker: resolve agent's key before API call | 6h | BE2 | Provider layer |
 | Fallback/error handling for key failures | 8h | BE2 | - |
 | Usage metering (Redis counters + flush job) | 6h | BE1 | - |
@@ -1185,8 +1200,8 @@ The BYOK system should be built incrementally, not as a Big Bang migration.
 
 | Task | Est. Hours | Owner | Dependencies |
 |------|-----------|-------|-------------|
-| Provider support: Google Gemini, Groq, Together, custom OpenAI-compat | 12h | BE1 | Phase 1B |
-| Embedding generation via BYOK (Voyage AI, OpenAI, Cohere) | 6h | BE2 | Provider layer |
+| Provider support: Google Gemini, Voyage AI, Cohere, Mistral (dedicated) | 12h | BE1 | Phase 1B |
+| Embedding generation via BYOK (OpenAI, OpenAI-compatible, Voyage AI, Cohere) | 6h | BE2 | Provider layer |
 | Task decomposition via BYOK (Sonnet-class models) | 4h | BE2 | Provider layer |
 | Evidence verification: charge to originating agent or platform fallback | 8h | BE1 | Provider layer |
 | Usage dashboard (frontend) | 12h | FE | Usage API |
@@ -1281,8 +1296,7 @@ Updated flow:
                   │
                   ├── "I have an Anthropic key" → Enter key → Validate
                   ├── "I have an OpenAI key" → Enter key → Validate
-                  ├── "I have a Google AI key" → Enter key → Validate
-                  ├── "I use another provider" → Enter custom endpoint + key → Validate
+                  ├── "I use another provider (OpenAI-compatible)" → Enter custom endpoint + key → Validate
                   └── "I don't have a key yet" → Guide: "Get a key in 2 minutes"
                          ├── Anthropic: console.anthropic.com → Create key → Copy
                          ├── OpenAI: platform.openai.com → Create key → Copy

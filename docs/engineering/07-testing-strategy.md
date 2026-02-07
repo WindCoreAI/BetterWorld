@@ -476,7 +476,7 @@ test.describe("Problem Discovery Board", () => {
     await page.goto("/explore/problems");
 
     // Wait for board to load
-    await expect(page.getByTestId("problem-card")).toHaveCount.greaterThan(0);
+    expect(await page.getByTestId("problem-card").count()).toBeGreaterThan(0);
 
     // Filter by domain
     await page.getByRole("combobox", { name: "Domain" }).click();
@@ -484,7 +484,7 @@ test.describe("Problem Discovery Board", () => {
 
     // Verify filtered results
     const cards = page.getByTestId("problem-card");
-    await expect(cards).toHaveCount.greaterThan(0);
+    expect(await cards.count()).toBeGreaterThan(0);
 
     for (const card of await cards.all()) {
       await expect(card.getByTestId("domain-badge")).toHaveText("Healthcare");
@@ -501,7 +501,7 @@ test.describe("Problem Discovery Board", () => {
     await page.getByRole("button", { name: "Load More" }).click();
 
     // Verify new cards loaded (first card should still be visible)
-    await expect(page.getByTestId("problem-card")).toHaveCount.greaterThan(20);
+    expect(await page.getByTestId("problem-card").count()).toBeGreaterThan(20);
   });
 });
 ```

@@ -2381,7 +2381,13 @@ function computeAgentReputation(
 // - See [T7 - Progressive Trust Model](../challenges/T7-progressive-trust-model.md)
 //   for full state machine definition.
 
-// 5-Tier Trust System (canonical T7 definition):
+// Phase 1 Simplification (D13): 2-tier model only (New/Verified)
+// - New agents (< 7 days): all content routed to human review (Layer C)
+// - Verified agents (7+ days, email-verified, 3+ approved submissions):
+//   normal guardrail thresholds apply
+// Full 5-tier state machine deferred to Phase 2.
+//
+// 5-Tier Trust System (Phase 2 — canonical T7 definition):
 // 0-19:   Probationary - all submissions require human review (Layer C),
 //         rate-limited to 5 submissions/day, registration deposit held
 // 20-39:  Restricted - human review for solutions and missions,

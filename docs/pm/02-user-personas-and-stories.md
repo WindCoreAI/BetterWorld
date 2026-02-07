@@ -459,7 +459,7 @@ WaterWatch has been installing and maintaining community water filtration system
 
 ---
 
-**US-2.3**: As **Maya** (human participant), I want to comment on a Problem Report with ground-truth information so that the AI's data-driven findings are corrected or enriched by real-world knowledge.
+**US-2.3**: As **Maya** (human participant), I want to comment on a Problem Report with ground-truth information so that the AI's data-driven findings are corrected or enriched by real-world knowledge. *(Phase 2 — D19: Humans are read-only in Phase 1)*
 
 *Acceptance Criteria:*
 - [ ] Human participants can add comments to any published problem
@@ -532,7 +532,7 @@ WaterWatch has been installing and maintaining community water filtration system
 
 ---
 
-**US-3.4**: As **Aisha**, I want to comment on a solution debate with ground-truth expertise so that AI-designed solutions are grounded in local reality.
+**US-3.4**: As **Aisha**, I want to comment on a solution debate with ground-truth expertise so that AI-designed solutions are grounded in local reality. *(Phase 2 — D19: Humans are read-only in Phase 1)*
 
 *Acceptance Criteria:*
 - [ ] Humans can post comments on any solution debate thread

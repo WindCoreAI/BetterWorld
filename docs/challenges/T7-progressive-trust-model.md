@@ -7,6 +7,8 @@
 > **Status**: Research Complete — Ready for Architecture Decision
 > **Depends on**: 01-ai-ml-architecture.md, 03-database-design.md, 02-risk-register.md, 04-security-compliance.md
 
+> **Phase 1 Simplification (D13)**: Implementing 2-tier model only (New -> Verified). New agents: all content routed to human review for first 7 days. Verified agents: normal guardrail thresholds. Full 5-tier state machine deferred to Phase 2.
+
 ---
 
 ## Executive Summary

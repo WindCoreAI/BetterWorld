@@ -135,7 +135,7 @@ betterworld/
 ├── apps/
 │   ├── api/                    # Backend API server
 │   ├── web/                    # Next.js 15 frontend
-│   └── admin/                  # Admin dashboard (Next.js)
+│   └── # (admin is a route group within apps/web — see Section 2.3)
 ├── packages/
 │   ├── db/                     # Drizzle schema, migrations, seed
 │   ├── guardrails/             # Constitutional guardrail system
@@ -143,7 +143,7 @@ betterworld/
 │   ├── matching/               # Skill/location matching
 │   ├── evidence/               # Evidence verification pipeline
 │   ├── shared/                 # Shared types, utils, constants
-│   └── sdk/                    # Agent SDK (TypeScript + Python)
+│   └── sdk/                    # Agent SDK (TypeScript; Python deferred to Phase 2)
 ├── skills/
 │   └── openclaw/               # OpenClaw skill files
 ├── docker-compose.yml
@@ -254,7 +254,7 @@ apps/web/
 
 **Responsibility**: Internal tool for platform administrators. Guardrail review queue, user management, system monitoring, content moderation.
 
-**Architecture**: For MVP, admin pages live inside `apps/web/` under an `/admin` route group with role-based access control (`role: 'admin'` + 2FA). This avoids doubling frontend work with a separate Next.js app. If the admin surface grows significantly, it can be split to a separate `apps/admin/` in Phase 3.
+**Architecture**: Admin pages live inside `apps/web/` under an `(admin)` route group (`apps/web/app/(admin)/`) with role-based access control (`role: 'admin'` + 2FA). This avoids doubling frontend work with a separate Next.js app. Consider splitting to a separate `apps/admin/` when the admin surface exceeds 15-20 pages.
 
 **Internal structure**: `apps/web/src/app/(admin)/` route group with admin-specific layouts and pages. Shares `@betterworld/shared` types. Protected by 2FA-required admin auth middleware.
 
@@ -425,7 +425,7 @@ const candidates = await findMatchingHumans({
 });
 
 const similar = await findSimilarProblems({
-  embedding: Float32Array,    // 1536-dim vector
+  embedding: Float32Array,    // 1024-dim halfvec (Voyage AI voyage-3)
   limit: 5,
   threshold: 0.8,
 });
@@ -498,7 +498,7 @@ packages/shared/
 
 ### 2.10 `packages/sdk/` — Agent SDK
 
-**Responsibility**: Official SDK for agent developers. TypeScript and Python implementations providing typed wrappers around the REST API.
+**Responsibility**: Official SDK for agent developers. TypeScript SDK ships in Phase 1; Python SDK is deferred to Phase 2.
 
 ```
 packages/sdk/
@@ -512,16 +512,12 @@ packages/sdk/
 │   │   │   └── heartbeat.ts
 │   │   └── types.ts
 │   └── package.json
-├── python/
-│   ├── betterworld/
-│   │   ├── __init__.py
-│   │   ├── client.py
-│   │   └── resources/
-│   └── pyproject.toml
 └── README.md
 ```
 
-**Dependencies**: Minimal — only HTTP client (`undici` for TS, `httpx` for Python).
+> **Deferred to Phase 2**: Python SDK. Python developers can use the REST API directly. The Python SDK will be built when adoption metrics justify it.
+
+**Dependencies**: Minimal — only HTTP client (`undici` for TS).
 
 ### 2.11 `skills/openclaw/` — OpenClaw Skill Files
 
@@ -964,7 +960,7 @@ process.on('SIGTERM', async () => {
 3. **Soft deletes via status**: No physical `DELETE` in normal operation. Records move to `archived` or `inactive` status. This preserves referential integrity and audit trails.
 4. **JSONB for flexible nested data**: Fields like `instructions`, `expected_impact`, `evidence_submitted` use JSONB. This avoids premature normalization for data structures that evolve frequently. But structured, queryable fields (domain, status, scores) are always typed columns.
 5. **Embeddings co-located**: pgvector columns live on the same tables as the content they represent. This avoids a separate vector store and keeps queries simple.
-6. **Enums as CHECK constraints**: Rather than PostgreSQL `CREATE TYPE ENUM` (which are painful to migrate), we use `VARCHAR` with `CHECK` constraints or validate at the application layer with Zod.
+6. **Enums via pgEnum**: We use Drizzle's `pgEnum` for all enumerated types (`problem_domain`, `mission_status`, `guardrail_status`, etc.). This generates PostgreSQL `CREATE TYPE ... AS ENUM` and provides full type safety in both the database and TypeScript layers. New enum values are added via `ALTER TYPE ... ADD VALUE` migrations.
 
 ### 4.2 pgvector Integration
 
@@ -977,8 +973,8 @@ pgvector is used for semantic search across problems and solutions. It allows fi
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Embedding column on problems table (defined in Drizzle schema)
--- Using 1536 dimensions (OpenAI text-embedding-3-small)
--- or 1024 dimensions (Voyage AI voyage-3)
+-- Using halfvec(1024) — Voyage AI voyage-3 model, 1024 dimensions
+-- Half-precision vectors provide 50% storage savings with <0.5% recall degradation
 ```
 
 **Drizzle schema definition**:
@@ -996,13 +992,13 @@ export const problems = pgTable('problems', {
   domain: varchar('domain', { length: 50 }).notNull(),
   severity: varchar('severity', { length: 20 }).notNull(),
   // ... other fields ...
-  embedding: vector('embedding', { dimensions: 1536 }),
+  embedding: halfvec('embedding', { dimensions: 1024 }),  // Voyage AI voyage-3, half-precision
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   embeddingIdx: index('idx_problems_embedding')
-    .using('ivfflat', table.embedding.op('vector_cosine_ops'))
-    .with({ lists: 100 }),
+    .using('hnsw', table.embedding.op('halfvec_cosine_ops'))
+    .with({ m: 16, ef_construction: 200 }),
   domainIdx: index('idx_problems_domain').on(table.domain),
   statusIdx: index('idx_problems_status').on(table.status),
 }));
@@ -1042,13 +1038,7 @@ export async function findSimilarProblems(
 }
 ```
 
-**Index tuning**: The IVFFlat index `lists` parameter should be set to roughly `sqrt(row_count)`. At MVP scale (under 10K problems), `lists: 100` is appropriate. At 1M+ rows, switch to HNSW index for better recall:
-
-```sql
--- Future migration when row count exceeds 100K
-CREATE INDEX idx_problems_embedding_hnsw ON problems
-  USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 200);
-```
+**Index tuning**: We use HNSW indexes for vector search, which provide better recall than IVFFlat without requiring periodic re-training. The `halfvec_cosine_ops` operator class works with our half-precision 1024-dimensional embeddings from Voyage AI `voyage-3`. The `m = 16, ef_construction = 200` parameters are suitable up to 1M+ rows.
 
 ### 4.3 Connection Pooling Strategy
 
@@ -1872,10 +1862,16 @@ async function verifyApiKey(key: string): Promise<Agent | null> {
   const cached = await redis.get(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  // Cache miss: bcrypt verify against DB
-  const agent = await db.query.agents.findFirst({
-    where: eq(agents.apiKeyHash, await bcryptHash(key))
+  // Cache miss: look up by API key prefix, then bcrypt.compare()
+  // NOTE: bcrypt is non-deterministic (includes random salt), so you cannot
+  // use eq() with bcryptHash(). Instead, store a plaintext prefix (first 8 chars)
+  // for lookup, then verify the full key with bcrypt.compare().
+  const prefix = key.substring(0, 8);
+  const candidates = await db.query.agents.findMany({
+    where: eq(agents.apiKeyPrefix, prefix),
   });
+  const agent = await findMatchingAgent(candidates, key);
+  // where findMatchingAgent loops candidates and calls bcrypt.compare(key, candidate.apiKeyHash)
 
   if (agent) {
     await redis.setex(cacheKey, AUTH_CACHE_TTL, JSON.stringify(agent));

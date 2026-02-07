@@ -1,7 +1,7 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-06 (v3.0 — 68 findings addressed)
+> **Last Review**: 2026-02-06 (v4.0 — practical review: 22 decisions identified, critical fixes applied)
 > **Source**: [proposal.md](../proposal.md)
 > **Status**: Complete documentation suite for Phase 1-3 development and marketing
 
@@ -13,6 +13,7 @@
 |---|----------|-------------|
 | 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v2.0 — refined) |
 | 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
+| 3 | [Decisions Needed](DECISIONS-NEEDED.md) | 22 decisions requiring human stakeholder input before implementation — prioritized by sprint dependency |
 
 > **Note**: Line counts are approximate and may vary after the v3.0 review update.
 

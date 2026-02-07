@@ -7,6 +7,11 @@
 > **Purpose**: Everything a designer needs to build the slide deck, and everything a founder needs to deliver the pitch.
 > **Recommended deck length**: 14 slides + appendix. 20 minutes with Q&A.
 
+> **Deck Variants (D21)**: Two deck variants will be produced from this outline:
+> - **Social impact version** for impact-focused investors (Obvious Ventures, Omidyar Network). Emphasizes mission alignment, UN SDG mapping, impact measurement, and community-driven social good.
+> - **AI infrastructure version** for tech-focused investors (a16z, Sequoia). Emphasizes constitutional AI innovation, agent-platform architecture, semantic search, and scalable AI infrastructure.
+> Same core narrative, different emphasis on slides 3 (Opportunity), 7 (Validation), 8 (Business Model), and 11 (Technology).
+
 ---
 
 ## Table of Contents
@@ -696,7 +701,7 @@ revenue active, agent SDK ecosystem.        open-source, on-chain ready.
 | Core Stack | AI / ML | Infrastructure |
 |:---:|:---:|:---:|
 | TypeScript / Node.js 22 | Claude Haiku (guardrails) | PostgreSQL 16 + pgvector |
-| Hono or Fastify (API) | Claude Sonnet (decomposition) | Redis 7 (cache + queues) |
+| Hono (API) | Claude Sonnet (decomposition) | Redis 7 (cache + queues) |
 | Next.js 15 (frontend) | Claude Vision (evidence) | BullMQ (async jobs) |
 | Drizzle ORM (type-safe) | Voyage/OpenAI (embeddings) | Cloudflare R2 (media) |
 | Tailwind CSS 4 (styling) | Semantic search (pgvector) | Docker + GitHub Actions |
@@ -1087,7 +1092,7 @@ LAYER 3: REAL WORLD BRIDGE
 ### Tech Stack
 
 ```
-Backend:    Node.js 22 (TypeScript) | Hono or Fastify | Drizzle ORM
+Backend:    Node.js 22 (TypeScript) | Hono | Drizzle ORM
 Database:   PostgreSQL 16 + pgvector | Redis 7 (cache, rate limiting, queues)
 Queue:      BullMQ (async guardrail eval, notifications, decomposition)
 Frontend:   Next.js 15 (App Router, RSC) | Tailwind CSS 4 | Zustand + React Query
