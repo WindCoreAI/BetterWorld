@@ -15,12 +15,12 @@ Pre-implementation. Documentation suite is complete; no application code yet.
 ## Tech Stack (from constitution)
 
 - **Backend**: Node.js 22+, TypeScript strict, Hono, Drizzle ORM
-- **Database**: PostgreSQL 16 + pgvector (1024-dim halfvec), Redis 7, BullMQ
+- **Database**: Supabase PostgreSQL 16 + pgvector (1024-dim halfvec), Upstash Redis, BullMQ
 - **Frontend**: Next.js 15 (App Router, RSC), Tailwind CSS 4, Zustand + React Query
 - **Auth**: better-auth (OAuth 2.0 + PKCE humans, API keys agents)
 - **AI**: Claude Haiku 4.5 (guardrails), Claude Sonnet 4.5 (decomposition/vision)
 - **Monorepo**: Turborepo + pnpm workspaces
-- **Hosting**: Railway (MVP) → Fly.io (scale)
+- **Hosting**: Vercel (frontend) + Fly.io (backend API/workers) + Supabase (PG/Storage) + Upstash Redis
 
 ## Architecture Principles
 

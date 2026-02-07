@@ -143,21 +143,17 @@ export function createDbClient(databaseUrl: string) {
 }
 ```
 
-**Scale configuration**: When Railway's PostgreSQL starts hitting connection limits (default 97 on their starter plan), add PgBouncer as a sidecar:
+**Scale configuration**: Supabase includes Supavisor connection pooling out of the box. Use the pooled connection string (port 6543, transaction mode) for application queries and the direct connection string (port 5432) for migrations:
 
-```yaml
-# docker-compose.override.yml (production)
-pgbouncer:
-  image: edoburu/pgbouncer:latest
-  environment:
-    DATABASE_URL: postgres://user:pass@postgres:5432/betterworld
-    POOL_MODE: transaction       # Transaction-level pooling
-    DEFAULT_POOL_SIZE: 50
-    MAX_CLIENT_CONN: 200
-    SERVER_IDLE_TIMEOUT: 300
-  ports:
-    - "6432:6432"
+```typescript
+// Connection pooling via Supavisor (transaction mode)
+const pooledUrl = process.env.DATABASE_URL; // postgresql://...pooler.supabase.com:6543/postgres
+
+// Direct connection for migrations only
+const directUrl = process.env.DIRECT_URL;   // postgresql://...supabase.com:5432/postgres
 ```
+
+If Supavisor's default pool limits are insufficient at scale, configure pool size via Supabase dashboard (Pro plan supports up to 200 connections).
 
 ### 4.4 Migration Strategy with Drizzle
 

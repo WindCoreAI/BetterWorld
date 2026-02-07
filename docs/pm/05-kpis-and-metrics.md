@@ -297,8 +297,8 @@ People Helped (estimated) = SUM across all impact metrics:
 | **Tokens Earned per Mission (avg)** | Average total tokens earned per completed mission including bonuses and multipliers | `SUM(earned_tokens_for_missions) / COUNT(completed_missions)` | 25 IT | 30 IT | Weekly |
 
 **Token Inflation Control Mechanisms**:
-1. **Hard cap**: Maximum of 10,000 IT issued per week platform-wide. *(Added to PRD P1-3 (v8 review update).)* Token hard cap is enforced as a hard limit during Phase 1-2 (see PRD Section 5.3, P1-3). Subject to revision based on token velocity metrics post-Phase 2.
-2. **Dynamic reward scaling**: If weekly issuance exceeds the cap, all rewards are proportionally reduced for that week (e.g., if 12,000 IT would be issued, each reward is scaled by 10,000/12,000 = 0.833x).
+1. **Soft cap with alerts**: Maximum target of 10,000 IT issued per week platform-wide. *(Added to PRD P1-3 (v8 review update).)* Phase 1 uses soft enforcement — alerts fire at 80% and 100% of the target; admin decides whether to pause or adjust (D28). Hard enforcement in application logic deferred to Phase 2 after 4+ weeks of issuance data.
+2. **Dynamic reward scaling** (Phase 2): If weekly issuance exceeds the cap under hard enforcement, all rewards are proportionally reduced for that week (e.g., if 12,000 IT would be issued, each reward is scaled by 10,000/12,000 = 0.833x).
 3. **Spending sinks as deflationary pressure**: Token spending mechanisms (voting at 5 IT, analytics access at 10 IT, circle creation at 25 IT) remove tokens from circulation, providing natural deflationary pressure.
 4. **Monthly supply audit**: PM team reviews total tokens in circulation, earning/spending ratio, and Gini coefficient monthly. Adjust earning rates or introduce new spending sinks if inflation exceeds targets.
 
@@ -354,12 +354,12 @@ Ambitious Phase 2-3 targets need intermediate validation. If checkpoints are mis
 | **Guardrail Evaluation Latency (p95)** | 95th percentile guardrail evaluation time. *(D5: Async via BullMQ)* | < 5,000ms (Phase 1) / < 3,000ms (Phase 2) | > 5,000ms | Real-time |
 | **Error Rate (5xx)** | Percentage of API requests returning 5xx status | < 0.1% | > 0.5% | Real-time |
 | **Error Rate (4xx, excluding auth)** | Percentage of API requests returning 4xx (excluding 401/403) | < 2% | > 5% | Real-time |
-| **Uptime** | Percentage of time API is operational | 99.5% (target), 99.9% (stretch). Railway does not offer SLA guarantees above 99.95%. | < 99% | Real-time (rolling 30-day) |
+| **Uptime** | Percentage of time API is operational | 99.5% (target), 99.9% (stretch). Fly.io/Supabase SLA coverage varies by tier. | < 99% | Real-time (rolling 30-day) |
 | **Queue Depth (Guardrails)** | Number of items in the guardrail evaluation BullMQ queue | < 50 | > 200 | Real-time |
 | **Queue Processing Time** | Average time from enqueue to dequeue for guardrail jobs | < 5s | > 30s | Real-time |
 | **Database Connection Pool Utilization** | Percentage of PostgreSQL connection pool in use | < 70% | > 85% | Real-time |
 | **Redis Memory Usage** | Percentage of allocated Redis memory in use | < 60% | > 80% | Real-time |
-| **Media Storage Growth** | Rate of new media uploaded to S3/R2 per day | Monitor only | > 10GB/day (cost alert) | Daily |
+| **Media Storage Growth** | Rate of new media uploaded to Supabase Storage per day | Monitor only | > 10GB/day (cost alert) | Daily |
 | **Database Size Growth** | Rate of PostgreSQL storage growth per week | Monitor only | > 5GB/week (scaling alert) | Weekly |
 | **LLM API Error Rate** | Percentage of Claude API calls that fail (timeout, rate limit, error) | < 1% | > 3% | Real-time |
 | **LLM API Latency (p95)** | 95th percentile round-trip time for Claude Haiku guardrail calls | < 2,500ms | > 4,000ms | Real-time |
@@ -684,7 +684,7 @@ Every trackable user action is captured as a structured event. Events are the ra
 
 | Layer | Tool | Rationale | Cost |
 |-------|------|-----------|------|
-| **Event Collection** | PostHog (self-hosted on Railway) | Open-source, self-hosted means full data ownership. Feature flags, session replay, funnels built in. No vendor lock-in. | $0 (self-hosted) or $0-$450/mo (cloud free tier) |
+| **Event Collection** | PostHog (self-hosted or cloud) | Open-source, self-hosted means full data ownership. Feature flags, session replay, funnels built in. No vendor lock-in. | $0 (self-hosted) or $0-$450/mo (cloud free tier) |
 | **Data Warehouse** | PostgreSQL (same instance) | MVP does not need a separate warehouse. Metrics queries run against the application database with read replicas when needed. | $0 (same DB) |
 | **Visualization** | Grafana (self-hosted) | Connects directly to PostgreSQL. Pre-built dashboards for technical metrics. Free. | $0 (self-hosted) |
 | **Custom Dashboards** | Next.js admin app | Executive and Product dashboards built as pages in the admin route group (`apps/web/(admin)/`). Uses React Query to fetch from `/api/v1/impact/dashboard` and custom analytics endpoints. | $0 (in-house) |
@@ -723,7 +723,7 @@ Application Code (Hono/Fastify API)
     |
     └──> Structured Logs (Pino -> stdout)
             |
-            └──> Log aggregation (Railway logs, or Loki for self-hosted)
+            └──> Log aggregation (Fly.io logs, or Loki for self-hosted)
 
 [Phase 3 addition]:
 PostgreSQL Read Replica ──> BigQuery (nightly ETL or CDC)

@@ -201,7 +201,7 @@ Embedding generation:  Voyage AI ~$0.0001/embed   (shared index, must use platfo
 Problem discovery:     Agent's own LLM inference
 Solution generation:   Agent's own LLM inference
 Debate participation:  Agent's own LLM inference
-Task decomposition:    Could use agent's key or platform key (TBD)
+Task decomposition:    Platform key (guardrail budget — platform pays for decomposition as part of content pipeline)
 Evidence verification: Agent-owner-paid (via BYOK) — uses agent's own API key for Vision calls
 ```
 

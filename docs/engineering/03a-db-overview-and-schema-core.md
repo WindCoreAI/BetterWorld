@@ -288,6 +288,38 @@ export const difficultyLevelEnum = pgEnum("difficulty_level", [
   "expert",
 ]);
 
+// Updated per D34 — pgEnum for all status fields.
+export const problemStatusEnum = pgEnum("problem_status", [
+  "active",
+  "being_addressed",
+  "resolved",
+  "archived",
+]);
+
+export const solutionStatusEnum = pgEnum("solution_status", [
+  "proposed",
+  "debating",
+  "ready_for_action",
+  "in_progress",
+  "completed",
+  "abandoned",
+]);
+
+export const evidenceVerificationStageEnum = pgEnum("evidence_verification_stage", [
+  "pending",
+  "metadata_check",
+  "ai_review",
+  "peer_review",
+  "completed",
+  "failed",
+]);
+
+export const claimStatusEnum = pgEnum("claim_status", [
+  "pending",
+  "claimed",
+  "verified",
+]);
+
 export const entityTypeEnum = pgEnum("entity_type", [
   "agent",
   "human",
@@ -312,6 +344,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { claimStatusEnum } from "./enums";
 import { humans } from "./humans";
 import { problems } from "./problems";
 import { solutions } from "./solutions";
@@ -328,9 +361,9 @@ export const agents = pgTable(
     modelProvider: varchar("model_provider", { length: 50 }), // 'anthropic' | 'openai' | 'google' | etc.
     modelName: varchar("model_name", { length: 100 }),
     ownerHumanId: uuid("owner_human_id").references(() => humans.id),
-    claimStatus: varchar("claim_status", { length: 20 })
+    claimStatus: claimStatusEnum("claim_status") // Updated per D34 — pgEnum for all status fields.
       .default("pending")
-      .notNull(), // 'pending' | 'claimed' | 'verified'
+      .notNull(),
     claimProofUrl: text("claim_proof_url"),
     apiKeyHash: varchar("api_key_hash", { length: 255 }).notNull(),
     // First 12 chars of raw API key for fast lookup/caching
@@ -504,6 +537,7 @@ import {
   problemDomainEnum,
   severityLevelEnum,
   guardrailStatusEnum,
+  problemStatusEnum,
 } from "./enums";
 import { agents } from "./agents";
 import { solutions } from "./solutions";
@@ -555,7 +589,7 @@ export const problems = pgTable(
     // Embedding for semantic similarity search (1024-dim, Voyage AI voyage-3, halfvec for 50% storage savings)
     embedding: halfvec("embedding", { dimensions: 1024 }),
 
-    status: varchar("status", { length: 20 }).default("active").notNull(),
+    status: problemStatusEnum("status").default("active").notNull(), // Updated per D34 — pgEnum for all status fields.
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -617,7 +651,7 @@ import {
   index,
   check,
 } from "drizzle-orm/pg-core";
-import { guardrailStatusEnum } from "./enums";
+import { guardrailStatusEnum, solutionStatusEnum } from "./enums";
 import { agents } from "./agents";
 import { problems } from "./problems";
 import { debates } from "./debates";
@@ -690,7 +724,7 @@ export const solutions = pgTable(
     // Embedding (1024-dim, Voyage AI voyage-3, halfvec for 50% storage savings)
     embedding: halfvec("embedding", { dimensions: 1024 }),
 
-    status: varchar("status", { length: 20 })
+    status: solutionStatusEnum("status") // Updated per D34 — pgEnum for all status fields.
       .default("proposed")
       .notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })

@@ -315,32 +315,31 @@ jobs:
           NODE_ENV: production
           NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL }}
 
-      # ── Railway deployment ────────────────────────────────────────────
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      # ── Fly.io deployment (API + Worker) ─────────────────────────────
+      - name: Install Fly CLI
+        run: curl -L https://fly.io/install.sh | sh
 
-      - name: Deploy API to Railway
-        run: railway up --service api --environment staging --detach
+      - name: Deploy API to Fly.io
+        run: fly deploy --config fly.toml --app betterworld-api-staging --strategy rolling --remote-only
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Deploy Worker to Railway
-        run: railway up --service worker --environment staging --detach
+      - name: Deploy Worker to Fly.io
+        run: fly deploy --config fly.worker.toml --app betterworld-worker-staging --strategy rolling --remote-only
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Deploy Web to Railway
-        run: railway up --service web --environment staging --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      # ── Vercel deployment (Web) ─────────────────────────────────────
+      # Vercel auto-deploys apps/web on push to main via GitHub integration.
+      # No manual step needed here — Vercel picks up the commit automatically.
 
       # Admin UI is served as part of the web app (route group in apps/web)
 
       # ── Run post-deploy migrations ────────────────────────────────────
       - name: Run database migrations
-        run: railway run --service api --environment staging -- pnpm --filter db migrate
+        run: fly ssh console --app betterworld-api-staging -C "pnpm --filter db migrate"
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       # ── Health check ──────────────────────────────────────────────────
       - name: Wait for API health
@@ -519,33 +518,33 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ vars.PRODUCTION_API_URL }}
 
       # ── Snapshot database before migration ────────────────────────────
-      # NOTE: Verify `pg_dump` availability in Railway container. Alternative: use
-      # Railway's built-in snapshot feature via dashboard or API (`railway snapshot`).
+      # NOTE: Uses Supabase pg_dump via fly ssh. Alternative: use Supabase
+      # dashboard's built-in backup feature or `supabase db dump`.
       - name: Create pre-deploy DB snapshot
         if: github.event.inputs.skip_migrations != 'true'
         run: |
-          railway run --service api --environment production -- \
-            pg_dump "$DATABASE_URL" --format=custom --no-owner \
+          fly ssh console --app betterworld-api -C \
+            "pg_dump \"$DATABASE_URL\" --format=custom --no-owner" \
             > /tmp/pre-deploy-snapshot.dump
           echo "Snapshot created at $(date -u +%Y%m%d_%H%M%S)"
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
 
       # ── Run migrations ────────────────────────────────────────────────
       - name: Run database migrations
         if: github.event.inputs.skip_migrations != 'true'
-        run: railway run --service api --environment production -- pnpm --filter db migrate
+        run: fly ssh console --app betterworld-api -C "pnpm --filter db migrate"
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
 
       # ── Deploy services (rolling) ─────────────────────────────────────
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      - name: Install Fly CLI
+        run: curl -L https://fly.io/install.sh | sh
 
       - name: Deploy API
-        run: railway up --service api --environment production --detach
+        run: fly deploy --config fly.toml --app betterworld-api --strategy rolling --remote-only
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
 
       - name: Verify API health
         run: |
@@ -565,14 +564,12 @@ jobs:
           fi
 
       - name: Deploy Worker
-        run: railway up --service worker --environment production --detach
+        run: fly deploy --config fly.worker.toml --app betterworld-worker --strategy rolling --remote-only
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
 
-      - name: Deploy Web
-        run: railway up --service web --environment production --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+      # Web (Next.js) is deployed to Vercel automatically via GitHub integration.
+      # No manual deploy step needed — Vercel picks up the commit on push to main.
 
       # Admin UI is served as part of the web app (route group in apps/web)
 
@@ -657,17 +654,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      - name: Install Fly CLI
+        run: curl -L https://fly.io/install.sh | sh
 
       # ── Action: status ────────────────────────────────────────────────
       - name: Check migration status
         if: inputs.action == 'status'
         run: |
-          railway run --service api --environment ${{ inputs.environment }} -- \
-            pnpm --filter db migrate:status
+          fly ssh console --app betterworld-api-${{ inputs.environment }} -C \
+            "pnpm --filter db migrate:status"
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       # ── Action: generate ──────────────────────────────────────────────
       - name: Generate migration
@@ -680,12 +677,12 @@ jobs:
       - name: Create pre-migration snapshot
         if: inputs.action == 'migrate'
         run: |
-          railway run --service api --environment ${{ inputs.environment }} -- \
-            pg_dump "$DATABASE_URL" --format=custom --no-owner \
+          fly ssh console --app betterworld-api-${{ inputs.environment }} -C \
+            "pg_dump \"$DATABASE_URL\" --format=custom --no-owner" \
             > /tmp/pre-migration.dump
           echo "Snapshot size: $(du -h /tmp/pre-migration.dump | cut -f1)"
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Upload snapshot artifact
         if: inputs.action == 'migrate'
@@ -698,18 +695,18 @@ jobs:
       - name: Run migration
         if: inputs.action == 'migrate'
         run: |
-          railway run --service api --environment ${{ inputs.environment }} -- \
-            pnpm --filter db migrate
+          fly ssh console --app betterworld-api-${{ inputs.environment }} -C \
+            "pnpm --filter db migrate"
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Verify migration
         if: inputs.action == 'migrate'
         run: |
-          railway run --service api --environment ${{ inputs.environment }} -- \
-            pnpm --filter db migrate:status
+          fly ssh console --app betterworld-api-${{ inputs.environment }} -C \
+            "pnpm --filter db migrate:status"
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       # ── Action: rollback ──────────────────────────────────────────────
       - name: Rollback migration
@@ -742,8 +739,8 @@ jobs:
 | `TURBO_TOKEN` | Turborepo remote cache | Generate at vercel.com → Settings → Tokens |
 | `ANTHROPIC_API_KEY` | Production guardrail classifier | console.anthropic.com → API Keys |
 | `ANTHROPIC_API_KEY_TEST` | Test suite guardrail calls (lower quota OK) | Same as above, separate key |
-| `RAILWAY_TOKEN` | Staging deployment | Railway dashboard → Account → Tokens |
-| `RAILWAY_TOKEN_PROD` | Production deployment (restricted access) | Same as above, separate token |
+| `FLY_API_TOKEN` | Staging deployment (Fly.io) | Fly.io dashboard → Account → Access Tokens |
+| `FLY_API_TOKEN_PROD` | Production deployment (restricted access) | Same as above, separate token |
 | `SENTRY_AUTH_TOKEN` | Error tracking release uploads | sentry.io → Settings → Auth Tokens |
 | `SENTRY_DSN` | Error tracking DSN | sentry.io → Project → Client Keys |
 

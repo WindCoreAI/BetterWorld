@@ -25,7 +25,7 @@
 
 > **Note**: Team is 3 engineers + 1 designer. BE1 focuses on core API and security. BE2 handles DevOps, infrastructure, and secondary backend tasks. FE owns the frontend. All engineers should pair on cross-cutting concerns as needed.
 >
-> **Role clarification**: BE1 (Senior) owns infrastructure setup (Docker Compose, CI/CD, Railway deployment) and database migrations. BE2 (Mid-level) focuses on API endpoint implementation and business logic. Both share code review responsibilities. DevOps tasks in Sprint 1 are primarily BE1; Sprint 2+ tasks are split based on domain expertise.
+> **Role clarification**: BE1 (Senior) owns infrastructure setup (Docker Compose, CI/CD, Fly.io + Vercel deployment) and database migrations. BE2 (Mid-level) focuses on API endpoint implementation and business logic. Both share code review responsibilities. DevOps tasks in Sprint 1 are primarily BE1; Sprint 2+ tasks are split based on domain expertise.
 
 ---
 
@@ -221,7 +221,7 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 
 | Attribute | Detail |
 |-----------|--------|
-| **Description** | Design and deliver Figma specs (or equivalent) for foundational components: `Button` (primary, secondary, ghost, destructive variants; sm/md/lg sizes; loading state), `Card` (with header, body, footer slots; hover state), `Input` (text, textarea, select variants; error state; label + helper text), `Badge` (status variants: approved, flagged, rejected, pending; domain badges for the 15 domains). Include hover, focus, and disabled states. |
+| **Description** | Implement foundational components from text-based design spec (AI-assisted per D24, no Figma dependency): `Button` (primary, secondary, ghost, destructive variants; sm/md/lg sizes; loading state), `Card` (with header, body, footer slots; hover state), `Input` (text, textarea, select variants; error state; label + helper text), `Badge` (status variants: approved, flagged, rejected, pending; domain badges for the 15 domains). Include hover, focus, and disabled states. |
 | **Estimated Hours** | 12h |
 | **Assigned Role** | D1 |
 | **Dependencies** | S1-D1 (design tokens) |

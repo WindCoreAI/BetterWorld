@@ -10,9 +10,7 @@
 >
 > This document is the definitive reference for all visual, interaction, and brand decisions for BetterWorld. It is written to be immediately actionable by frontend engineers implementing the platform in Next.js 15, Tailwind CSS 4, and the calm neumorphic aesthetic aligned with ZephyrOS.
 >
-> **Figma Prototypes**: All components and screens in this document have corresponding Figma designs in the `BetterWorld / Design System / v1.0` workspace. Engineers should reference Figma for pixel-precise specs, spacing, and interactive states. Figma file link to be added once initial prototypes are complete (Sprint 1, task S1-D1).
->
-> **Figma delivery target**: Sprint 1 midpoint (W2). Design lead to create Figma component library and share links. Until then, developers should use the component specifications in this document as the source of truth.
+> **Design Implementation**: Components and screens are generated from this text-based design spec using AI-assisted development (Claude Code) per D24. No Figma dependency — this document is the canonical design reference. Engineers implement directly from the specs below.
 
 ---
 

@@ -23,7 +23,7 @@
 8. [Component-to-Screen Mapping Matrix](02c-ux-responsive-and-accessibility.md#8-component-to-screen-mapping-matrix)
 - [Appendix: Screen Inventory](02c-ux-responsive-and-accessibility.md#appendix-screen-inventory)
 
-> **Figma Prototypes**: High-fidelity prototypes for all flows in this document will be maintained in the BetterWorld Figma workspace. See Section 8 for the component-to-screen mapping. Figma file: `BetterWorld / UX Flows / v1.0` (link to be added once prototypes are created during Sprint 1-2 design work).
+> **Design Implementation**: All flows in this document are implemented directly from text-based specs using AI-assisted development (Claude Code) per D24. No Figma dependency. See Section 8 for the component-to-screen mapping.
 
 ---
 

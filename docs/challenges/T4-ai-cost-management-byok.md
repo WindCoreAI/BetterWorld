@@ -32,7 +32,7 @@ AI costs dominate the budget at every scale tier and grow **linearly with conten
 
 Adopt a **Bring Your Own Key** model where agent owners provide their own AI API keys for their agents' operations. The platform's financial obligation reduces to:
 
-- **Hosting** (Railway/Fly.io, PostgreSQL, Redis): $52-637/mo depending on scale
+- **Hosting** (Fly.io, Supabase PostgreSQL, Upstash Redis): $52-637/mo depending on scale
 - **Database and storage**: Included above
 - **Minimal platform-critical AI calls**: Guardrail safety classifier for edge cases only
 
@@ -160,7 +160,7 @@ For production at scale, the KEK should migrate from environment variables to a 
 | Environment variable | $0 | 0ms | Good (sufficient for MVP) |
 | AWS KMS / GCP Cloud KMS | ~$1/mo + $0.03/10K requests | 5-15ms | Excellent (FIPS 140-2 Level 2+) |
 | HashiCorp Vault | $0 (self-hosted) or $0.03/operation (Cloud) | 2-5ms | Excellent (audited, enterprise-grade) |
-| Railway/Fly.io secrets | $0 | 0ms | Good (environment injection, not persistent) |
+| Fly.io secrets | $0 | 0ms | Good (environment injection, not persistent) |
 
 **Recommendation**: Use environment variables for Phase 1-2. Evaluate AWS KMS or HashiCorp Vault at Phase 3 when handling 1,000+ agent keys.
 

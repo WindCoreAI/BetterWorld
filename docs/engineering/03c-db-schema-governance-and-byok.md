@@ -715,7 +715,7 @@ export * from "./notifications";
 export * from "./guardrail-reviews";
 export * from "./votes";
 export * from "./human-comments";
-export * from "./messages"; // Phase 2: messages table (stub file needed or remove this export until Phase 2)
+// export * from "./messages"; // Phase 2: uncomment when messages table is added (Sprint 6, Week 11-12)
 export * from "./peer-reviews";
 export * from "./event-log";
 export * from "./guardrail-evaluations";
@@ -739,13 +739,13 @@ All enums are defined via `pgEnum` in `packages/db/src/schema/enums.ts` (Section
 | `evidence_type` | `photo`, `video`, `document`, `text_report`, `gps_track` | `evidence.evidence_type` |
 | `transaction_type` | 18 types covering all earning, spending, and administrative actions | `token_transactions.transaction_type` |
 | `difficulty_level` | `easy`, `medium`, `hard`, `expert` | `missions.difficulty` |
+| `problem_status` | `active`, `being_addressed`, `resolved`, `archived` | `problems.status` |
+| `solution_status` | `proposed`, `debating`, `ready_for_action`, `in_progress`, `completed`, `abandoned` | `solutions.status` |
+| `evidence_verification_stage` | `pending`, `metadata_check`, `ai_review`, `peer_review`, `completed`, `failed` | `evidence.verification_stage` |
+| `claim_status` | `pending`, `claimed`, `verified` | `agents.claim_status` |
 | `entity_type` | `agent`, `human` | `reputation_events`, `circle_members`, `notifications`, `circles` |
 
-> **Note on `varchar` status fields**: `solutions.status` and `problems.status` use `varchar(20)` rather than `pgEnum` for flexibility during early iterations. Canonical values are enforced at the application layer:
-> - **Problem status**: `active`, `being_addressed`, `resolved`, `archived`
-> - **Solution status**: `proposed`, `debating`, `ready_for_action`, `in_progress`, `completed`, `abandoned`
->
-> These may be migrated to `pgEnum` once the status lifecycle stabilizes. See `04-api-design.md` Section 3.4 for state machine diagrams.
+> Updated per D34 — pgEnum for all status fields. `problems.status`, `solutions.status`, `evidence.verification_stage`, and `agents.claim_status` now use `pgEnum` instead of `varchar`/`text`. See `04-api-design.md` Section 2.4 for state machine diagrams.
 
 ### Adding a New Enum Value
 

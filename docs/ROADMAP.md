@@ -68,7 +68,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 7 | Auth middleware via better-auth (D23): agent API key + bcrypt, human JWT + OAuth | BE2 | 12h | Auth working end-to-end |
 | 8 | Rate limiting (Redis sliding window, per-role + per-endpoint, **10 writes/min per agent**) | BE1 | 6h | Rate limits enforced |
 | 9 | CI/CD pipeline (GitHub Actions: lint, test, build, type-check) | BE1 | 6h | PRs gated on CI |
-| 10 | Environment config (.env validation, Railway/dev parity) | BE2 | 4h | `.env.example` + validator |
+| 10 | Environment config (.env validation, Fly.io/Supabase/dev parity) | BE2 | 4h | `.env.example` + validator |
 | 11 | Next.js 15 web app boilerplate (App Router, Tailwind CSS 4) | FE | 8h | `apps/web/` skeleton |
 | 12 | **Observability foundation** (Pino structured logging, Sentry error tracking, `/healthz` + `/readyz`) | BE2 | 4h | Errors tracked from Day 1 |
 | 13 | **AI API budget tracking** (daily/hourly cost counters in Redis, alert at 80% of cap) | BE1 | 4h | Cost visibility from Day 1 |
@@ -77,7 +77,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 
 **Sprint 1 Decision Points**:
 - [ ] Confirm domain name (`betterworld.ai` availability)
-- [ ] Confirm Railway as MVP hosting provider
+- [ ] Confirm Fly.io + Supabase + Upstash as MVP hosting providers
 - [ ] Confirm OpenClaw-first agent strategy with framework-agnostic REST API
 - [ ] All Sprint 0 decisions ratified
 
@@ -127,7 +127,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 3 | Activity Feed (chronological platform activity) | FE | 8h | Real-time feed |
 | 4 | Admin Review Panel (**as `/admin` route group in `apps/web/`**, flagged queue + approve/reject) | FE | 12h | Admins can moderate |
 | 5 | Landing page | FE | 8h | Public homepage |
-| 6 | Railway deployment (API + web + DB + Redis) | BE1 | 8h | Production live |
+| 6 | Fly.io + Vercel deployment (API + web + DB + Redis) | BE1 | 8h | Production live |
 | 7 | **Full monitoring setup** (Grafana dashboards: guardrail metrics, API latency, AI cost, error rates) | BE2 | 6h | Dashboards active |
 | 8 | Security hardening (TLS, CORS, CSP, helmet) | BE1 | 4h | Security checklist passed |
 | 9 | E2E integration tests (agent registration → problem → solution → guardrail → approval flow) | BE1 + BE2 | 8h | Critical paths tested |
@@ -182,7 +182,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | # | Task | Owner | Est. | Deliverable |
 |---|------|-------|------|-------------|
 | 1 | Evidence submission (multipart upload, EXIF extraction, **rate limit: 10 uploads/hour/human**) | BE1 | 12h | Photos/docs submittable |
-| 2 | Cloudflare R2 storage + CDN signed URLs | BE1 | 6h | Media stored securely |
+| 2 | Supabase Storage + CDN signed URLs | BE1 | 6h | Media stored securely |
 | 3 | AI evidence verification (Claude Vision: GPS, photo analysis) | BE2 | 12h | AI auto-check working |
 | 4 | Peer review system (1-3 reviewers, majority vote, **stranger-only assignment**) | BE2 | 10h | Peer review operational |
 | 5 | Evidence submission UI (camera, GPS, checklist) | FE | 12h | Mobile-friendly submission |
@@ -236,7 +236,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 | 20 | **First paying NGO partner** | PM + Sales | Revenue milestone |
 | 21-22 | **Notification system** (in-app + email) | BE + FE | Mission updates, evidence reviews, token events |
 | 21-22 | **Advanced analytics** | BE + FE | Domain trends, agent effectiveness, geographic heatmaps |
-| 23-24 | **Infrastructure migration** (Railway → Fly.io) | DevOps | Multi-region, read replicas, PgBouncer |
+| 23-24 | **Infrastructure scaling** (scale Fly.io to multi-region) | DevOps | Multi-region, read replicas, PgBouncer |
 | 23-24 | **i18n foundation** (Spanish, Mandarin) | FE | Mission marketplace in 3 languages |
 | 23-24 | **Evaluate pgvector → dedicated vector DB** | BE + DevOps | If >500K vectors or p95 vector search >500ms, migrate to Qdrant |
 | 23-24 | **Backup & Disaster Recovery** | DevOps | Automated daily PG backups (pg_dump to S3-compatible storage), tested restore procedure, documented RTO <4h / RPO <1h |
@@ -296,7 +296,7 @@ These decisions block Sprint 1 implementation. Each must be resolved and documen
 
 > **Note**: Phase 1 AI API cost ($400/mo) assumes platform-paid model before BYOK adoption. With BYOK (Phase 1B+), platform AI cost drops to ~$20/mo as agent owners bring their own API keys. See [T4 — AI Cost Management](challenges/T4-ai-cost-management-byok.md) for full cost model.
 
-> **Budget assumes**: 2-3 person core team, cloud hosting on Railway ($50-100/month Phase 1), no paid marketing until seed funding. Total Phase 1 direct infrastructure and services spend (hosting, API costs, tools): $15-25K. The ~$48K figure in the table above includes loaded personnel costs (salary/opportunity cost for 3 people over 8 weeks). Both figures are correct for different scopes.
+> **Budget assumes**: 2-3 person core team, cloud hosting on Fly.io + Supabase + Upstash (~$30-50/month Phase 1), no paid marketing until seed funding. Total Phase 1 direct infrastructure and services spend (hosting, API costs, tools): $15-25K. The ~$48K figure in the table above includes loaded personnel costs (salary/opportunity cost for 3 people over 8 weeks). Both figures are correct for different scopes.
 
 ---
 
@@ -362,9 +362,9 @@ These doc improvements should be completed alongside development:
 
 | Priority | Action | Owner | By When | Status |
 |----------|--------|-------|---------|--------|
-| **Critical** | Sprint 0 ADR (Architecture Decision Record) | Engineering Lead | Week 0 | **NEW** |
+| **Critical** | Sprint 0 ADR (Architecture Decision Record) | Engineering Lead | Week 0 | **DONE** — `engineering/00-sprint0-adr.md` created 2026-02-07 |
 | **Critical** | Update `03a-db-overview-and-schema-core.md` embedding columns to `halfvec(1024)` | BE1 | Week 0 | **DONE** |
-| **Critical** | Update `02a-tech-arch-overview-and-backend.md` guardrail middleware → async queue | BE1 | Week 0 | **NEW** |
+| **Critical** | Update `02a-tech-arch-overview-and-backend.md` guardrail middleware → async queue | BE1 | Week 0 | **DONE** — already uses async BullMQ enqueue pattern (line 684-699) |
 | Critical | Reconcile pagination model (cursor vs offset) across API + SDK | BE1 | Week 2 | From v1 |
 | Critical | Complete pitch deck appendices (C, D, E) | PM | Week 3 | From v1 |
 | Critical | Fill team bios in pitch deck | PM | Week 1 | From v1 |
@@ -379,6 +379,8 @@ These doc improvements should be completed alongside development:
 | Medium | Add evidence upload rate limits to `04-api-design.md` | BE2 | Week 12 | **NEW** |
 | Medium | Complete 3 incident playbooks in DevOps doc | BE1 | Week 8 | From v1 |
 | Medium | Verify dark mode contrast for all 15 domain colors | Design | Week 6 | From v1 |
+| **Resolved** | Figma component library handoff | FE | Sprint 1 | **RESOLVED** — AI-generated from text design system spec; no Figma dependency |
+| **Resolved** | Complete API endpoint spec (missions, humans, BYOK) | BE | Sprint 0 | **DONE** — 04-api-design.md updated 2026-02-07 |
 | Medium | Add residual risk scores to risk register | PM | Week 4 | From v1 (done in v2.0 of risk register) |
 
 ---

@@ -539,7 +539,7 @@ This is the single metric that captures the full pipeline: agents discovering pr
 |----------|-----------|----------------|
 | **PR** | PR agency retainer (2-month minimum) or freelance PR | $8,000 |
 | **Paid Social** | X/Twitter promoted posts, Reddit ads | $5,000 |
-| **Infrastructure** | Railway hosting scale-up (launch traffic) | $1,000 |
+| **Infrastructure** | Fly.io backend scale-up (launch traffic) | $500 |
 | **AI API Costs** | Claude Haiku for guardrails (~100K evaluations at ~$0.001/eval) | $500 |
 | **AI API Costs** | Claude Sonnet for task decomposition | $1,000 |
 | **Events** | Virtual launch event production | $1,500 |
@@ -550,10 +550,10 @@ This is the single metric that captures the full pipeline: agents discovering pr
 
 | Category | Line Item | Monthly Cost |
 |----------|-----------|-------------|
-| **Infrastructure** | Hosting (Railway -> Fly.io migration) | $2,000-$5,000 |
-| **Infrastructure** | PostgreSQL managed (Neon/Supabase or RDS) | $500-$1,500 |
-| **Infrastructure** | Redis managed | $200-$500 |
-| **Infrastructure** | CDN + media storage (Cloudflare R2) | $200-$1,000 |
+| **Infrastructure** | Fly.io backend scaling (multi-instance) | $50-$200 |
+| **Infrastructure** | Supabase Pro (PostgreSQL + Storage, existing subscription) | $25 |
+| **Infrastructure** | Upstash Redis Pro | $10-$100 |
+| **Infrastructure** | Vercel Pro (frontend, existing subscription) | $0 (included) |
 | **AI API** | Guardrail evaluations (scaling with content) | $1,000-$5,000 |
 | **AI API** | Task decomposition + evidence verification | $500-$2,000 |
 | **Marketing** | Content creation, social media management | $3,000-$5,000 |
@@ -580,7 +580,7 @@ This is the single metric that captures the full pipeline: agents discovering pr
 ### 8.5 Infrastructure Cost Trajectory
 
 ```
-W1-4  (Alpha):    ~$500/month   (Railway free tier + minimal API calls)
+W1-4  (Alpha):    ~$500/month   (Fly.io/Supabase free tiers + minimal API calls)
 W7-8  (Launch):   ~$3,000/month (traffic spike, guardrail API costs)
 W9-16 (Growth):   ~$8,000/month (scaling DB, more API calls, media storage)
 W17-24 (Phase 3): ~$15,000/month (scaling services, i18n, Circles)
@@ -591,7 +591,7 @@ W25-32 (Phase 4): ~$20,000/month (multi-region, heavy API, managed services)
 - Fine-tune a smaller open model (Llama 3.x) for guardrail evaluation to reduce Claude API dependency
 - Implement aggressive caching for repeated guardrail patterns (estimated 40% cost reduction)
 - Use pgvector for semantic search instead of dedicated vector DB service
-- R2 (Cloudflare) for media storage instead of S3 (zero egress fees)
+- Supabase Storage for media storage (included with Supabase plan, simple integration)
 
 ### 8.6 Total Budget Summary (First 6 Months)
 

@@ -118,9 +118,9 @@ Before iterative scans, pgvector would fetch `LIMIT` results from the HNSW index
 
 ### 2.1 pgvector HNSW Benchmarks (1024-dim, cosine similarity)
 
-All benchmarks assume PostgreSQL 16, pgvector 0.8.0, 8 vCPU / 32GB RAM instance (representative of a Railway/Fly.io production config).
+All benchmarks assume PostgreSQL 16, pgvector 0.8.0, 8 vCPU / 32GB RAM instance (representative of a Supabase Pro / Fly.io production config).
 
-> **Benchmark disclaimer**: The latency and throughput numbers in this section are **projected estimates based on published pgvector benchmarks, ann-benchmarks.com data, and vendor documentation** -- not measurements on BetterWorld's actual workload. Real-world performance will vary based on data distribution, query patterns, concurrent load, and hosting tier. The "8 vCPU / 32 GB RAM" configuration maps approximately to Railway Pro (8 vCPU / 32 GB) or Fly.io Performance-8x; actual Railway/Fly.io tier naming and resource allocations should be verified against current provider pricing pages before capacity planning. Re-validate these projections with actual BetterWorld data during Phase 1 beta.
+> **Benchmark disclaimer**: The latency and throughput numbers in this section are **projected estimates based on published pgvector benchmarks, ann-benchmarks.com data, and vendor documentation** -- not measurements on BetterWorld's actual workload. Real-world performance will vary based on data distribution, query patterns, concurrent load, and hosting tier. The "8 vCPU / 32 GB RAM" configuration maps approximately to Supabase Pro (8 vCPU / 32 GB) or Fly.io Performance-8x; actual Supabase/Fly.io tier naming and resource allocations should be verified against current provider pricing pages before capacity planning. Re-validate these projections with actual BetterWorld data during Phase 1 beta.
 
 #### Query Latency (single-threaded, ef_search=40 default)
 
@@ -274,7 +274,7 @@ Qdrant is the best migration target for BetterWorld because:
 1. **Rust-based**: Best raw performance among OSS vector DBs
 2. **Simple API**: gRPC + REST, easy to integrate from Node.js
 3. **Built-in filtering**: Payload-based filtering is equivalent to pgvector's WHERE clauses
-4. **Qdrant Cloud**: Managed option for Railway/Fly.io equivalent simplicity
+4. **Qdrant Cloud**: Managed option for Supabase/Fly.io equivalent simplicity
 5. **Snapshot-based backup**: Simple disaster recovery
 6. **Good multi-tenancy**: Collection-per-tenant or payload filtering
 7. **Active development**: Regular releases with performance improvements

@@ -33,29 +33,29 @@
 ### 1.1 High-Level System Diagram
 
 ```
-                           ┌─────────────────┐
-                           │   Cloudflare     │
-                           │   CDN / WAF      │
-                           └────────┬─────────┘
-                                    │
-                 ┌──────────────────┼──────────────────┐
-                 │                  │                   │
-          ┌──────▼──────┐   ┌──────▼──────┐   ┌───────▼──────┐
-          │  Next.js 15  │   │  Hono API   │   │  WebSocket   │
-          │  (apps/web)  │   │  (apps/api) │   │  Server      │
-          │  SSR + RSC   │   │  REST v1    │   │  (real-time) │
-          └──────┬───────┘   └──────┬──────┘   └───────┬──────┘
-                 │                  │                   │
-                 │           ┌──────▼──────┐           │
-                 │           │  Middleware  │           │
-                 │           │  Pipeline   │           │
-                 │           │             │           │
-                 │           │ auth        │           │
-                 │           │ rate-limit  │           │
-                 │           │ validate    │           │
-                 │           │ enqueue*    │           │
-                 │           └──────┬──────┘           │
-                 │                  │                   │
+     ┌─────────────┐                        ┌─────────────────┐
+     │   Vercel     │                        │    Fly.io       │
+     │  (frontend)  │                        │   (backend)     │
+     └──────┬───────┘                        └────────┬────────┘
+            │                                         │
+     ┌──────▼──────┐          ┌───────────────────────┼──────────────┐
+     │  Next.js 15  │          │                       │              │
+     │  (apps/web)  │   ┌──────▼──────┐         ┌─────▼────────┐
+     │  SSR + RSC   │   │  Hono API   │         │  WebSocket   │
+     └──────┬───────┘   │  (apps/api) │         │  Server      │
+            │           │  REST v1    │         │  (real-time) │
+            │           └──────┬──────┘         └──────┬───────┘
+            │                  │                       │
+            │           ┌──────▼──────┐               │
+            │           │  Middleware  │               │
+            │           │  Pipeline   │               │
+            │           │             │               │
+            │           │ auth        │               │
+            │           │ rate-limit  │               │
+            │           │ validate    │               │
+            │           │ enqueue*    │               │
+            │           └──────┬──────┘               │
+            │                  │                       │
        ┌─────────────────────────────────────────────────┐
        │              Service / Domain Layer              │
        │                                                  │
@@ -66,15 +66,15 @@
        ┌──────────────────────┼───────────────────────┐
        │                      │                        │
 ┌──────▼──────┐   ┌──────────▼──────────┐   ┌────────▼────────┐
-│ PostgreSQL  │   │       Redis 7       │   │    BullMQ       │
-│ 16 +        │   │                     │   │    Queues       │
-│ pgvector    │   │ sessions · cache    │   │                 │
-│             │   │ rate-limits · pubsub│   │ guardrail-eval  │
-│ Drizzle ORM │   │                     │   │ task-decompose  │
-└─────────────┘   └─────────────────────┘   │ evidence-verify │
-                                            │ notifications   │
+│ Supabase    │   │   Upstash Redis     │   │    BullMQ       │
+│ PostgreSQL  │   │                     │   │    Queues       │
+│ 16 +        │   │ sessions · cache    │   │                 │
+│ pgvector    │   │ rate-limits · pubsub│   │ guardrail-eval  │
+│             │   │                     │   │ task-decompose  │
+│ Drizzle ORM │   └─────────────────────┘   │ evidence-verify │
+└─────────────┘                             │ notifications   │
        ┌────────────────────┐               │ embedding-gen   │
-       │  Cloudflare R2     │               └─────────────────┘
+       │  Supabase Storage  │               └─────────────────┘
        │  (evidence media)  │
        └────────────────────┘
 
@@ -128,7 +128,7 @@ The system is organized into five conceptual layers, each with strict boundaries
 │  Bridges digital decisions to physical execution.            │
 ├──────────────────────────────────────────────────────────────┤
 │  Layer 4: INFRASTRUCTURE                                     │
-│  PostgreSQL, Redis, BullMQ, R2, monitoring.                  │
+│  Supabase PG, Upstash Redis, BullMQ, Supabase Storage, monitoring. │
 │  All stateful concerns live here.                            │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -145,7 +145,7 @@ The system is organized into five conceptual layers, each with strict boundaries
 | State management | Zustand + React Query over Redux | Zustand for ephemeral client state (UI). React Query for server state (cache, refetch, optimistic updates). Avoids Redux boilerplate. |
 | Auth library | better-auth over lucia-auth | More active maintenance, built-in OAuth providers, cleaner API. Lucia is sunset. |
 | Queue | BullMQ over custom | Battle-tested Redis-based queue. Priorities, retries, dead-letter, cron — all built-in. Avoids reinventing. |
-| Hosting (MVP) | Railway | One-click PostgreSQL + Redis provisioning, GitHub deploy integration, good free tier for development. Migrate to Fly.io when we need multi-region. |
+| Hosting | Vercel (frontend) + Fly.io (backend) + Supabase (PG/Storage) + Upstash Redis | Leverages existing Vercel and Supabase subscriptions. Vercel is optimal for Next.js SSR/RSC. Fly.io provides persistent Node.js process for Hono API + BullMQ workers. Supabase manages PostgreSQL + pgvector + file storage. Upstash Redis is BullMQ-compatible serverless Redis. (D38) |
 | Real-time | Hono WebSocket over Socket.io | Keeps the stack unified under Hono. Socket.io adds weight and a second protocol. Fallback to SSE if WebSocket proves insufficient for our needs. |
 
 ---

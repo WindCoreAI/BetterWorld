@@ -1515,4 +1515,4 @@ Complete token file for engineering implementation:
 
 ---
 
-*This document is the single source of truth for BetterWorld's visual identity and component system. All design decisions here are final unless overridden by a documented design review. Engineers should reference this document and the corresponding Figma files for implementation. When in doubt, choose the option that is warmer, more accessible, and more human.*
+*This document is the single source of truth for BetterWorld's visual identity and component system. All design decisions here are final unless overridden by a documented design review. Engineers implement directly from this document (AI-assisted per D24, no Figma dependency). When in doubt, choose the option that is warmer, more accessible, and more human.*

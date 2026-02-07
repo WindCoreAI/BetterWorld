@@ -1,8 +1,8 @@
 # Decisions Needed Before Implementation
 
 > **Generated**: 2026-02-06 (Systematic Review Round 2)
-> **Status**: 20 of 23 DECISIONS RESOLVED (1 superseded, 2 pending: D20, D22)
-> **Resolved**: 2026-02-06
+> **Status**: 35 of 37 DECISIONS RESOLVED (1 superseded, 2 pending: D20, D22)
+> **Last Updated**: 2026-02-07
 
 ---
 
@@ -282,6 +282,176 @@ Same core narrative, different emphasis per audience. Social impact version for 
 
 ---
 
+### D24. Frontend Development Approach [P0-BLOCKER] — RESOLVED
+
+**Decision**: **AI-assisted development (Claude Code)**
+
+Frontend development is primarily AI-assisted: components and pages are generated from the text-based design system spec using Claude Code, with a developer reviewing and integrating. No dedicated FE engineer required. No Figma dependency — designs generated directly from [design/01b-design-system.md](design/01b-design-system.md).
+
+**Impact**:
+- FE work can run in parallel with BE work (not blocked on a person's schedule)
+- Sprint 1 FE deliverables: Next.js skeleton + design system components
+- Sprint 2+ FE deliverables: pages built as API endpoints become available
+- Bottleneck shifts from "FE availability" to "API readiness"
+
+---
+
+### D25. Mission Creation Model [P1-URGENT] — RESOLVED
+
+**Decision**: **Both paths** — agents can POST /missions explicitly AND the system auto-generates missions from task decomposition.
+
+Agent-initiated missions go through guardrails like any other content. Auto-generated missions are attributed to the solution's proposing agent. Both produce identical Mission entities.
+
+**Propagation status**: **DONE** — `04-api-design.md` updated with `POST /missions` contract and "Two Paths" documentation.
+
+---
+
+### D26. Phase 1 WebSocket Scope [P1-URGENT] — RESOLVED
+
+**Decision**: **Minimal — polling fallback for Phase 1**, full WebSocket in Phase 3.
+
+Phase 1 uses `GET /api/v1/events/poll?since=<ISO8601>` every 5-10 seconds for the activity feed. Event type names and payload schemas are defined in 04-api-design.md Section 4 as the canonical reference. Full persistent WebSocket connections ship in Phase 3 (Weeks 17-18).
+
+**Propagation status**: **DONE** — `04-api-design.md` Section 4 updated with Phase 1 scope note.
+
+---
+
+### D27. Email Provider [P0-BLOCKER] — RESOLVED
+
+**Decision**: **Resend** (TypeScript SDK, free tier 100 emails/day).
+
+Transactional emails (agent verification codes, notifications) sent from `noreply@betterworld.ai` via Resend. 6-digit numeric verification codes, bcrypt-hashed, 15-minute expiry. Rate limited: max 3 resends/hour, max 5 verify attempts per 15 minutes.
+
+**Propagation status**: **DONE** — `04-api-design.md` Section 3.1 updated with full email verification flow.
+
+---
+
+### D28. Token Hard Cap Enforcement [P1-URGENT] — RESOLVED
+
+**Decision**: **Soft cap with alerts** for Phase 1.
+
+No hard enforcement. Weekly issuance tracked in Redis counter (`token:weekly_issuance:{week}`). Alerts fire at 80% and 100% of 10K IT cap. Admin decides whether to pause rewards or adjust. Hard cap in application logic deferred to Phase 2 after 4+ weeks of issuance data.
+
+---
+
+### D29. Guardrail Prompt Versioning SOP [P1-URGENT] — RESOLVED
+
+**Decision**: **Lightweight SOP** — PR-based with 2 reviewers and test suite gate.
+
+- **Propose**: Engineer submits PR modifying prompt template in `packages/guardrails/`
+- **Review**: 2 approvals required (1 engineering + 1 PM/domain expert)
+- **Test gate**: Run against 200-item labeled test suite. PR blocked if F1 drops > 3%
+- **Deploy**: All-at-once for Phase 1 (traffic too low for canary). Phase 2+ adds 20% canary rollout
+- **Tracking**: Each guardrail evaluation tagged with `prompt_version` (semver). Dashboard shows approval rate per version
+- **Rollback**: Revert the PR. Previous prompt version restores immediately
+
+---
+
+### D30. Self-Audit Layer A → Layer B Interaction [P1-URGENT] — RESOLVED
+
+**Decision**: **Layer A informs Layer B, never bypasses it.**
+
+When Layer A detects a domain mismatch, self-reported harm, or low justification quality:
+1. Warnings are injected into the Layer B classifier prompt as additional context
+2. Layer B runs with full awareness of Layer A signals
+3. "Force-flag" means: regardless of Layer B's score, content is routed to human review (Layer C)
+4. Layer B score is still recorded for telemetry and threshold calibration
+
+This preserves two independent signals (keyword-based + semantic) and prevents false positives from keyword detection from causing blind spots.
+
+---
+
+### D31. Phase 1 Trust Model Scope [P1-URGENT] — RESOLVED
+
+**Decision**: **2-tier model with time + quality promotion criteria.**
+
+| Tier | Criteria | Behavior |
+|------|----------|----------|
+| **New** | < 7 days since registration OR < 5 approved submissions | All content routed to human review regardless of classifier score |
+| **Verified** | 7+ days AND 5+ approved submissions | Standard guardrail thresholds apply (reject < 0.4, flag 0.4-0.7, approve >= 0.7) |
+
+- **Promotion**: Automatic when both conditions met (time AND quality). No reputation score in Phase 1.
+- **Demotion**: If admin rejects 2+ submissions in a 7-day window, agent drops to "New" for 7 days.
+- **Phase 2**: Upgrade to full 5-tier progressive trust model (see T7 challenge doc).
+
+---
+
+### D32. Evidence Peer Reviewer Selection [P2-IMPORTANT] — RESOLVED
+
+**Decision**: **Random from domain pool** with conflict prevention.
+
+- **Pool**: All humans with 1+ completed missions in the same domain as the evidence
+- **Selection**: Random, 3 reviewers requested per evidence item
+- **Conflict prevention**: Cannot review evidence for missions you created or from your own agent
+- **Fallback**: If < 3 qualified reviewers in domain, expand to any human with 3+ completed missions
+- **Timeout**: 48 hours. If < 3 reviews received, resolve with available reviews. If 0 reviews, escalate to admin
+- **Minimum review time**: 30 seconds (filter instant rubber-stamps)
+
+---
+
+### D33. Model Fallback Chain [P1-URGENT] — RESOLVED
+
+**Decision**: **3-model chain with circuit breaker.**
+
+| Priority | Model | Timeout | Use Case |
+|----------|-------|---------|----------|
+| Primary | Claude Haiku 4.5 | 4s | All guardrail evaluations |
+| Secondary | GPT-4o-mini | 4s | Fallback on Haiku failure |
+| Tertiary | Gemini 2.0 Flash | 4s | Fallback on GPT failure |
+| Last resort | Human review queue | — | If all models fail |
+
+**Fallback triggers**: HTTP 5xx, timeout > 4s, rate limit (429), response validation failure.
+
+**Circuit breaker**: If primary model fails 5 times in 2 minutes, open circuit → route all traffic to secondary for 5 minutes, then retry primary. Same pattern cascades to tertiary.
+
+---
+
+### D34. Schema Status Fields [P1-URGENT] — RESOLVED
+
+**Decision**: **pgEnum for all status fields** (consistent with D2).
+
+Convert `problems.status`, `solutions.status`, `missions.status`, `guardrail_status` from `varchar(20)` to pgEnum in Drizzle schema. Adding new values requires `ALTER TYPE ... ADD VALUE` migration — acceptable cost for type safety.
+
+**Propagation needed**: Update `03a-db-overview-and-schema-core.md` to use pgEnum for all status columns.
+
+---
+
+### D35. Pilot City [P2-IMPORTANT] — RESOLVED
+
+**Decision**: **Founding team's city.**
+
+Phase 2 human launch (Weeks 9-16) targets the city where the core team is based. Fastest to iterate, easiest to seed missions, recruit early humans, and verify evidence in person. Specific city to be confirmed at Sprint 5 planning.
+
+---
+
+### D36. BYOK Key Rotation [P2-IMPORTANT] — RESOLVED
+
+**Decision**: **On-demand CLI rotation** for Phase 1. Upgrade to KMS in Phase 2.
+
+- **Frequency**: On-demand only. Rotate if key compromise suspected or on major version release
+- **Executor**: Engineering lead runs `pnpm --filter db rotate-kek` CLI command
+- **Process**: Generate new KEK → store in Fly.io secrets → decrypt/re-encrypt all DEKs in single DB transaction → verify 5 random agent keys → keep old KEK in `KEK_PREVIOUS` for 7 days
+- **Failure**: Transaction rolls back atomically. No partial state.
+- **Audit**: Log to `audit_log` table (timestamp, operator, KEK version hash, agent count)
+- **Phase 2**: Move KEK to AWS KMS or HashiCorp Vault. Add automatic quarterly rotation.
+
+---
+
+### D37. Production Backup Strategy [P1-URGENT] — RESOLVED
+
+**Decision**: **Supabase daily backups + pre-deploy pg_dump + weekly restore test.**
+
+| Layer | Mechanism | Frequency | RPO |
+|-------|-----------|-----------|-----|
+| Supabase | Automatic point-in-time recovery backups | Daily | < 24h |
+| CI/CD | `pg_dump` before each production deploy (already in deploy-production.yml) | Per deploy | < 1h during active development |
+| Manual | Restore latest snapshot to test DB, run smoke queries | Weekly (Monday) | Verification only |
+
+- **RTO target**: < 1 hour (Supabase restore from backup)
+- **Phase 2 upgrade**: WAL archiving for RPO < 1 minute, cross-region backup to S3, automated restore testing in CI
+
+---
+
 ## Quick Reference: Decision Summary
 
 | # | Decision | Choice |
@@ -309,6 +479,20 @@ Same core narrative, different emphasis per audience. Social impact version for 
 | D21 | Pitch positioning | Two deck variants |
 | D22 | Demo strategy | Deferred (depends on pitch timing) |
 | D23 | Auth library | better-auth (replaces lucia-auth) |
+| D24 | FE approach | AI-assisted (Claude Code), no Figma dependency |
+| D25 | Mission creation | Both paths (agent POST + auto-generated) |
+| D26 | Phase 1 WebSocket | Minimal (polling), full WS in Phase 3 |
+| D27 | Email provider | Resend (TypeScript SDK, transactional email) |
+| D28 | Token hard cap | Soft cap + alerts (hard cap in Phase 2) |
+| D29 | Prompt versioning | PR + 2 reviewers + F1 regression gate |
+| D30 | Layer A → Layer B | Inform (never bypass), force-flag = always human review |
+| D31 | Phase 1 trust tiers | 2-tier: New (< 7d OR < 5 approvals) → Verified |
+| D32 | Peer reviewer selection | Random from domain pool, 3 reviewers, 48h timeout |
+| D33 | Model fallback chain | Haiku → GPT-4o-mini → Gemini Flash → human queue |
+| D34 | Status field enums | pgEnum everywhere (consistent with D2) |
+| D35 | Pilot city | Founding team's city (confirm at Sprint 5) |
+| D36 | BYOK key rotation | On-demand CLI (Phase 1), KMS (Phase 2) |
+| D37 | Backup strategy | Supabase backups + pre-deploy pg_dump + weekly restore test |
 
 ---
 

@@ -329,7 +329,7 @@ BetterWorld is the first platform where AI intelligence and human agency converg
 |-----------|--------|
 | **Description** | Database-tracked token economy that rewards verified positive impact. Non-transferable (soulbound-like) to prevent speculation. |
 | **User** | Human Participants |
-| **Implementation** | Phase 1: database-only point tracking (no blockchain). Weekly platform-wide issuance hard cap: 10,000 IT (experimental parameter, subject to adjustment based on economic health metrics). The hard cap is an experimental safety mechanism. During Phase 1, enforce as a hard limit to prevent runaway token inflation. Revisit based on token velocity data after Phase 2. |
+| **Implementation** | Phase 1: database-only point tracking (no blockchain). Weekly platform-wide issuance target: 10,000 IT (experimental parameter, subject to adjustment based on economic health metrics). Phase 1 uses **soft cap with alerts** at 80% and 100% of the target (D28). Admin decides whether to pause rewards or adjust. Hard enforcement deferred to Phase 2 after 4+ weeks of issuance data. |
 | **Design Philosophy** | > ImpactTokens use `decimal(18,8)` precision to support either crypto or fiat redemption paths. The specific monetary model will be determined based on regulatory analysis and market traction. *(Decision D15)* |
 | **Earning Rules** | See table below. |
 | **Spending Rules** | See table below. |
@@ -592,14 +592,14 @@ The following are explicitly excluded from the MVP (Phase 1) scope:
 
 | Dependency | Type | Risk Level | Mitigation |
 |------------|------|------------|------------|
-| **PostgreSQL 16 + pgvector** | Database | Low | Well-established, widely supported. Alternatives: Supabase (managed). |
-| **Redis 7** | Cache / Rate Limiting / Queues | Low | Standard infrastructure. Alternatives: Upstash (serverless). |
+| **PostgreSQL 16 + pgvector** | Database | Low | Well-established, widely supported. Hosted on **Supabase** (managed, existing subscription — D41). |
+| **Redis 7** | Cache / Rate Limiting / Queues | Low | Standard infrastructure. Hosted on **Upstash** (serverless — D40). |
 | **Claude Haiku API** (Anthropic) | Guardrail Classifier | Medium | Single-vendor dependency for core function. Mitigation: abstract behind interface; support fallback to fine-tuned open model (Llama 3). Cache common patterns to reduce API calls. |
 | **Claude Sonnet API** (Anthropic) | Task Decomposition | Medium | Same mitigation as Haiku. Task decomposition is P1, not MVP-blocking. |
 | **Claude Vision API** (Anthropic) | Evidence Verification | Medium | P1 feature. Can start with simpler checks (GPS, timestamp) and add Vision later. |
 | **OpenClaw Framework** | Agent Integration | Medium | OpenClaw is open source (114K stars) and actively maintained. But API surface could change. Mitigation: framework-agnostic REST API is primary; OpenClaw skill is a convenience layer. |
 | **X/Twitter API** | Agent Verification | Medium | API access costs and rate limits may change. Mitigation: support alternative verification methods (GitHub profile, manual admin verification). |
-| **S3/R2 (Cloudflare R2 or AWS S3)** | Media Storage | Low | Commodity service, easy to swap. |
+| **Supabase Storage** | Media Storage | Low | S3-compatible, included in Supabase plan (D39). |
 | **BullMQ** | Job Queues | Low | Well-maintained, Redis-backed. |
 | **Next.js 15** | Frontend | Low | Stable, widely adopted. |
 | **OAuth Providers (Google, GitHub)** | Human Auth | Low | Standard integrations. |
@@ -611,7 +611,7 @@ The following are explicitly excluded from the MVP (Phase 1) scope:
 | **Guardrail test suite creation** | Need a curated dataset of 200+ content samples (good and bad) to validate classifier accuracy before launch | Must be completed before Phase 1 end |
 | **NGO partner relationships** | At least 1-2 NGO partners for cold-start seeding of problems | High impact on post-MVP growth if missing |
 | **Legal review** | Terms of service, privacy policy, and clarification that missions create no employment relationship | Must be in place before human registration opens |
-| **Domain name and hosting** | Secure `betterworld.ai` or alternative domain; set up Railway/Fly.io infrastructure | Must be completed in Week 1 |
+| **Domain name and hosting** | Secure `betterworld.ai` or alternative domain; set up Vercel + Fly.io + Supabase infrastructure | Must be completed in Week 1 |
 | **Ed25519 key management** | Generate and securely store signing keys for heartbeat protocol | Must be completed before P0-8 |
 
 ### 8.3 Assumptions
@@ -637,7 +637,7 @@ These questions (derived from proposal Section 19) must be resolved before or du
 |---|----------|---------|-------------|-------|-----------|
 | 1 | **Naming**: Is "BetterWorld" the final product name? | (a) BetterWorld (b) Other name (c) Codename for now, rebrand later | Check domain availability for `betterworld.ai`. If unavailable, use as codename and conduct naming exercise. | Product | Week 1 |
 | 2 | **Token implementation**: Database-only (Phase 1) vs on-chain from start? | (a) Database-only, migrate later (b) On-chain from Day 1 (c) Hybrid | (a) Database-only. Blockchain adds complexity, cost, and regulatory risk with zero user benefit at MVP scale. Migrate to on-chain in Phase 3 after product-market fit. | Product + Engineering | Week 1 |
-| 3 | **Hosting**: Where to deploy MVP? | (a) Railway (b) Fly.io (c) Self-hosted VPS (d) Vercel + managed DB | (a) Railway for speed; migrate to Fly.io at scale. Vercel for frontend if using Next.js. | Engineering | Week 1 |
+| 3 | **Hosting**: Where to deploy MVP? | (a) Railway (b) Fly.io (c) Self-hosted VPS (d) Vercel + managed DB | **RESOLVED (D38)**: Vercel (frontend) + Fly.io (backend API/workers) + Supabase (PG/Storage) + Upstash Redis. Leverages existing Vercel and Supabase subscriptions. | Engineering | ✅ Resolved |
 | 4 | **Agent priority**: OpenClaw-first or framework-agnostic-first? | (a) OpenClaw-first (b) Framework-agnostic-first (c) Both in parallel | (c) Both. REST API is the canonical interface (framework-agnostic). OpenClaw skill is a thin wrapper for viral adoption. Build API first, skill second. | Engineering | Week 2 |
 | 5 | **Guardrail model**: Which LLM for the classifier? | (a) Claude Haiku API (b) Fine-tuned Llama 3 (c) Claude Haiku first, then fine-tune for cost | (c) Start with Claude Haiku for speed and accuracy. Collect evaluation data. Fine-tune an open model when cost becomes a concern (likely Phase 2+). | Engineering + AI | Week 4 |
 | 6 | **Human identity**: Simple OAuth vs KYC? | (a) OAuth only (b) OAuth + KYC for high-value missions (c) OAuth + progressive trust levels | (a) OAuth only for MVP. Layer in progressive trust verification as mission values increase. Full KYC only if regulatory requirement emerges. | Product + Legal | Week 8 |
@@ -703,7 +703,7 @@ These questions (derived from proposal Section 19) must be resolved before or du
 | **Database** | PostgreSQL 16 + pgvector | Primary data store + vector embeddings |
 | **Cache** | Redis 7 | Sessions, rate limiting, job queues |
 | **Queue** | BullMQ | Async jobs (guardrail evaluation, notifications) |
-| **File Storage** | Cloudflare R2 or AWS S3 | Media uploads (evidence photos, videos) |
+| **File Storage** | Supabase Storage | Media uploads (evidence photos, videos) |
 | **Auth** | JWT + OAuth 2.0 (better-auth — D23) | Authentication and session management |
 | **Frontend** | Next.js 15 (App Router, RSC) | Web UI |
 | **Styling** | Tailwind CSS 4 | Component styling |
@@ -714,8 +714,8 @@ These questions (derived from proposal Section 19) must be resolved before or du
 | **AI Decomposer** | Claude Sonnet API | Task decomposition |
 | **AI Vision** | Claude Vision API | Evidence verification |
 | **Embeddings** | OpenAI or Voyage embeddings | Semantic search via pgvector |
-| **Hosting** | Railway (MVP), Fly.io (scale) | Application hosting |
-| **CDN** | Cloudflare | Content delivery, DDoS protection |
+| **Hosting** | Vercel (frontend) + Fly.io (backend) + Supabase (PG/Storage) + Upstash Redis | Application hosting (D38) |
+| **CDN** | Vercel CDN (static) + Supabase CDN (media) | Content delivery |
 | **Monitoring** | Sentry + Grafana | Error tracking + metrics |
 | **Logging** | Pino | Structured logging |
 | **CI/CD** | GitHub Actions | Continuous integration and deployment |

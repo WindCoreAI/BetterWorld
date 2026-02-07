@@ -229,7 +229,7 @@ healthRoutes.get('/readyz', async (c) => {
 | A07: Auth Failures | Short-lived JWTs (15min), API key rotation, 2FA for admins, rate limiting on auth endpoints |
 | A08: Data Integrity Failures | Signed heartbeat instructions (Ed25519), content hash verification, no auto-deserialization of user input |
 | A09: Logging Failures | Structured logging with Pino, sensitive data redaction, audit trail for all admin actions |
-| A10: SSRF | No user-controlled URLs in server-side fetches. Evidence URLs point only to our R2 bucket. Agent-submitted URLs are stored but never fetched by the server. |
+| A10: SSRF | No user-controlled URLs in server-side fetches. Evidence URLs point only to our Supabase Storage bucket. Agent-submitted URLs are stored but never fetched by the server. |
 
 ### 12.2 Content Security Policy
 
@@ -294,7 +294,7 @@ export const createProblemSchema = z.object({
 
 - All secrets are environment variables, never committed to version control.
 - `.env` files are in `.gitignore`. `.env.example` contains placeholder values.
-- Railway injects secrets at runtime via their dashboard.
+- Fly.io injects backend secrets via `fly secrets set`. Supabase credentials come from the project settings dashboard. Vercel manages frontend env vars via its dashboard.
 - Environment variables are validated at startup with Zod — if any required secret is missing, the server refuses to start:
 
 ```typescript
@@ -307,10 +307,10 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
-  R2_ENDPOINT: z.string().url(),
-  R2_ACCESS_KEY_ID: z.string().min(1),
-  R2_SECRET_ACCESS_KEY: z.string().min(1),
-  R2_BUCKET_NAME: z.string().min(1),
+  SUPABASE_STORAGE_ENDPOINT: z.string().url(),
+  SUPABASE_STORAGE_ACCESS_KEY: z.string().min(1),
+  SUPABASE_STORAGE_SECRET_KEY: z.string().min(1),
+  SUPABASE_STORAGE_BUCKET: z.string().min(1),
   CDN_BASE_URL: z.string().url(),
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-'),
   SENTRY_DSN: z.string().url().optional(),
@@ -343,24 +343,26 @@ export type Env = z.infer<typeof envSchema>;
 
 ```
 Phase 1 (MVP, <1K users): Single instance
-  ├── 1 API server (Railway)
-  ├── 1 PostgreSQL instance (Railway)
-  ├── 1 Redis instance (Railway)
-  └── Workers in-process
+  ├── Vercel (Next.js frontend, auto-deployed)
+  ├── 1 Fly.io machine (Hono API + workers in-process)
+  ├── Supabase PostgreSQL (managed, pgvector enabled)
+  ├── Supabase Storage (evidence media, avatars)
+  └── Upstash Redis (BullMQ, cache, rate limits)
 
 Phase 2 (Growth, 1K-50K users): Multi-instance
-  ├── 2-4 API servers (Fly.io, multi-region)
-  ├── 1 PostgreSQL primary + 1 read replica
-  ├── 1 Redis instance (managed)
-  ├── Separate worker processes (1-2 instances)
-  └── CDN for static assets + media
+  ├── Vercel (frontend, edge functions if needed)
+  ├── 2-4 Fly.io API machines (multi-region)
+  ├── Supabase PostgreSQL + read replica (Supabase Pro)
+  ├── Upstash Redis Pro (higher throughput)
+  ├── Separate Fly.io worker processes (1-2 machines)
+  └── Vercel CDN (static) + Supabase CDN (media)
 
 Phase 3 (Scale, 50K+ users): Full distribution
-  ├── Auto-scaling API (Fly.io machines, 4-16 instances)
-  ├── PostgreSQL primary + 2 read replicas + PgBouncer
-  ├── Redis Cluster (3 nodes)
-  ├── Worker fleet (auto-scale based on queue depth)
-  ├── CDN at edge
+  ├── Vercel (frontend, globally distributed)
+  ├── Auto-scaling Fly.io API (4-16 machines)
+  ├── Supabase PostgreSQL + 2 read replicas + Supavisor pooling
+  ├── Upstash Redis Global (multi-region replication)
+  ├── Fly.io worker fleet (auto-scale based on queue depth)
   └── Consider: separate guardrail service for independent scaling
 ```
 
@@ -395,12 +397,12 @@ CREATE TABLE missions_2026_02 PARTITION OF missions
 
 ```
 Static assets (Next.js):
-  ├── /_next/static/*    → Cloudflare CDN, immutable, 1 year TTL
-  └── /images/*          → Cloudflare CDN, 1 week TTL
+  ├── /_next/static/*    → Vercel CDN, immutable, 1 year TTL
+  └── /images/*          → Vercel CDN, 1 week TTL
 
-Evidence media (R2):
-  ├── /evidence/*        → Cloudflare CDN, immutable, 1 year TTL
-  └── /avatars/*         → Cloudflare CDN, 24h TTL
+Evidence media (Supabase Storage):
+  ├── /evidence/*        → Supabase CDN, immutable, 1 year TTL
+  └── /avatars/*         → Supabase CDN, 24h TTL
 
 API responses:
   └── NOT cached at CDN (all dynamic, role-dependent)
@@ -409,7 +411,7 @@ API responses:
 ### 13.4 Rate Limiting at Multiple Layers
 
 ```
-Layer 1: Cloudflare WAF
+Layer 1: Cloudflare WAF (optional, or Fly.io built-in DDoS protection)
   └── DDoS protection, bot filtering, IP reputation
   └── 10K req/min per IP globally
 

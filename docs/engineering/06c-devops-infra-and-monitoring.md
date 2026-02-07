@@ -4,140 +4,125 @@
 
 ## 3. Infrastructure Architecture
 
-### 3.1 MVP (Railway)
+### 3.1 MVP (Vercel + Fly.io + Supabase + Upstash)
 
 **Service Topology:**
 
 ```
-                    ┌─────────────────────────────────────────────┐
-                    │              Railway Project                 │
-                    │                                             │
-   Internet ───────►│  ┌──────────────────────┐                  │
-                    │  │   Web (Next.js :3000) │                  │
-                    │  │   includes admin UI   │                  │
-                    │  │   at /admin route     │                  │
-                    │  └────────────┬──────────┘                  │
-                    │               │                              │
-                    │               ▼                              │
-                    │  ┌──────────────────────┐                  │
-                    │  │     API Service      │                  │
-                    │  │     (Hono :4000)     │                  │
-                    │  └──────┬──────┬────────┘                  │
-                    │         │      │                            │
-                    │    ┌────▼──┐ ┌─▼──────────┐               │
-                    │    │  PG   │ │   Redis    │               │
-                    │    │  16   │ │    7       │               │
-                    │    │pgvec  │ │            │               │
-                    │    └───────┘ └─────┬──────┘               │
-                    │                    │                       │
-                    │              ┌─────▼──────┐               │
-                    │              │   Worker   │               │
-                    │              │  (BullMQ)  │               │
-                    │              └────────────┘               │
-                    │                                           │
-                    │         Cloudflare R2 (external)          │
-                    └───────────────────────────────────────────┘
+                ┌──────────────┐         ┌────────────────────────┐
+                │   Vercel     │         │       Fly.io           │
+                │              │         │                        │
+   Internet ──►│  Next.js 15  │    ────►│  ┌──────────────────┐ │
+                │  (apps/web)  │         │  │  API Service     │ │
+                │  incl admin  │         │  │  (Hono :4000)    │ │
+                │  at /admin   │         │  │  + Worker        │ │
+                └──────────────┘         │  │  (BullMQ, in-    │ │
+                                         │  │   process)       │ │
+                                         │  └──────┬───────────┘ │
+                                         └─────────┼─────────────┘
+                                                   │
+                              ┌─────────────────────┼──────────────────┐
+                              │                     │                   │
+                    ┌─────────▼──────────┐  ┌──────▼────────┐  ┌──────▼──────────┐
+                    │  Supabase          │  │ Upstash Redis │  │ Supabase        │
+                    │  PostgreSQL 16     │  │ (serverless)  │  │ Storage         │
+                    │  + pgvector        │  │               │  │ (evidence       │
+                    │                    │  │ BullMQ, cache │  │  media)         │
+                    └────────────────────┘  │ rate-limits   │  └─────────────────┘
+                                           └───────────────┘
 ```
 
 > **Note**: Admin UI is served as a route group within the web app (`apps/web/(admin)/`), not as a separate service. Admin API routes are under `/api/v1/admin/*`.
 
-**Railway Configuration (railway.toml):**
+**Fly.io Configuration (fly.toml):**
 
 ```toml
-# railway.toml (API service)
-[build]
-builder = "nixpacks"
-buildCommand = "pnpm install --frozen-lockfile && pnpm turbo build --filter=api..."
+# fly.toml — API + Worker service (combined for MVP)
+app = "betterworld-api"
+primary_region = "iad"
 
-[deploy]
-startCommand = "node apps/api/dist/index.js"
-healthcheckPath = "/health"
-healthcheckTimeout = 300
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 5
-numReplicas = 1
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "4000"
+  LOG_LEVEL = "info"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 2
 ```
 
-```toml
-# railway.toml (Worker service)
-[build]
-builder = "nixpacks"
-buildCommand = "pnpm install --frozen-lockfile && pnpm turbo build --filter=api..."
+**Vercel** auto-deploys `apps/web` on push to `main`. No custom config needed beyond linking the monorepo in the Vercel dashboard (`Root Directory: apps/web`).
 
-[deploy]
-startCommand = "node apps/api/dist/worker.js"
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
-numReplicas = 1
-```
+**Cost Estimate (MVP):**
 
-```toml
-# railway.toml (Web service)
-[build]
-builder = "nixpacks"
-buildCommand = "pnpm install --frozen-lockfile && pnpm turbo build --filter=web..."
+| Resource | Provider | Spec | Monthly Cost |
+|----------|----------|------|-------------|
+| Frontend (Next.js + admin) | Vercel | Pro plan (existing subscription) | $0 (included) |
+| API + Worker | Fly.io | shared-cpu-2x, 1 GB RAM | ~$5-7 |
+| PostgreSQL + pgvector | Supabase | Free/Pro plan (existing subscription) | $0 (included) |
+| File Storage | Supabase Storage | Included in plan | $0 (included) |
+| Redis | Upstash | Free tier (10K commands/day) | $0 |
+| **Total** | | | **~$5-7/mo** |
 
-[deploy]
-startCommand = "node apps/web/.next/standalone/server.js"
-healthcheckPath = "/"
-healthcheckTimeout = 120
-numReplicas = 1
-```
+**Scaling triggers (move to multi-instance):**
 
-**Cost Estimate (Railway MVP):**
+| Trigger | Action |
+|---------|--------|
+| API p95 consistently > 300ms | Add Fly.io machines (scale to 2-4) |
+| BullMQ queue depth > 100 sustained | Separate worker to its own Fly.io machine |
+| Supabase free tier limits hit | Upgrade to Supabase Pro ($25/mo) |
+| Upstash free tier limits hit | Upgrade to Upstash Pro (~$10/mo) |
+| Users in EU/Asia report > 200ms | Add Fly.io read region + Supabase read replica |
 
-| Resource | Spec | Monthly Cost |
-|----------|------|-------------|
-| API Service | 1 vCPU, 1 GB RAM | $10 |
-| Web Service (includes admin UI) | 0.5 vCPU, 512 MB RAM | $5 |
-| Worker Service | 1 vCPU, 1 GB RAM | $10 |
-| PostgreSQL | 1 GB RAM, 10 GB disk | $10 |
-| Redis | 256 MB | $5 |
-| **Total** | | **~$40/mo** |
-
-**Limitations and migration triggers:**
-
-| Limitation | Trigger to Migrate |
-|-----------|-------------------|
-| Single region (US-West) | Users in EU/Asia report > 200ms latency |
-| No auto-scaling | API p95 consistently > 300ms under load |
-| Shared infrastructure | Need for dedicated compute isolation |
-| 500 GB bandwidth included | Exceeding bandwidth limits |
-| Limited observability | Need custom Prometheus metrics |
-
-Recommendation: Migrate to Fly.io when monthly Railway spend exceeds $200 or when multi-region becomes a requirement (estimated at ~1K active agents).
-
-### 3.2 Scale (Fly.io)
+### 3.2 Scale (Multi-Region)
 
 **Service Topology with Regions:**
 
 ```
-                    ┌──────────────────────────────────────────────┐
-                    │              Fly.io Organization              │
-                    │                                              │
-                    │  Primary Region: iad (US-East)               │
-                    │  ┌───────────────────────────────┐          │
-                    │  │  API (3 machines, auto-scale)  │          │
-                    │  │  Web (2 machines, incl. admin) │          │
-                    │  │  Worker (2 machines)            │          │
-                    │  │  PostgreSQL (primary, 2 vCPU)  │          │
-                    │  │  Redis (primary)                │          │
-                    │  └───────────────────────────────┘          │
-                    │                                              │
-                    │  Read Replica Region: lhr (London)           │
-                    │  ┌───────────────────────────────┐          │
-                    │  │  API (2 machines, read-only DB)│          │
-                    │  │  Web (1 machine)               │          │
-                    │  │  PostgreSQL (read replica)     │          │
-                    │  └───────────────────────────────┘          │
-                    │                                              │
-                    │  Read Replica Region: nrt (Tokyo)            │
-                    │  ┌───────────────────────────────┐          │
-                    │  │  API (1 machine, read-only DB) │          │
-                    │  │  Web (1 machine)               │          │
-                    │  │  PostgreSQL (read replica)     │          │
-                    │  └───────────────────────────────┘          │
-                    └──────────────────────────────────────────────┘
+    Vercel (global edge)                   Fly.io Organization
+    ┌────────────────────┐    ┌──────────────────────────────────────┐
+    │  Next.js frontend  │    │  Primary Region: iad (US-East)       │
+    │  (auto-scaled,     │    │  ┌────────────────────────────────┐  │
+    │   global CDN)      │    │  │  API (3 machines, auto-scale)  │  │
+    └────────────────────┘    │  │  Worker (2 machines)            │  │
+                              │  └────────────────────────────────┘  │
+    Supabase                  │                                      │
+    ┌────────────────────┐    │  Read Replica Region: lhr (London)   │
+    │  PostgreSQL primary│    │  ┌────────────────────────────────┐  │
+    │  + read replicas   │    │  │  API (2 machines, read-only)   │  │
+    │  + Storage + CDN   │    │  └────────────────────────────────┘  │
+    └────────────────────┘    │                                      │
+                              │  Read Replica Region: nrt (Tokyo)    │
+    Upstash Redis             │  ┌────────────────────────────────┐  │
+    ┌────────────────────┐    │  │  API (1 machine, read-only)    │  │
+    │  Global replication│    │  └────────────────────────────────┘  │
+    │  (multi-region)    │    └──────────────────────────────────────┘
+    └────────────────────┘
 ```
 
 **fly.toml (API service):**
@@ -208,42 +193,15 @@ primary_region = "iad"
   processes = ["worker"]
 ```
 
-```toml
-# fly.toml — Web service
-app = "betterworld-web"
-primary_region = "iad"
-
-[build]
-  dockerfile = "apps/web/Dockerfile"
-
-[env]
-  NODE_ENV = "production"
-  PORT = "3000"
-
-[http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = "suspend"
-  auto_start_machines = true
-  min_machines_running = 1
-
-  [http_service.concurrency]
-    type = "requests"
-    hard_limit = 500
-    soft_limit = 400
-
-[[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
-```
+**Frontend**: Deployed to Vercel (auto-deploy on push to `main`). No fly.toml needed — Vercel handles SSR, RSC, edge caching, and global CDN automatically.
 
 **Auto-scaling Policies:**
 
-| Service | Min Machines | Max Machines | Scale Trigger | Cool-down |
-|---------|-------------|-------------|---------------|-----------|
-| API | 2 | 10 | > 200 concurrent requests | 5 min |
-| Web | 1 | 5 | > 400 concurrent requests | 5 min |
-| Worker | 1 | 5 | BullMQ queue depth > 100 jobs | 10 min |
+| Service | Provider | Min Machines | Max Machines | Scale Trigger | Cool-down |
+|---------|----------|-------------|-------------|---------------|-----------|
+| API | Fly.io | 2 | 10 | > 200 concurrent requests | 5 min |
+| Frontend | Vercel | auto | auto | Managed by Vercel (serverless) | N/A |
+| Worker | Fly.io | 1 | 5 | BullMQ queue depth > 100 jobs | 10 min |
 
 **Multi-region Strategy:**
 
@@ -297,7 +255,7 @@ This architecture is not needed before ~10K agents / 50K humans. Documented here
                     │  │ Read       │  └──────────────────────┘    │
                     │  │ replicas   │                               │
                     │  └────────────┘  ┌──────────────────────┐    │
-                    │                  │    S3 / R2            │    │
+                    │                  │    S3                 │    │
                     │                  │    (evidence media)   │    │
                     │                  └──────────────────────┘    │
                     │                                              │
@@ -311,8 +269,8 @@ This architecture is not needed before ~10K agents / 50K humans. Documented here
 
 | Concern | Fly.io | AWS/GCP |
 |---------|--------|---------|
-| Database | Fly Postgres (community) | RDS Multi-AZ (managed, automated backups, PITR) |
-| Cache | Upstash or Fly Redis | ElastiCache cluster with failover |
+| Database | Supabase PostgreSQL (managed, daily backups) | RDS Multi-AZ (managed, automated backups, PITR) |
+| Cache | Upstash Redis (serverless) | ElastiCache cluster with failover |
 | Compute | Fly Machines (microVMs) | ECS Fargate or Cloud Run (container-level isolation) |
 | Networking | Anycast, WireGuard mesh | VPC, private subnets, NAT gateways |
 | Compliance | SOC 2 (Fly.io) | SOC 2, HIPAA, PCI-DSS (if needed) |
@@ -373,10 +331,10 @@ pnpm --filter db push
 
 | Backup Type | Frequency | Retention | Storage | Automation |
 |-------------|-----------|-----------|---------|------------|
-| Continuous WAL archiving (PITR) | Continuous | 7 days | Railway/Fly internal | Built into managed PG |
-| Daily logical backup (`pg_dump`) | Daily at 03:00 UTC | 30 days | Cloudflare R2 | Cron job on worker |
-| Pre-migration snapshot | Before each migration | 90 days | GitHub Actions artifact + R2 | CI workflow |
-| Monthly full backup | 1st of month | 1 year | R2 cold storage | Cron job |
+| Continuous WAL archiving (PITR) | Continuous | 7 days | Supabase/Fly internal | Built into managed PG |
+| Daily logical backup (`pg_dump`) | Daily at 03:00 UTC | 30 days | Supabase Storage | Cron job on worker |
+| Pre-migration snapshot | Before each migration | 90 days | GitHub Actions artifact + Supabase Storage | CI workflow |
+| Monthly full backup | 1st of month | 1 year | Supabase Storage | Cron job |
 
 **Daily backup script (runs as BullMQ scheduled job):**
 
@@ -402,19 +360,19 @@ const backupWorker = new Worker(
       `pg_dump "${process.env.DATABASE_URL}" --format=custom --no-owner --compress=9 -f ${filepath}`
     );
 
-    // 2. Upload to R2
+    // 2. Upload to Supabase Storage
     const s3 = new S3Client({
       region: "auto",
-      endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
+      endpoint: process.env.SUPABASE_STORAGE_ENDPOINT,
       credentials: {
-        accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY!,
-        secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_KEY!,
+        accessKeyId: process.env.SUPABASE_STORAGE_ACCESS_KEY!,
+        secretAccessKey: process.env.SUPABASE_STORAGE_SECRET_KEY!,
       },
     });
 
     await s3.send(
       new PutObjectCommand({
-        Bucket: `${process.env.CLOUDFLARE_R2_BUCKET}-backups`,
+        Bucket: `${process.env.SUPABASE_STORAGE_BUCKET}-backups`,
         Key: `daily/${filename}`,
         Body: createReadStream(filepath),
       })
@@ -771,12 +729,12 @@ export function createRequestLogger(requestId: string, agentId?: string) {
 Application (Pino JSON) → stdout
     │
     ▼
-Railway/Fly log drain → Grafana Loki (or Datadog / Axiom)
+Fly.io log drain → Grafana Loki (or Datadog / Axiom)
     │
     ▼
 Grafana dashboards + log search
 ```
 
-**MVP approach:** Railway provides built-in log viewing. At the Fly.io stage, configure a log drain to Grafana Cloud Loki (free tier covers 50 GB/month).
+**MVP approach:** Fly.io provides built-in log viewing via `fly logs`. Configure a log drain to Grafana Cloud Loki (free tier covers 50 GB/month) when structured log search is needed.
 
 ---

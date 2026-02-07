@@ -132,8 +132,8 @@ Revocation:  DELETE /api/v1/auth/agents/keys/:prefix → immediate invalidation
 | Layer | Method | Details |
 |-------|--------|---------|
 | Data in transit | TLS 1.3 (required for all connections. TLS 1.2 not supported — new platform, no legacy compatibility needed) | Enforced by Cloudflare. HSTS enabled. |
-| Data at rest (database) | AES-256 (provider-managed) | Railway/Fly.io managed encryption for PostgreSQL volumes. |
-| Data at rest (object storage) | AES-256 (SSE-S3) | Cloudflare R2 server-side encryption. |
+| Data at rest (database) | AES-256 (provider-managed) | Supabase/Fly.io managed encryption for PostgreSQL volumes. |
+| Data at rest (object storage) | AES-256 (SSE-S3) | Supabase Storage server-side encryption. |
 | API key hashes | bcrypt (cost factor 12) | One-way hash. Original key never stored. |
 | TOTP secrets | AES-256-GCM | Encrypted in database with application-level key. |
 | Backup codes | bcrypt (cost factor 12) | One-way hash. Codes shown once at generation. |
@@ -279,8 +279,8 @@ Internet
        │ Origin pull (TLS, authenticated)
        ▼
 ┌──────────────┐
-│  Railway /    │  Application containers
-│  Fly.io       │  Private networking between services
+│  Fly.io       │  Application containers
+│               │  Private networking between services
 ├──────────────┤
 │  API Server   │◄─────── Only service exposed to internet
 │  Web Server   │◄─────── Only service exposed to internet
@@ -330,7 +330,7 @@ Internet
 | Agent API keys | bcrypt hash in database | On demand (agent-initiated) | Self-service |
 | OAuth client secrets | Environment variable | Annually | Manual |
 | Cloudflare API token | Environment variable | Annually | Manual |
-| R2 access keys | Environment variable | Quarterly | Yes (see 6.2) |
+| Supabase Storage keys | Environment variable (Fly.io secrets) | Quarterly | Yes (see 6.2) |
 
 ### 6.2 Automated Secret Rotation
 
@@ -353,16 +353,16 @@ jobs:
           echo "::add-mask::$NEW_SECRET"
           echo "NEW_JWT_SECRET=$NEW_SECRET" >> $GITHUB_ENV
 
-      - name: Update secret in Railway/Fly
+      - name: Update secret in Fly.io
         run: |
-          # Railway: update via CLI
-          railway variables set JWT_SECRET="$NEW_JWT_SECRET" --environment production
-          railway variables set JWT_SECRET_PREVIOUS="$CURRENT_JWT_SECRET" --environment production
+          # Fly.io: update via CLI
+          fly secrets set JWT_SECRET="$NEW_JWT_SECRET" --app betterworld-api
+          fly secrets set JWT_SECRET_PREVIOUS="$CURRENT_JWT_SECRET" --app betterworld-api
 
       - name: Trigger rolling restart
         run: |
-          # Railway: redeploy to pick up new secret
-          railway redeploy --environment production
+          # Fly.io: redeploy to pick up new secret
+          fly deploy --app betterworld-api
 
       - name: Verify health
         run: |
@@ -375,30 +375,19 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"text":"JWT secret rotated successfully. Previous secret remains valid for 24h grace period."}'
 
-  rotate-r2-keys:
-    name: Rotate R2 Access Keys
+  rotate-storage-keys:
+    name: Rotate Supabase Storage Keys
     runs-on: ubuntu-latest
     steps:
-      - name: Create new R2 key pair
+      - name: Rotate Supabase service role key
         run: |
-          # Use Cloudflare API to create new key
-          NEW_KEYS=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/r2/credentials" \
-            -H "Authorization: Bearer $CF_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"name":"betterworld-r2-'$(date +%Y%m%d)'","type":"admin"}')
-          # Extract and set new keys...
+          # Supabase Storage uses the service role key; rotate via Supabase dashboard or CLI
+          # Update the key in Fly.io secrets
+          fly secrets set SUPABASE_SERVICE_ROLE_KEY="$NEW_SUPABASE_KEY" --app betterworld-api
 
-      - name: Update and restart
+      - name: Trigger rolling restart
         run: |
-          railway variables set R2_ACCESS_KEY_ID="$NEW_ACCESS_KEY" --environment production
-          railway variables set R2_SECRET_ACCESS_KEY="$NEW_SECRET_KEY" --environment production
-          railway redeploy --environment production
-
-      - name: Revoke old key (after grace period)
-        run: |
-          sleep 3600  # 1 hour grace
-          curl -X DELETE "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/r2/credentials/$OLD_KEY_ID" \
-            -H "Authorization: Bearer $CF_API_TOKEN"
+          fly deploy --app betterworld-api
 ```
 
 ### 6.3 JWT Secret Rotation with Grace Period
@@ -526,7 +515,7 @@ function validateSelfAudit(
 | Right to access (Art. 15) | Planned | `/api/v1/me/data-export` endpoint |
 | Right to deletion (Art. 17) | Designed | Account deletion flow (Section 3.5) |
 | Right to portability (Art. 20) | Planned | JSON export of user data |
-| Data Processing Agreement | Planned | For Anthropic, Cloudflare, Railway/Fly.io |
+| Data Processing Agreement | Planned | For Anthropic, Cloudflare, Fly.io, Supabase, Upstash |
 | Cookie consent | Planned | Only functional cookies in Phase 1 (no tracking) |
 | Data breach notification | Designed | 72-hour notification process (Section 9) |
 | DPO appointment | Deferred | Required when processing at scale — evaluate at 10K users |
@@ -652,9 +641,9 @@ interface AuditLogEntry {
 |---------|------------|:----------:|:------------:|:---------------:|
 | Anthropic (Claude) | Content text (for classification) | High | Yes | Completed |
 | Cloudflare | All traffic (edge proxy) | High | Yes | Completed |
-| Railway / Fly.io | All application data | Critical | Yes | Completed |
-| Railway PostgreSQL (MVP) / Fly.io PostgreSQL (scale) | All database data | Critical | Yes | In progress |
-| Cloudflare R2 | Evidence files (images, docs) | High | Yes (covered by CF) | Completed |
+| Fly.io | All application containers | Critical | Yes | Completed |
+| Supabase | PostgreSQL database + object storage | Critical | Yes | In progress |
+| Upstash | Redis data (caching, rate limiting) | High | Yes | Planned |
 | GitHub | Source code, CI secrets | High | Yes | Completed |
 | Google OAuth | User email, name | Medium | Standard terms | N/A |
 | GitHub OAuth | User email, username | Medium | Standard terms | N/A |

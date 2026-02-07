@@ -55,10 +55,10 @@ x-common-env: &common-env
   NODE_ENV: development
   DATABASE_URL: postgresql://betterworld:betterworld_dev@postgres:5432/betterworld?sslmode=disable
   REDIS_URL: redis://redis:6379
-  CLOUDFLARE_R2_ENDPOINT: http://minio:9000
-  CLOUDFLARE_R2_ACCESS_KEY: minioadmin
-  CLOUDFLARE_R2_SECRET_KEY: minioadmin
-  CLOUDFLARE_R2_BUCKET: betterworld-dev
+  SUPABASE_STORAGE_ENDPOINT: http://minio:9000
+  SUPABASE_STORAGE_ACCESS_KEY: minioadmin
+  SUPABASE_STORAGE_SECRET_KEY: minioadmin
+  SUPABASE_STORAGE_BUCKET: betterworld-dev
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-ant-placeholder}
   JWT_SECRET: dev-jwt-secret-do-not-use-in-production
   ED25519_PRIVATE_KEY: ${ED25519_PRIVATE_KEY:-}
@@ -108,7 +108,7 @@ services:
       retries: 5
 
   # ---------------------------------------------------------------------------
-  # Object storage (S3-compatible, replaces Cloudflare R2 locally)
+  # Object storage (S3-compatible, replaces Supabase Storage locally)
   # ---------------------------------------------------------------------------
   minio:
     image: minio/minio:latest
@@ -573,12 +573,12 @@ VISION_MODEL=claude-sonnet-4-5-20250929
 EMBEDDING_MODEL=voyage-3
 EMBEDDING_DIMENSIONS=1024
 
-# ─── Object Storage (Cloudflare R2 / S3-compatible) ─────────────────────────
-CLOUDFLARE_R2_ENDPOINT=http://localhost:9000
-CLOUDFLARE_R2_ACCESS_KEY=minioadmin
-CLOUDFLARE_R2_SECRET_KEY=minioadmin
-CLOUDFLARE_R2_BUCKET=betterworld-dev
-CLOUDFLARE_R2_PUBLIC_URL=http://localhost:9000/betterworld-dev
+# ─── Object Storage (Supabase Storage / S3-compatible, MinIO locally) ─────────────────────────
+SUPABASE_STORAGE_ENDPOINT=http://localhost:9000
+SUPABASE_STORAGE_ACCESS_KEY=minioadmin
+SUPABASE_STORAGE_SECRET_KEY=minioadmin
+SUPABASE_STORAGE_BUCKET=betterworld-dev
+SUPABASE_STORAGE_PUBLIC_URL=http://localhost:9000/betterworld-dev
 
 # ─── OAuth Providers ────────────────────────────────────────────────────────
 GOOGLE_CLIENT_ID=

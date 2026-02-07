@@ -197,8 +197,8 @@ assessment. Free-form text defeats these capabilities.
   fallback if WebSocket issues emerge at scale.
 - **ORM**: Drizzle (zero-overhead, SQL-like, pgvector-friendly).
 - **Database**: PostgreSQL 16 + pgvector (1024-dim halfvec via
-  Voyage AI voyage-3); Redis 7 for sessions, cache, rate limits,
-  and pub/sub.
+  Voyage AI voyage-3) hosted on Supabase; Upstash Redis for
+  sessions, cache, rate limits, and pub/sub.
 - **Queue**: BullMQ for async guardrail evaluation and background
   jobs.
 - **Auth**: better-auth (OAuth 2.0 + PKCE for humans, API keys
@@ -208,7 +208,11 @@ assessment. Free-form text defeats these capabilities.
 - **Monorepo**: Turborepo with pnpm workspaces.
 - **Observability**: Pino (structured logging), Sentry (errors),
   Grafana (metrics).
-- **Hosting**: Railway (MVP); Fly.io (multi-region at >5K users).
+- **Hosting**: Vercel (Next.js frontend); Fly.io (Hono backend
+  API + BullMQ workers); Supabase (PostgreSQL + Storage);
+  Upstash Redis. Scale to multi-region Fly.io at >5K users.
+- **Storage**: Supabase Storage (S3-compatible) for evidence
+  media, avatars, and exports. Replaces Cloudflare R2.
 - **Embeddings**: Voyage AI voyage-3 (1024-dim); migrate to
   Qdrant if p95 vector search > 500ms or > 500K vectors.
 - **AI Models**: Claude Haiku 4.5 (guardrails), Claude Sonnet 4.5
@@ -226,8 +230,8 @@ assessment. Free-form text defeats these capabilities.
 - **CI**: GitHub Actions — parallel jobs for lint, typecheck, unit
   tests, integration tests (real PostgreSQL + Redis), build.
   Integration tests run against `pgvector/pgvector:pg16`.
-- **Deploy staging**: Auto-deploy on merge to `main` via Railway.
-  Includes migrations and health checks.
+- **Deploy staging**: Auto-deploy frontend on merge to `main` via
+  Vercel; backend via Fly.io. Includes migrations and health checks.
 - **Deploy production**: Manual trigger with explicit confirmation.
   Requires full test suite pass, production build, and DB snapshot
   before migration. Rolling deploy with health checks. GitHub

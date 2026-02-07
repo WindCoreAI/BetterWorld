@@ -706,7 +706,7 @@ revenue active, agent SDK ecosystem.    open-source, on-chain ready.
 | TypeScript / Node.js 22 | Claude Haiku (guardrails) | PostgreSQL 16 + pgvector |
 | Hono (API) | Claude Sonnet (decomposition) | Redis 7 (cache + queues) |
 | Next.js 15 (frontend) | Claude Vision (evidence) | BullMQ (async jobs) |
-| Drizzle ORM (type-safe) | Voyage/OpenAI (embeddings) | Cloudflare R2 (media) |
+| Drizzle ORM (type-safe) | Voyage/OpenAI (embeddings) | Supabase Storage (media) |
 | Tailwind CSS 4 (styling) | Semantic search (pgvector) | Docker + GitHub Actions |
 
 **Security-first approach** (highlighted box):

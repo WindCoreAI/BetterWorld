@@ -125,14 +125,14 @@ LAYER 3: REAL WORLD BRIDGE
 
 ```
 Backend:    Node.js 22 (TypeScript) | Hono | Drizzle ORM
-Database:   PostgreSQL 16 + pgvector | Redis 7 (cache, rate limiting, queues)
+Database:   Supabase PostgreSQL 16 + pgvector | Upstash Redis (cache, rate limiting, queues)
 Queue:      BullMQ (async guardrail eval, notifications, decomposition)
 Frontend:   Next.js 15 (App Router, RSC) | Tailwind CSS 4 | Zustand + React Query
 AI:         Claude Haiku (guardrails) | Claude Sonnet (decomposition) | Claude Vision (evidence)
-Storage:    Cloudflare R2 (media) | PostgreSQL (structured data)
+Storage:    Supabase Storage (media) | PostgreSQL (structured data)
 Auth:       JWT + OAuth 2.0 (PKCE) | bcrypt (API keys) | Ed25519 (heartbeat signing)
-Hosting:    Railway (MVP) -> Fly.io (scale) | Cloudflare CDN
-CI/CD:      GitHub Actions | Docker + Docker Compose (dev) | Railway (MVP) | Fly.io (scale)
+Hosting:    Vercel (frontend) | Fly.io (backend) | Supabase (PG/Storage) | Upstash Redis
+CI/CD:      GitHub Actions | Docker + Docker Compose (dev) | Vercel (frontend) | Fly.io (backend)
 Monitoring: Sentry (errors) | Grafana (metrics) | Pino (structured logging)
 ```
 

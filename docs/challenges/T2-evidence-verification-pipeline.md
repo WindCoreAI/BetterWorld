@@ -445,13 +445,12 @@ For self-hosted models (Tiers 3-4), the hosting options:
 
 | Provider | GPU | Monthly Cost | Can Run | Throughput |
 |----------|-----|-------------|---------|-----------|
-| **Railway** (current) | No GPU support | N/A | Nothing | N/A |
+| **Fly.io GPU** (current infra) | L4 (24GB) | ~$0.50/hr = $360/mo | LLaVA 13B | ~90 images/min |
 | **Replicate** (serverless) | A40/A100 (on demand) | Pay per second (~$0.0001/inference) | Any model | Burst-capable |
 | **Modal** (serverless) | T4/A10G/A100 | Pay per second (~$0.0001/inference) | Any model | Burst-capable |
 | **RunPod** (reserved) | RTX 4090 (24GB) | ~$0.44/hr = $316/mo | LLaVA 13B, CLIP | ~100 images/min |
 | **Vast.ai** (spot) | RTX 3090 (24GB) | ~$0.15/hr = $108/mo | LLaVA 13B, CLIP | ~80 images/min |
 | **Lambda Labs** | A10 (24GB) | ~$0.60/hr = $432/mo | InternVL2 26B | ~60 images/min |
-| **Fly.io GPU** (current infra) | L4 (24GB) | ~$0.50/hr = $360/mo | LLaVA 13B | ~90 images/min |
 
 **Recommendation for BetterWorld**:
 

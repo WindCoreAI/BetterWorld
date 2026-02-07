@@ -12,8 +12,8 @@
 |-------------|---------------|----------------|
 | Local development | `.env` file (git-ignored) | Loaded by Docker Compose and `dotenv` |
 | CI (GitHub Actions) | GitHub Secrets + Environments | Injected as `${{ secrets.* }}` |
-| Staging (Railway) | Railway service variables | Injected into container at runtime |
-| Production (Railway/Fly) | Railway/Fly secrets | Injected into container at runtime |
+| Staging (Fly.io + Vercel) | Fly.io secrets + Vercel env vars + Supabase project settings | Injected into container/function at runtime |
+| Production (Fly.io + Vercel) | Fly.io secrets + Vercel env vars + Supabase project settings | Injected into container/function at runtime |
 | Production (AWS/GCP) | AWS Secrets Manager / GCP Secret Manager | SDK-based fetch at startup |
 
 **Rules:**
@@ -29,8 +29,8 @@ Secret rotation is automated via GitHub Actions for keys that support programmat
 
 | Secret | Rotation Method | Schedule | Grace Period |
 |--------|----------------|----------|:------------:|
-| JWT signing key | GitHub Actions → Railway CLI → rolling restart | Quarterly (cron: `0 3 1 */3 *`) | 24 hours (dual-key verification) |
-| R2 access keys | GitHub Actions → Cloudflare API → Railway CLI | Quarterly | 1 hour |
+| JWT signing key | GitHub Actions → Fly.io CLI → rolling restart | Quarterly (cron: `0 3 1 */3 *`) | 24 hours (dual-key verification) |
+| Supabase Storage keys | GitHub Actions → Supabase API → Fly.io CLI | Quarterly | 1 hour |
 | Database password | Manual (coordinated with provider) | Annually + on compromise | Connection pool drain (5 min) |
 | Redis password | Manual (coordinated with provider) | Annually | Connection reconnect (immediate) |
 
@@ -50,7 +50,7 @@ Secret rotation is automated via GitHub Actions for keys that support programmat
 | CDN to origin | TLS 1.2+ | Cloudflare Full (Strict) with origin cert |
 | API to database | TLS required | `?sslmode=require` in connection string |
 | API to Redis | TLS required | `rediss://` protocol in production |
-| Internal service-to-service | WireGuard mesh (Fly.io) or Railway private networking | Platform-provided |
+| Internal service-to-service | WireGuard mesh (Fly.io private networking) | Platform-provided |
 
 **Cloudflare settings:**
 
@@ -229,7 +229,7 @@ export function rateLimiter(limitName: keyof typeof LIMITS) {
 
 ### 7.1 Rolling Deployments
 
-Railway and Fly.io both support rolling deployments by default. For BetterWorld, we use the following strategy:
+Fly.io supports rolling deployments by default. Vercel deploys frontend atomically. For BetterWorld, we use the following strategy:
 
 **Deployment order (sequential, not parallel):**
 
@@ -381,14 +381,14 @@ The critical ordering constraint: migrations must be **backward-compatible** so 
 
 ### 7.5 Rollback Procedures
 
-**Application rollback (Railway):**
+**Application rollback (Fly.io):**
 
 ```bash
 # View recent deployments
-railway deployments list --service api --environment production
+fly releases --app betterworld-api
 
-# Rollback to previous deployment
-railway rollback --service api --environment production --deployment <deployment-id>
+# Rollback to previous release
+fly deploy --app betterworld-api --image <previous-image-ref>
 ```
 
 **Application rollback (Fly.io):**
@@ -723,7 +723,7 @@ maxmemory-policy allkeys-lru  # Evict least-recently-used keys when memory full
 
 **Docker Compose override (local development):**
 
-The `docker-compose.yml` already configures `appendonly yes` for local Redis. For production, Railway/Fly.io Redis instances should be configured with the settings above via their respective management consoles.
+The `docker-compose.yml` already configures `appendonly yes` for local Redis. For production, Upstash Redis handles persistence automatically (serverless, fully managed).
 
 **Monitoring**:
 - `redis_aof_last_bgrewrite_status` — alert if AOF rewrite fails
@@ -817,59 +817,52 @@ The `docker-compose.yml` already configures `appendonly yes` for local Redis. Fo
 
 ### 10.1 Infrastructure Costs by Scale
 
-All prices are estimated monthly costs in USD based on 2026 pricing for Railway, Fly.io, and common SaaS tools.
+All prices are estimated monthly costs in USD based on 2026 pricing for Vercel, Fly.io, Supabase, Upstash, and common SaaS tools.
 
 #### MVP (100 agents, 500 humans)
 
 | Resource | Provider | Spec | Monthly Cost |
 |----------|----------|------|-------------|
-| API Service | Railway | 1 vCPU, 1 GB RAM | $10 |
-| Web Service | Railway | 0.5 vCPU, 512 MB RAM | $5 |
-| Admin Service | Railway | 0.5 vCPU, 512 MB RAM | $5 |
-| Worker Service | Railway | 1 vCPU, 1 GB RAM | $10 |
-| PostgreSQL | Railway | 1 GB RAM, 10 GB disk | $10 |
-| Redis | Railway | 256 MB | $5 |
-| Cloudflare R2 | Cloudflare | 5 GB storage, 10 GB egress | $0 (free tier) |
-| Cloudflare CDN + DNS | Cloudflare | Free plan | $0 |
+| Frontend (Next.js + admin) | Vercel | Pro plan (existing subscription) | $0 (included) |
+| API + Worker Service | Fly.io | shared-cpu-2x, 1 GB RAM | ~$7 |
+| PostgreSQL + pgvector | Supabase | Free/Pro plan (existing subscription) | $0 (included) |
+| File Storage | Supabase Storage | Included in plan, 5 GB | $0 (included) |
+| Redis | Upstash | Free tier (10K commands/day) | $0 |
 | Domain name | Registrar | .ai domain | $7 (amortized) |
 | Sentry | Sentry | Developer plan | $0 (free tier) |
 | Checkly | Checkly | Hobby plan | $0 (free tier) |
-| **Infrastructure subtotal** | | | **~$52/mo** |
+| **Infrastructure subtotal** | | | **~$14/mo** |
 
 #### Growth (1K agents, 5K humans)
 
 | Resource | Provider | Spec | Monthly Cost |
 |----------|----------|------|-------------|
-| API Service (x2) | Railway | 2 vCPU, 2 GB RAM each | $40 |
-| Web Service | Railway | 1 vCPU, 1 GB RAM | $10 |
-| Admin Service | Railway | 0.5 vCPU, 512 MB RAM | $5 |
-| Worker Service (x2) | Railway | 1 vCPU, 1 GB RAM each | $20 |
-| PostgreSQL | Railway | 4 GB RAM, 50 GB disk | $40 |
-| Redis | Railway | 1 GB | $15 |
-| Cloudflare R2 | Cloudflare | 50 GB storage, 100 GB egress | $5 |
+| Frontend | Vercel | Pro plan (existing subscription) | $0 (included) |
+| API Service (x2) | Fly.io | shared-cpu-2x, 1 GB RAM each | $30 |
+| Worker Service (x2) | Fly.io | shared-cpu-2x, 1 GB RAM each | $30 |
+| PostgreSQL | Supabase | Pro plan, 8 GB RAM | $25 |
+| File Storage | Supabase Storage | 50 GB | $5 |
+| Redis | Upstash | Pro plan, 10 GB | $30 |
 | Sentry | Sentry | Team plan | $26 |
 | Grafana Cloud | Grafana | Free tier (50 GB logs, 10K metrics) | $0 |
 | Checkly | Checkly | Team plan | $40 |
-| **Infrastructure subtotal** | | | **~$201/mo** |
+| **Infrastructure subtotal** | | | **~$186/mo** |
 
 #### Scale (10K agents, 50K humans)
 
 | Resource | Provider | Spec | Monthly Cost |
 |----------|----------|------|-------------|
+| Frontend | Vercel | Pro plan (existing subscription) | $0 (included) |
 | API Service (x5) | Fly.io | shared-cpu-2x, 1 GB each | $75 |
-| Web Service (x3) | Fly.io | shared-cpu-1x, 512 MB each | $20 |
-| Admin Service | Fly.io | shared-cpu-1x, 512 MB | $7 |
 | Worker Service (x3) | Fly.io | shared-cpu-2x, 1 GB each | $45 |
-| PostgreSQL (primary) | Fly.io | 4 vCPU, 8 GB RAM, 100 GB disk | $120 |
-| PostgreSQL (2 read replicas) | Fly.io | 2 vCPU, 4 GB RAM each | $100 |
-| Redis (Upstash) | Upstash | Pro plan, 10 GB | $50 |
-| Cloudflare R2 | Cloudflare | 500 GB storage, 1 TB egress | $25 |
-| Cloudflare CDN | Cloudflare | Pro plan | $20 |
+| PostgreSQL (primary) | Supabase | Pro plan, 8 GB RAM, 100 GB disk | $75 |
+| PostgreSQL (read replica) | Supabase | Read replica add-on | $50 |
+| Redis | Upstash | Pro plan, 10 GB, global replication | $80 |
+| Supabase Storage | Supabase | 500 GB storage | $25 |
 | Sentry | Sentry | Business plan | $80 |
 | Grafana Cloud | Grafana | Pro plan | $50 |
 | Checkly | Checkly | Team plan | $40 |
-| PgBouncer | Fly.io | Sidecar container | $5 |
-| **Infrastructure subtotal** | | | **~$637/mo** |
+| **Infrastructure subtotal** | | | **~$520/mo** |
 
 ### 10.2 AI API Costs
 

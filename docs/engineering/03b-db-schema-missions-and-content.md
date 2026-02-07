@@ -169,7 +169,7 @@ import {
   index,
   check,
 } from "drizzle-orm/pg-core";
-import { evidenceTypeEnum } from "./enums";
+import { evidenceTypeEnum, evidenceVerificationStageEnum } from "./enums";
 import { missions } from "./missions";
 import { humans } from "./humans";
 import { impactMetrics } from "./impact-metrics";
@@ -212,7 +212,7 @@ export const evidence = pgTable(
     exifData: jsonb("exif_data"),
     gpsCoordinates: text("gps_coordinates"),
     deviceFingerprint: text("device_fingerprint"),
-    verificationStage: text("verification_stage").default("pending"), // Valid: "pending" | "metadata_check" | "ai_review" | "peer_review" | "completed" | "failed"
+    verificationStage: evidenceVerificationStageEnum("verification_stage").default("pending"), // Updated per D34 — pgEnum for all status fields.
     verificationScore: real("verification_score"),
 
     createdAt: timestamp("created_at", { withTimezone: true })

@@ -286,13 +286,13 @@ export function rateLimit(config: RateLimitConfig) {
 
 ## 9. File Storage Architecture
 
-### 9.1 Cloudflare R2 Configuration
+### 9.1 Supabase Storage Configuration
 
-Cloudflare R2 is S3-compatible, zero-egress-fee object storage. Used for all evidence media (photos, videos, documents).
+Supabase Storage is S3-compatible object storage included with the Supabase plan. Used for all evidence media (photos, videos, documents).
 
 ```
 ┌──────────┐     presigned URL      ┌──────────────────┐
-│  Client   │ ─────────────────────> │  Cloudflare R2   │
+│  Client   │ ─────────────────────> │ Supabase Storage │
 │ (browser) │     direct upload      │                  │
 └──────┬────┘                        │  Buckets:        │
        │                             │  ├── evidence/   │
@@ -301,12 +301,12 @@ Cloudflare R2 is S3-compatible, zero-egress-fee object storage. Used for all evi
 ┌──────▼────┐                        └────────┬─────────┘
 │  API      │                                 │
 │  Server   │  3. Confirm upload              │
-│           │ <───────────────────────────────│
+│  (Fly.io) │ <───────────────────────────────│
 │           │                                 │
 │           │  4. Queue image processing      │
 └───────────┘                                 │
                                        ┌──────▼────────┐
-                                       │  Cloudflare   │
+                                       │  Supabase     │
                                        │  CDN          │
                                        │  (read cache) │
                                        └───────────────┘
@@ -320,14 +320,15 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
 
-// Canonical env var names should match `.env.example`: R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, CDN_BASE_URL
+// Canonical env var names should match `.env.example`: SUPABASE_STORAGE_ENDPOINT, SUPABASE_STORAGE_ACCESS_KEY, SUPABASE_STORAGE_SECRET_KEY, SUPABASE_STORAGE_BUCKET, CDN_BASE_URL
 const s3 = new S3Client({
   region: 'auto',
-  endpoint: env.R2_ENDPOINT,           // https://<account-id>.r2.cloudflarestorage.com
+  endpoint: env.SUPABASE_STORAGE_ENDPOINT,  // https://<project-ref>.supabase.co/storage/v1/s3
   credentials: {
-    accessKeyId: env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+    accessKeyId: env.SUPABASE_STORAGE_ACCESS_KEY,
+    secretAccessKey: env.SUPABASE_STORAGE_SECRET_KEY,
   },
+  forcePathStyle: true,
 });
 
 export async function createUploadUrl(params: {
@@ -351,7 +352,7 @@ export async function createUploadUrl(params: {
   const key = `evidence/${params.missionId}/${randomUUID()}.${ext}`;
 
   const command = new PutObjectCommand({
-    Bucket: env.R2_BUCKET_NAME,
+    Bucket: env.SUPABASE_STORAGE_BUCKET,
     Key: key,
     ContentType: params.fileType,
     ContentLength: params.fileSizeBytes,
@@ -383,7 +384,7 @@ export async function uploadEvidence(file: File, missionId: string) {
     fileSizeBytes: file.size,
   });
 
-  // 2. Upload directly to R2 (bypasses our server)
+  // 2. Upload directly to Supabase Storage (bypasses our server)
   await fetch(uploadUrl, {
     method: 'PUT',
     body: file,
@@ -415,9 +416,9 @@ const imageProcessingWorker = new Worker(
   async (job) => {
     const { key, evidenceId } = job.data;
 
-    // 1. Download original from R2
+    // 1. Download original from Supabase Storage
     const original = await s3.send(new GetObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
+      Bucket: env.SUPABASE_STORAGE_BUCKET,
       Key: key,
     }));
     const buffer = Buffer.from(await original.Body!.transformToByteArray());
@@ -445,8 +446,8 @@ const imageProcessingWorker = new Worker(
     const mediumKey = key.replace(/\.[^.]+$/, '_medium.webp');
 
     await Promise.all([
-      s3.send(new PutObjectCommand({ Bucket: env.R2_BUCKET_NAME, Key: thumbKey, Body: thumbnail, ContentType: 'image/webp' })),
-      s3.send(new PutObjectCommand({ Bucket: env.R2_BUCKET_NAME, Key: mediumKey, Body: medium, ContentType: 'image/webp' })),
+      s3.send(new PutObjectCommand({ Bucket: env.SUPABASE_STORAGE_BUCKET, Key: thumbKey, Body: thumbnail, ContentType: 'image/webp' })),
+      s3.send(new PutObjectCommand({ Bucket: env.SUPABASE_STORAGE_BUCKET, Key: mediumKey, Body: medium, ContentType: 'image/webp' })),
     ]);
 
     // 5. Update evidence record with extracted metadata
@@ -467,7 +468,7 @@ const imageProcessingWorker = new Worker(
 
 ### 9.4 CDN Strategy
 
-- Cloudflare CDN sits in front of R2 automatically (same network).
+- Supabase CDN sits in front of Supabase Storage automatically.
 - Cache-Control headers set to `public, max-age=31536000, immutable` for evidence media (content-addressed by UUID, never modified).
 - Avatars use shorter TTL: `public, max-age=86400` (24h) since users can update them.
 - API responses are NOT cached at CDN layer (dynamic content).
