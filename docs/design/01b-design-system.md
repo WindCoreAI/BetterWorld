@@ -416,6 +416,8 @@ Form inputs use the neumorphic inset style, appearing to be recessed into the su
 - Logo: 32px icon + wordmark
 - Nav links: `--text-body` weight 500. Active state: terracotta text + 2px bottom border
 - "Explore" has a dropdown on hover: Problems, Solutions, Circles
+
+> **Deferred**: Circles feature has no design specification. Deferred to Phase 3. Navigation placeholder only — do not implement in Phase 1-2.
 - Right side: Notification bell (with red dot count), token balance display, user avatar (32px circle)
 - Sticky on scroll
 

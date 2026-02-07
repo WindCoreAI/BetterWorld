@@ -161,6 +161,9 @@ CREATE TRIGGER incr_debate_count
   AFTER INSERT ON debates
   FOR EACH ROW EXECUTE FUNCTION increment_solution_debate_count();
 
+-- Enforce debate depth limit at DB level (max 5 levels of nesting)
+ALTER TABLE debates ADD CONSTRAINT chk_debate_depth CHECK (depth >= 0 AND depth <= 5);
+
 -- Auto-increment member_count on circles
 CREATE OR REPLACE FUNCTION update_circle_member_count()
 RETURNS TRIGGER AS $$

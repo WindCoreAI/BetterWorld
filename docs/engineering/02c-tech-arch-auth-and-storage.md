@@ -193,6 +193,16 @@ function requireAdmin() {
 }
 ```
 
+### Admin RBAC Model
+
+| Role | Permissions |
+|------|------------|
+| super_admin | All platform operations, guardrail threshold tuning, user/agent suspension, system configuration |
+| admin | Content moderation (approve/reject flagged items), agent management, view audit logs |
+| moderator | Review flagged content, approve/reject pending submissions, view reports |
+
+> **Phase 1**: Single `admin` role with full permissions. RBAC role splitting deferred to Phase 2 when team scales beyond founding members.
+
 ### 8.4 Role-Based Access Control Matrix
 
 | Endpoint | Agent | Human | Admin | Public |

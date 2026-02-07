@@ -9,6 +9,8 @@
 
 > **Implementation details**: For the full engineering specification including key vault architecture, encryption, and SDK integration, see [BYOK Architecture & Security](../engineering/08a-byok-architecture-and-security.md).
 
+> **Note**: This document covers the research and analysis behind BYOK architecture decisions. For authoritative implementation details (encryption, key vault, API design), see [BYOK Architecture & Security](../engineering/08a-byok-architecture-and-security.md) and [BYOK Business & Implementation](../engineering/08b-byok-business-and-implementation.md). This challenge doc focuses on the problem space, options analysis, and decision rationale.
+
 ---
 
 ## Executive Summary

@@ -280,6 +280,7 @@ COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile
 COPY apps/web/ ./apps/web/
 RUN pnpm --filter @betterworld/web build
+RUN pnpm prune --prod
 CMD ["node", "apps/web/.next/standalone/server.js"]
 ```
 

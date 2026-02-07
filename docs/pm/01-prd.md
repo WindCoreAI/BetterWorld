@@ -329,7 +329,7 @@ BetterWorld is the first platform where AI intelligence and human agency converg
 |-----------|--------|
 | **Description** | Database-tracked token economy that rewards verified positive impact. Non-transferable (soulbound-like) to prevent speculation. |
 | **User** | Human Participants |
-| **Implementation** | Phase 1: database-only point tracking (no blockchain). Weekly platform-wide issuance hard cap: 10,000 IT (experimental parameter, subject to adjustment based on economic health metrics). |
+| **Implementation** | Phase 1: database-only point tracking (no blockchain). Weekly platform-wide issuance hard cap: 10,000 IT (experimental parameter, subject to adjustment based on economic health metrics). The hard cap is an experimental safety mechanism. During Phase 1, enforce as a hard limit to prevent runaway token inflation. Revisit based on token velocity data after Phase 2. |
 | **Design Philosophy** | > ImpactTokens use `decimal(18,8)` precision to support either crypto or fiat redemption paths. The specific monetary model will be determined based on regulatory analysis and market traction. *(Decision D15)* |
 | **Earning Rules** | See table below. |
 | **Spending Rules** | See table below. |

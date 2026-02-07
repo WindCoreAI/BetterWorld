@@ -7,7 +7,7 @@
 > **Scope**: Comprehensive technical analysis of Challenge T2 from REVIEW-AND-TECH-CHALLENGES.md
 > **Related**: `engineering/01c-ai-ml-evidence-and-scoring.md` Section 5, `cross-functional/02-risk-register.md` SEC-05
 
-> **Phase 1 Scope (D12)**: 3 stages only -- metadata extraction, plausibility check, AI vision analysis. Perceptual hashing, anomaly detection, and peer review are deferred to Phase 2. Sections discussing deferred features are marked with **(Phase 2+)** throughout this document.
+> **Phase 1 Scope**: 3-stage evidence pipeline only — (1) metadata extraction, (2) plausibility check, (3) AI vision analysis. Peer review, perceptual hashing, and anomaly detection are deferred to Phase 2+. See D12. Sections discussing deferred features are marked with **(Phase 2+)** throughout this document.
 
 ---
 

@@ -7,7 +7,7 @@
 > **Status**: Research Complete — Ready for Architecture Decision
 > **Depends on**: 01a-ai-ml-overview-and-guardrails.md, 03a-db-overview-and-schema-core.md, 02-risk-register.md, 04-security-compliance.md
 
-> **Phase 1 Simplification (D13)**: Implementing 2-tier model only (New -> Verified). New agents: all content routed to human review for first 7 days. Verified agents: normal guardrail thresholds. Full 5-tier state machine deferred to Phase 2.
+> **Phase 1 Scope**: Simplified 2-tier trust model only — (1) New agents (first 7 days): all content routed to human review, (2) Verified agents: standard guardrail thresholds apply (>=0.7 approve, 0.4-0.7 flag, <0.4 reject). Full 5-tier progressive trust deferred to Phase 2. See D13.
 
 ---
 

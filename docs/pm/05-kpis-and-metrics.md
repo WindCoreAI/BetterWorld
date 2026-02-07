@@ -57,12 +57,12 @@ The leadership team reviews lagging indicators to confirm strategy. Product and 
 
 **Phase 2+ North Star**: **Verified Missions Completed per Week** *(Decision D14)*
 
-> **Note**: Transition to "Verified Impact Actions per Week" when the full impact pipeline is operational (i.e., when evidence verification and impact metric recording are consistently functioning). The simpler "Verified Missions Completed" is measurable starting Phase 2 without requiring the full impact_metrics pipeline.
+> **Note**: The canonical North Star metric is 'Verified Missions Completed per Week' (D14). 'Verified Impact Actions' is a broader aspirational metric for Phase 3+ when the platform tracks impacts beyond mission completion. Transition to "Verified Impact Actions per Week" when the full impact pipeline is operational (i.e., when evidence verification and impact metric recording are consistently functioning). The simpler "Verified Missions Completed" is measurable starting Phase 2 without requiring the full impact_metrics pipeline.
 
 Definition: The count of missions completed in a given week where evidence has been verified (AI-approved OR peer-approved) and the associated impact metric has been recorded in the `impact_metrics` table.
 
 ```
-Verified Impact Actions (week W) =
+Verified Missions Completed (week W) =
   COUNT(missions
     WHERE status = 'completed'
     AND evidence_status IN ('ai_approved', 'peer_approved')
@@ -245,6 +245,8 @@ Track each of the 15 approved domains independently:
 
 #### Impact by Geography
 
+> **Geographic scope**: All Phase 1-2 KPI targets assume single-city pilot deployment (D18). Scale targets for multi-city expansion will be defined in Phase 3 planning.
+
 | Metric | Definition | Target (6mo) | Frequency |
 |--------|-----------|--------------|-----------|
 | **Countries with Active Agent Submissions** | Distinct countries with at least 1 agent-submitted problem or solution in the last 30 days | 15 (agent activity is digital-only and global from Day 1) | Monthly |
@@ -295,7 +297,7 @@ People Helped (estimated) = SUM across all impact metrics:
 | **Tokens Earned per Mission (avg)** | Average total tokens earned per completed mission including bonuses and multipliers | `SUM(earned_tokens_for_missions) / COUNT(completed_missions)` | 25 IT | 30 IT | Weekly |
 
 **Token Inflation Control Mechanisms**:
-1. **Hard cap**: Maximum of 10,000 IT issued per week platform-wide. *(Added to PRD P1-3 (v8 review update).)*
+1. **Hard cap**: Maximum of 10,000 IT issued per week platform-wide. *(Added to PRD P1-3 (v8 review update).)* Token hard cap is enforced as a hard limit during Phase 1-2 (see PRD Section 5.3, P1-3). Subject to revision based on token velocity metrics post-Phase 2.
 2. **Dynamic reward scaling**: If weekly issuance exceeds the cap, all rewards are proportionally reduced for that week (e.g., if 12,000 IT would be issued, each reward is scaled by 10,000/12,000 = 0.833x).
 3. **Spending sinks as deflationary pressure**: Token spending mechanisms (voting at 5 IT, analytics access at 10 IT, circle creation at 25 IT) remove tokens from circulation, providing natural deflationary pressure.
 4. **Monthly supply audit**: PM team reviews total tokens in circulation, earning/spending ratio, and Gini coefficient monthly. Adjust earning rates or introduce new spending sinks if inflation exceeds targets.

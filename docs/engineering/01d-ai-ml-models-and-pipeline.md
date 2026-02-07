@@ -122,8 +122,10 @@ AI API calls use a circuit breaker pattern to handle provider outages gracefully
 | State | Behavior | Transition |
 |-------|----------|-----------|
 | Closed | Normal operation, all calls pass through | -> Open after 5 failures in 60s |
-| Open | All calls fail-fast, return cached/fallback result | -> Half-Open after 30s cooldown |
+| Open | All calls fail-fast, return cached/fallback result | -> Half-Open after exponential backoff cooldown |
 | Half-Open | Allow 1 probe request | -> Closed on success, -> Open on failure |
+
+Circuit breaker cooldown uses exponential backoff: 30s -> 60s -> 120s -> 300s (max). Resets to 30s after successful request. Formula: `min(30 * 2^(consecutiveFailures - 1), 300)` seconds.
 
 ```typescript
 // packages/guardrails/src/models/circuit-breaker.ts

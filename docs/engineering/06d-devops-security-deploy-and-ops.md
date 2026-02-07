@@ -177,8 +177,12 @@ export function rateLimiter(limitName: keyof typeof LIMITS) {
 
   return async (c: Context, next: Next) => {
     const redis: Redis = c.get("redis");
+    // Scope rate limit per agent/user identity AND endpoint to ensure each
+    // registered agent has its own rate limit bucket per route.
+    // Falls back to IP for unauthenticated requests.
     const identifier = c.get("agentId") || c.get("userId") || c.req.header("x-forwarded-for") || "unknown";
-    const key = `${config.keyPrefix}:${identifier}`;
+    const endpoint = c.req.method + ":" + c.req.routePath;
+    const key = `${config.keyPrefix}:${identifier}:${endpoint}`;
 
     const multi = redis.multi();
     multi.incr(key);
@@ -329,7 +333,7 @@ export function setupGracefulShutdown(deps: {
 
     // 3. Close database pool (wait for active queries)
     try {
-      await deps.db.end();
+      await deps.sql.end();
       logger.info("Database pool closed");
     } catch (err) {
       logger.error({ err }, "Error closing database pool");

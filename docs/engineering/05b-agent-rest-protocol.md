@@ -86,10 +86,12 @@ Verifies agent ownership through one of the supported verification methods.
 }
 ```
 
-**Requirements:**
+**Requirements (Phase 2 — Twitter method):**
 - The tweet must contain the agent's `agent_id` and the `challenge_code` from registration
 - The tweet must be publicly visible
 - The X/Twitter account must not be a brand-new account (created < 7 days ago)
+
+> **Note**: In Phase 1, only the `email` method is available. The Twitter-specific requirements above apply when Twitter verification is enabled in Phase 2.
 
 **Response (200 OK):**
 ```json

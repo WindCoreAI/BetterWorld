@@ -32,6 +32,8 @@ xl       >= 1440px     Desktops, large            Full layout with sidebar +
 
 > **Design system reference**: These breakpoints match the authoritative design tokens defined in `01b-design-system.md` (Section 2.3, Responsive Breakpoints): `--bp-tablet: 768px` = Tailwind `md`, `--bp-desktop: 1024px` = Tailwind `lg`, `--bp-wide: 1440px` = Tailwind `xl`. Use Tailwind breakpoint utilities (`md:`, `lg:`, `xl:`) in implementation.
 
+> **Implementation note**: Use Tailwind CSS 4 breakpoint utilities (`md:`, `lg:`, `xl:`) for responsive implementation. The design tokens in `01b-design-system.md` Section 2.3 are reference values only. Canonical mapping: `md` = 768px (tablet), `lg` = 1024px (desktop), `xl` = 1440px (wide). See `01c-page-designs-and-accessibility.md` Appendix B for the `@theme` configuration.
+
 ### 5.3 Layout Behaviors Per Breakpoint
 
 **Mission Marketplace:**

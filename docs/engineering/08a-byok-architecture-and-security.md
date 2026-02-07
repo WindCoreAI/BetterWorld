@@ -340,19 +340,25 @@ export class KeyVault {
     const dekCiphertext = encryptedDekBuf.subarray(16, encryptedDekBuf.length - 16);
 
     const dekDecipher = createDecipheriv('aes-256-gcm', kek, dekIv);
+    // GCM auth tag validation: setAuthTag() must be called before final().
+    // Node.js crypto will throw "Unsupported state or unable to authenticate data"
+    // on final() if the auth tag does not match, preventing forgery/tampering.
     dekDecipher.setAuthTag(dekAuthTag);
     const dek = Buffer.concat([
       dekDecipher.update(dekCiphertext),
-      dekDecipher.final(),
+      dekDecipher.final(), // Throws if auth tag validation fails
     ]);
 
     // Decrypt the API key with the DEK
     const iv = Buffer.from(bundle.iv, 'base64');
     const authTag = Buffer.from(bundle.authTag, 'base64');
     const decipher = createDecipheriv('aes-256-gcm', dek, iv);
+    // GCM auth tag validation: setAuthTag() MUST be called before final().
+    // This ensures the ciphertext has not been tampered with. If the tag
+    // doesn't match (forgery attempt), final() throws an error.
     decipher.setAuthTag(authTag);
     const plaintext = decipher.update(Buffer.from(bundle.encryptedKey, 'base64'), undefined, 'utf8') +
-      decipher.final('utf8');
+      decipher.final('utf8'); // Throws if auth tag validation fails (tampered ciphertext)
 
     // Zero the DEK from memory
     dek.fill(0);

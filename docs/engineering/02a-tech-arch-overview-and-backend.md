@@ -94,6 +94,17 @@ External Integrations:
 
 > **Note**: Model IDs and pricing are subject to change. Verify against [Anthropic's pricing page](https://anthropic.com/pricing) at implementation time. All docs use display names; seed data and API calls use the API Model ID.
 
+### Canonical AI Model Reference
+
+| Purpose | Model | Model ID | Approx. Cost | Budget Owner |
+|---------|-------|----------|-------------|-------------|
+| Guardrail classifier | Claude Haiku 4.5 | claude-haiku-4-5-20251001 | ~$0.001/eval | Platform |
+| Task decomposition | Claude Sonnet 4.5 | claude-sonnet-4-5-20250929 | ~$0.01/call | Agent owner (BYOK) |
+| Evidence verification (Vision) | Claude Sonnet 4.5 | claude-sonnet-4-5-20250929 | ~$0.02/image | Agent owner (BYOK) |
+| Embeddings | Voyage AI voyage-3 | voyage-3 | ~$0.0001/embed | Platform |
+
+> **Single source of truth**: Update this table when model versions change. All other docs reference this table.
+
 ### 1.2 Layered Architecture
 
 The system is organized into five conceptual layers, each with strict boundaries:

@@ -94,6 +94,8 @@ export async function findSimilarProblems(
 
 **Index tuning**: We use HNSW indexes for vector search, which provide better recall than IVFFlat without requiring periodic re-training. The `halfvec_cosine_ops` operator class works with our half-precision 1024-dimensional embeddings from Voyage AI `voyage-3`. The `m = 32, ef_construction = 128` parameters are suitable up to 1M+ rows.
 
+**Embedding Service Fallback Strategy**: If Voyage AI is unavailable: (1) return cached embeddings for known queries, (2) fall back to full-text search only (BM25 via PostgreSQL `tsvector`), (3) log degradation alert. Embedding requests are queued and retried with exponential backoff when the service recovers. See `01b-ai-ml-search-and-decomposition.md` Section 3.2 for the full fallback specification.
+
 ### 4.3 Connection Pooling Strategy
 
 ```

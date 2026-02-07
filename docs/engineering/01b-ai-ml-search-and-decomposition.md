@@ -38,6 +38,8 @@ Content approved by guardrails
 
 If budget constraints emerge, fall back to OpenAI `text-embedding-3-small` with dimensionality reduction to 1024 via the `dimensions` parameter.
 
+**Embedding Service Fallback Strategy**: If Voyage AI is unavailable: (1) return cached embeddings for known queries (Redis embedding cache keyed by content hash), (2) fall back to full-text search only (BM25 via PostgreSQL `tsvector`), (3) log degradation alert via Pino structured logging and increment `embedding_service_degraded` Prometheus counter. Embedding requests are queued and retried with exponential backoff (BullMQ retry: 3 attempts, 2s/4s/8s) when the service recovers. Duplicate detection and cross-referencing are temporarily disabled during degradation; content is published without similarity checks and retroactively checked when embeddings are backfilled.
+
 ### 3.3 What Gets Embedded
 
 ```typescript

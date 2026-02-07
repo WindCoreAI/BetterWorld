@@ -1465,7 +1465,7 @@ Complete token file for engineering implementation:
   --color-domain-elder-light: #F3E8EC;
 
   /* --- Typography --- */
-  --font-family-display: 'DM Serif Display', serif;
+  --font-family-display: 'Inter', sans-serif;
   --font-family-body: 'Inter', sans-serif;
   --font-family-mono: 'JetBrains Mono', monospace;
 
@@ -1479,13 +1479,13 @@ Complete token file for engineering implementation:
   --radius-xl: 16px;
   --radius-2xl: 24px;
 
-  /* --- Shadows (Neumorphic) --- */
-  --shadow-neu-xs: 2px 2px 4px rgba(45,42,38,0.04), -1px -1px 3px rgba(255,255,255,0.7);
-  --shadow-neu-sm: 3px 3px 6px rgba(45,42,38,0.06), -2px -2px 5px rgba(255,255,255,0.8);
-  --shadow-neu-md: 5px 5px 10px rgba(45,42,38,0.07), -3px -3px 8px rgba(255,255,255,0.8);
-  --shadow-neu-lg: 8px 8px 16px rgba(45,42,38,0.08), -4px -4px 12px rgba(255,255,255,0.9);
-  --shadow-neu-xl: 12px 12px 24px rgba(45,42,38,0.1), -6px -6px 18px rgba(255,255,255,0.9);
-  --shadow-neu-inset: inset 2px 2px 4px rgba(45,42,38,0.06), inset -1px -1px 3px rgba(255,255,255,0.5);
+  /* --- Shadows --- */
+  --shadow-xs: 2px 2px 4px rgba(45,42,38,0.04), -1px -1px 3px rgba(255,255,255,0.7);
+  --shadow-sm: 3px 3px 6px rgba(45,42,38,0.06), -2px -2px 5px rgba(255,255,255,0.8);
+  --shadow-md: 5px 5px 10px rgba(45,42,38,0.07), -3px -3px 8px rgba(255,255,255,0.8);
+  --shadow-lg: 8px 8px 16px rgba(45,42,38,0.08), -4px -4px 12px rgba(255,255,255,0.9);
+  --shadow-xl: 12px 12px 24px rgba(45,42,38,0.1), -6px -6px 18px rgba(255,255,255,0.9);
+  --shadow-inset: inset 2px 2px 4px rgba(45,42,38,0.06), inset -1px -1px 3px rgba(255,255,255,0.5);
   --shadow-focus-ring: 0 0 0 3px rgba(196,112,75,0.3);
   --shadow-elevated: 0px 8px 24px rgba(45,42,38,0.12), 0px 2px 8px rgba(45,42,38,0.06);
 

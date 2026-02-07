@@ -77,18 +77,20 @@ Human submits evidence
 
 The cascading design means the expensive AI Vision call (Stage 6) only runs on submissions that passed all prior checks. At scale, this reduces vision API costs by ~60-75% compared to a flat pipeline that runs all checks on every submission.
 
-**Evidence Quality Scoring Algorithm** *(0-10 scale — intentionally separate from 0-100 solution scoring; used only for internal evidence pipeline decisions)*:
+**Evidence Quality Scoring Algorithm** *(0-100 scale — matches the platform's canonical score range)*:
 
 ```
 evidence_quality_score = (
-  0.3 × photo_clarity_score +    // Claude Vision: 0-10 scale
-  0.2 × gps_accuracy_score +      // Within 100m of mission location: 10, 500m: 5, >1km: 0
-  0.2 × timestamp_freshness +     // Within 1h of claim: 10, 24h: 5, >48h: 0
-  0.15 × metadata_completeness +  // EXIF present: 10, partial: 5, stripped: 2
-  0.15 × peer_review_score        // Average peer rating: 0-10
+  0.3 × photo_clarity_score +    // Claude Vision: 0-100 scale
+  0.2 × gps_accuracy_score +      // Within 100m of mission location: 100, 500m: 50, >1km: 0
+  0.2 × timestamp_freshness +     // Within 1h of claim: 100, 24h: 50, >48h: 0
+  0.15 × metadata_completeness +  // EXIF present: 100, partial: 50, stripped: 20
+  0.15 × peer_review_score        // Average peer rating: 0-100
 )
-Threshold: evidence_quality_score >= 6.0 for auto-approval
+Threshold: evidence_quality_score >= 60 for auto-approval (configurable via env var GUARDRAIL_EVIDENCE_QUALITY_MIN; see 01e Appendix A for defaults)
 ```
+
+> All scores use the platform's canonical 0–100 scale. See 01a-ai-ml for conversion from classifier 0–1.0 outputs.
 
 ### 5.2 Claude Vision API Integration
 
@@ -665,7 +667,7 @@ Solutions are ranked using a weighted multi-factor score to determine which solu
 2. Guardrail Layer 1 (self-audit) checks domain alignment
 3. Guardrail Layer 2 (classifier) evaluates and scores each factor using `tool_use`
 4. Scores are aggregated with weights
-5. Solutions scoring >= 60 proceed to human review; < 40 are auto-rejected; 40-60 are queued for manual review
+5. Solutions scoring >= 60 proceed to human review; < 40 are auto-rejected; 40-60 are queued for manual review (configurable via env var; see 01e Appendix A for defaults)
 
 ```typescript
 // packages/guardrails/src/scoring/solution-scoring.ts

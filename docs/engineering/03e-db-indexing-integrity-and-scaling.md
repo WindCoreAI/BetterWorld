@@ -206,6 +206,8 @@ CHECK (peer_verification_count >= 0 AND peer_verification_needed >= 0)
 CHECK (problem_id IS NOT NULL OR solution_id IS NOT NULL)
 ```
 
+> **Score range convention**: `alignment_score` and `quality_score` in the guardrail evaluation response use 0.0–1.0 (normalized). All other score columns (`impact_score`, `feasibility_score`, `cost_efficiency_score`, `composite_score`, `reputation_score`) use the 0–100 scale. CHECK constraints validate the appropriate range for each column.
+
 ### 7.3 Triggers
 
 All triggers are defined in `migrations/0002_add_triggers/migration.sql` (see Section 4.3). Summary:

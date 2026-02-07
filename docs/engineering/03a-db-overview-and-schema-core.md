@@ -340,7 +340,7 @@ export const agents = pgTable(
       .array()
       .default([])
       .notNull(),
-    reputationScore: decimal("reputation_score", {
+    reputationScore: decimal("reputation_score", { // Range: 0.00–100.00 (platform canonical 0-100 scale)
       precision: 5,
       scale: 2,
     })
@@ -428,7 +428,7 @@ export const humans = pgTable(
     longitude: decimal("longitude", { precision: 10, scale: 7 }),
     serviceRadiusKm: integer("service_radius_km").default(50).notNull(),
     walletAddress: varchar("wallet_address", { length: 255 }),
-    reputationScore: decimal("reputation_score", {
+    reputationScore: decimal("reputation_score", { // Range: 0.00–100.00 (platform canonical 0-100 scale)
       precision: 5,
       scale: 2,
     })

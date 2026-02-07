@@ -601,11 +601,11 @@ Run this checklist at the end of every sprint:
 
 | Role | Sprint 1 | Sprint 2 | Sprint 3 | Sprint 4 | Total |
 |------|----------|----------|----------|----------|-------|
-| BE1 | 61h | 36h | 56h | 35h | 188h |
+| BE1 | 52h | 36h | 56h | 35h | 179h |
 | BE2/FE | 18h | 22h | 21h | 25h | 86h |
 | FE | 8h | (overlap)* | (overlap)* | 48h | 56h+ |
 | D1 | 26h | 14h | 14h | 20h | 74h |
-| **Sprint Total** | 105h | 72h | 91h | 128h | **396h** |
+| **Sprint Total** | 96h | 72h | 91h | 128h | **387h** |
 
 > *In a 2-3 engineer team, BE2/FE and FE may be the same person. Overlap hours represent frontend work done by BE2 during Sprint 2-3 spare capacity.
 
@@ -613,7 +613,7 @@ Run this checklist at the end of every sprint:
 
 | Sprint | Available Team Hours | Planned Hours | Buffer |
 |--------|---------------------|---------------|--------|
-| Sprint 1 | 240h (3 eng + 1 design) | 105h | 56% buffer |
+| Sprint 1 | 240h (3 eng + 1 design) | 96h | 60% buffer |
 | Sprint 2 | 240h | 72h | 70% buffer |
 | Sprint 3 | 240h | 91h | 62% buffer |
 | Sprint 4 | 240h | 128h | 47% buffer |
@@ -624,7 +624,7 @@ Run this checklist at the end of every sprint:
 
 | Bottleneck | Sprint(s) | Risk | Mitigation |
 |------------|-----------|------|------------|
-| **BE1 is overloaded in Sprint 1** | 1 | BE1 has 61h of tasks -- close to true capacity after overhead | BE2 pair-programs on auth middleware (S1-07). Parallelize: Docker setup (S1-02, S1-03) on Day 1, schema (S1-04) on Day 2-3. |
+| **BE1 is overloaded in Sprint 1** | 1 | BE1 has 52h of tasks (redistributed from 61h per v9 review — S1-08 and S1-10 moved to BE2) | BE2 pair-programs on auth middleware (S1-07). Parallelize: Docker setup (S1-02, S1-03) on Day 1, schema (S1-04) on Day 2-3. |
 | **Frontend backlog accumulates** | 1-3 | No frontend pages built until Sprint 4 | **Critical**: FE and BE2 must build components and pages during Sprint 2-3 spare capacity. Treat this as mandatory, not optional. |
 | **Guardrails are the riskiest feature** | 3 | Prompt engineering + API integration + async pipeline = high complexity | Start prompt experimentation in Sprint 2 (BE1 can test prompts locally). Have a fallback: synchronous evaluation (no BullMQ) if async is too complex. |
 | **D1 designs needed before FE builds** | 2-4 | FE blocked if designs arrive late | D1 should work 1 sprint ahead. Sprint 3 designs should be delivered in Sprint 2. Sprint 4 designs in Sprint 3. Use wireframes as minimum viable designs -- pixel perfection comes later. |

@@ -444,7 +444,9 @@ By creating and naming the "Constitutional AI Agent Platform for Social Good" ca
 
 **Phase 1 Interim**: **Guardrail-Approved Content per Week** (problems + solutions passing all 3 guardrail layers). Target: 50/week by W8.
 
-**Phase 2+**: **Verified Impact Actions per Week** — the count of missions completed where evidence has been verified and impact metrics recorded.
+**Phase 2+**: **Verified Missions Completed per Week** *(Decision D14)* — the count of missions completed where evidence has been verified and impact metrics recorded.
+
+> **Note**: The canonical North Star metric is 'Verified Missions Completed per Week' (D14). 'Verified Impact Actions' is a broader aspirational metric for Phase 3+ when the platform tracks impacts beyond mission completion.
 
 This is the single metric that captures the full pipeline: agents discovering problems, proposing solutions, decomposing tasks, humans claiming and completing missions, and evidence being verified. If this number grows, the platform is working. This metric is consistent with the North Star defined in the KPIs framework (05-kpis-and-metrics.md) and the PRD.
 

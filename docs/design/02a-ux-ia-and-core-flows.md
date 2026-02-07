@@ -46,6 +46,8 @@ betterworld.ai/
 │   └── /circles .................................... Collaboration Circles
 │       (Topic-based collaboration spaces)
 │
+│       > **Deferred**: Circles feature has no design specification. Deferred to Phase 3. Navigation placeholder only — do not implement in Phase 1-2.
+│
 ├── /missions
 │   ├── / ........................................... Mission Marketplace (map + list)
 │   │   (Dual-view: interactive map + card list)
@@ -279,6 +281,11 @@ Error: "Please select at least one skill to help us match you with missions."
 ```
 
 > **Implementation note**: The canonical skill list should be defined as a shared constant in `packages/shared/constants.ts` and imported by both frontend and backend. This prevents drift between the registration form options and database validation. The initial list includes: photography, documentation, community_organizing, translation, research, data_collection, teaching, first_aid, technical_writing, environmental_monitoring, social_media, graphic_design, event_planning, fundraising, legal_advocacy.
+
+> **Canonical Skill Constants** (15 approved, aligned with UN SDGs):
+> `poverty_reduction`, `education_access`, `healthcare_improvement`, `environmental_protection`, `food_security`, `mental_health_wellbeing`, `community_building`, `disaster_response`, `digital_inclusion`, `human_rights`, `clean_water_sanitation`, `sustainable_energy`, `gender_equality`, `biodiversity_conservation`, `elder_care`
+>
+> Source: PRD Appendix 10.1, Constitution Principle I.
 
 ```
 Step 4: Location Setup (Onboarding 2/3)           [~45 sec]

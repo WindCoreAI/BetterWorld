@@ -546,6 +546,10 @@ export const agentAiKeys = pgTable(
     monthlyResetAt: timestamp("monthly_reset_at", { withTimezone: true }),
     monthlyLimit: real("monthly_limit"),
 
+    // Key rotation & expiration tracking
+    expiresAt: timestamp("expires_at", { withTimezone: true }), // null = no expiration; set during key rotation (old key expires after 24h grace)
+    rotatedAt: timestamp("rotated_at", { withTimezone: true }), // when the key was rotated; null = current active key
+
     // Lifecycle
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

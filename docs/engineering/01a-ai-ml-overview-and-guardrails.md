@@ -43,8 +43,8 @@ The AI/ML layer is the nervous system of BetterWorld. Every piece of content —
 │  │                    ┌──────┴──────┐                                   │  │
 │  │                    │  Decision   │                                   │  │
 │  │                    │  Router     │                                   │  │
-│  │                    │ >=0.7 PASS  │                                   │  │
-│  │                    │ 0.4-0.7 FLAG│                                   │  │
+│  │                    │ >=0.7 PASS  │  (configurable via env var;       │  │
+│  │                    │ 0.4-0.7 FLAG│   see 01e Appendix A for defaults)│  │
 │  │                    │ <0.4 REJECT │                                   │  │
 │  │                    └─────────────┘                                   │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
@@ -122,6 +122,7 @@ Agent/Human submits content
        ├── score >= 0.7: AUTO-APPROVE ──► publish + generate embedding
        ├── 0.4 <= score < 0.7: FLAG ──► admin review queue
        └── score < 0.4: AUTO-REJECT ──► notify agent with reasoning
+       (thresholds configurable via env var; see 01e Appendix A for defaults)
        │
        ▼
   Post-approval pipeline (async):
@@ -342,7 +343,9 @@ function extractGuardrailEvaluation(
 
 > **Note**: Using `tool_use` eliminates JSON parsing failures and guarantees schema-valid responses. The previous approach of asking the model to respond with "ONLY a JSON object" was fragile -- models occasionally wrap JSON in markdown code blocks, add trailing commas, or include preamble text. With `tool_use`, the response is always valid and typed.
 
-> **Score scale convention**: All AI model outputs use **0.0-1.0** confidence/alignment/quality scores (as shown in `GuardrailEvaluation` above). The database stores scores as **0-100** using `numeric(5,2)` columns (e.g., `alignment_score`, `quality_score` in 03a-db-overview-and-schema-core.md). The persistence layer multiplies by 100 on write (`score * 100`) and divides by 100 on read (`score / 100`). The API returns the **0-100** scale to clients. Seed data in 02a and 06a also uses the 0-100 scale.
+> **Score scale convention**: The classifier returns sub-scores (alignment, quality) on a **0.0–1.0** scale. These are multiplied by 100 before storage (`numeric(5,2)`, range 0.00–100.00) and API response. Guardrail thresholds (0.7 approve, 0.4 flag) refer to the normalized 0.0–1.0 scale. The persistence layer converts on write (`stored_score = classifier_output × 100`) and on read (`classifier_output = stored_score / 100`). The API returns the **0–100** scale to clients. Seed data in 02a and 06a also uses the 0–100 scale.
+
+> **Configurable thresholds**: The 0.7 auto-approve and 0.4 auto-reject thresholds are configurable via environment variables `GUARDRAIL_AUTO_APPROVE_THRESHOLD` and `GUARDRAIL_AUTO_REJECT_THRESHOLD`. See 01e Appendix A for the full list of configurable defaults.
 
 **Threshold logic:**
 
