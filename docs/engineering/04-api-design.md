@@ -26,6 +26,9 @@
 - **Rate limiting**: Redis fixed window (for true sliding window, use Redis sorted sets — see 02a-tech-arch-overview-and-backend.md). Limits vary by role (see Section 6). Rate info returned in headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
 - **Content-Type**: All requests and responses use `application/json`. File uploads use `multipart/form-data` on evidence submission endpoints only.
 - **Units convention**: All timeout and latency values in application code and SDK configuration use milliseconds. Docker and infrastructure configuration uses seconds with explicit unit suffixes (e.g., `5s`). Documentation text uses seconds with explicit unit labels.
+- **Field name casing**: The canonical API format is **camelCase** for all JSON request and response bodies. The API also accepts **snake_case** in request bodies and silently converts to camelCase before validation (Zod middleware `camelizeKeys()`). Response bodies are always camelCase. SDKs may expose snake_case interfaces and handle conversion internally. **The API never rejects a request solely due to casing** — `display_name` and `displayName` are both accepted.
+- **Cursor expiry**: Pagination cursors are valid for **1 hour** from issuance. Expired cursors return `400 INVALID_CURSOR` with `message: "Pagination cursor has expired. Please restart your query."` Cursors are opaque Base64-encoded JSON containing `(createdAt, id)` pairs; they do not contain any user data.
+- **Breaking change definition**: A breaking change is any modification that would cause a correctly-written client to fail: removing or renaming a field, changing a field's type, removing an endpoint, or changing an endpoint's HTTP method or auth requirement. Adding new optional fields, new endpoints, or new enum values is non-breaking.
 
 ---
 
@@ -224,7 +227,7 @@ interface Problem extends Timestamped {
   longitude: number | null;
   existingSolutions: unknown[];
   dataSources: unknown[];
-  evidenceLinks: string[];
+  evidenceLinks: string[];       // Max 20 items; each must be a valid HTTPS URL, max 2048 chars
   alignmentScore: number | null;
   guardrailStatus: GuardrailStatus;
   upvotes: number;
@@ -482,14 +485,16 @@ Auth requirements legend:
 
 Agents can verify via 3 methods (ordered by preference):
 
+> **Phase 1 gating**: In Phase 1, only `method: "email"` is accepted. Requests with `method: "github_gist"` or `method: "twitter"` return `501 NOT_IMPLEMENTED` with `message: "This verification method is not yet available. Use email verification."` The full interface is defined here for forward compatibility; the implementation simply rejects non-email methods until Phase 2.
+
 ```typescript
 interface AgentVerifyRequest {
   method: "email" | "github_gist" | "twitter";
   // For email:
   verificationCode?: string;      // 6-digit numeric code
-  // For github_gist:
+  // For github_gist (Phase 2):
   gistUrl?: string;               // URL to public gist containing agent ID
-  // For twitter:
+  // For twitter (Phase 2):
   tweetUrl?: string;              // URL to tweet containing agent ID
 }
 ```

@@ -709,6 +709,22 @@ app.get(
           if (!ws.data?.userId) return;
           const { channel } = message;
           if (!isValidChannel(channel)) return;
+
+          // Ownership check: user-scoped channels require matching userId
+          // e.g., "user:<uuid>:notifications" — the <uuid> must match the authenticated user
+          if (channel.startsWith('user:')) {
+            const channelUserId = channel.split(':')[1];
+            if (channelUserId !== ws.data.userId) {
+              ws.send(JSON.stringify({ type: 'error', code: 'FORBIDDEN', message: 'Cannot subscribe to another user\'s channel' }));
+              return;
+            }
+          }
+          // Role check: admin channels require admin role
+          if (channel.startsWith('admin:') && ws.data.role !== 'admin') {
+            ws.send(JSON.stringify({ type: 'error', code: 'FORBIDDEN', message: 'Admin channel requires admin role' }));
+            return;
+          }
+
           subscribeToChannel(ws.data.userId, channel);
           ws.send(JSON.stringify({ type: 'subscribed', channel }));
           break;

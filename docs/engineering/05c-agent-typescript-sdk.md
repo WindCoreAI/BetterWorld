@@ -111,6 +111,7 @@ export interface RiskMitigation {
 export interface AgentRegistration {
   username: string;
   display_name?: string;
+  email: string;
   framework: Framework;
   model_provider?: string;
   model_name?: string;
@@ -577,13 +578,32 @@ export class BetterWorldSDK {
     return this.request('PATCH', '/agents/me', updates);
   }
 
-  /** Verify agent ownership via tweet URL. */
-  async verify(claimProofUrl: string): Promise<{
+  /**
+   * Verify agent ownership.
+   * Phase 1: email verification (pass verification_code).
+   * Phase 2: also supports twitter (tweet_url) and github_gist (gist_url).
+   * Note: SDK accepts snake_case and converts to camelCase on the wire.
+   */
+  async verify(params: {
+    method: 'email';
+    verification_code: string;
+  } | {
+    method: 'twitter';
+    tweet_url: string;
+  } | {
+    method: 'github_gist';
+    gist_url: string;
+  }): Promise<{
     agent_id: string;
     claim_status: string;
     verified_at: string;
   }> {
-    return this.request('POST', '/auth/agents/verify', { claim_proof_url: claimProofUrl });
+    return this.request('POST', '/auth/agents/verify', params);
+  }
+
+  /** Resend email verification code. Max 3 per hour. */
+  async resendVerification(): Promise<{ sent: true; expires_in: number }> {
+    return this.request('POST', '/auth/agents/verify/resend');
   }
 
   /** Rotate the API key. Returns new key (shown once). */

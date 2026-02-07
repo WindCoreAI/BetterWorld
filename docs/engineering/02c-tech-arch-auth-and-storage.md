@@ -125,15 +125,24 @@ import { db } from '@betterworld/db';
 
 export const auth = betterAuth({
   database: drizzleAdapter(db),
+  // Base URL used to construct OAuth callback URLs:
+  //   Dev:  http://localhost:4000/api/auth
+  //   Prod: https://api.betterworld.ai/api/auth
+  // Callback pattern: {baseURL}/callback/{provider}
+  //   e.g., https://api.betterworld.ai/api/auth/callback/google
+  // Register these callback URLs in each OAuth provider's developer console.
+  baseURL: env.API_BASE_URL,         // e.g., "http://localhost:4000/api/auth" or "https://api.betterworld.ai/api/auth"
   emailAndPassword: { enabled: true },
   socialProviders: {
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+      // Callback: {baseURL}/callback/google
     },
     github: {
       clientId: env.GITHUB_CLIENT_ID,
       clientSecret: env.GITHUB_CLIENT_SECRET,
+      // Callback: {baseURL}/callback/github
     },
   },
   session: {
@@ -192,6 +201,15 @@ function requireAdmin() {
   };
 }
 ```
+
+**TOTP 2FA enrollment flow:**
+1. Admin calls `POST /api/v1/admin/2fa/enroll` — server generates a TOTP secret, encrypts it (AES-256-GCM with `TOTP_ENCRYPTION_KEY` from env), stores in `humans.totp_secret`, returns the secret as a `otpauth://` URI and QR code data URL.
+2. Admin scans QR code with authenticator app (Google Authenticator, 1Password, etc.)
+3. Admin confirms enrollment by calling `POST /api/v1/admin/2fa/confirm` with a valid TOTP code from their app.
+4. Server sets `humans.totp_enrolled_at` timestamp. 2FA is now required for all admin API calls.
+5. If admin loses their authenticator, a super_admin can reset 2FA via `DELETE /api/v1/admin/users/:id/2fa`.
+
+> **Schema reference**: `humans.totp_secret` and `humans.totp_enrolled_at` columns — see [03a-db-overview-and-schema-core.md](03a-db-overview-and-schema-core.md) Section 2.3.
 
 ### Admin RBAC Model
 
@@ -320,15 +338,17 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
 
-// Canonical env var names should match `.env.example`: SUPABASE_STORAGE_ENDPOINT, SUPABASE_STORAGE_ACCESS_KEY, SUPABASE_STORAGE_SECRET_KEY, SUPABASE_STORAGE_BUCKET, CDN_BASE_URL
+// Storage env vars are provider-agnostic (work with both MinIO and Supabase Storage).
+// See .env.example for per-provider values. STORAGE_PROVIDER ('minio' | 'supabase')
+// controls behavior differences (e.g., bucket creation, public URL format).
 const s3 = new S3Client({
   region: 'auto',
-  endpoint: env.SUPABASE_STORAGE_ENDPOINT,  // https://<project-ref>.supabase.co/storage/v1/s3
+  endpoint: env.STORAGE_ENDPOINT,    // MinIO: http://localhost:9000 | Supabase: https://<project>.supabase.co/storage/v1/s3
   credentials: {
-    accessKeyId: env.SUPABASE_STORAGE_ACCESS_KEY,
-    secretAccessKey: env.SUPABASE_STORAGE_SECRET_KEY,
+    accessKeyId: env.STORAGE_ACCESS_KEY,
+    secretAccessKey: env.STORAGE_SECRET_KEY,
   },
-  forcePathStyle: true,
+  forcePathStyle: true,  // Required for both MinIO and Supabase S3
 });
 
 export async function createUploadUrl(params: {

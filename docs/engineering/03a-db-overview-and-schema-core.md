@@ -489,6 +489,9 @@ export const humans = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    role: varchar("role", { length: 20 }).default("human").notNull(), // 'human' | 'admin' | 'moderator'
+    totpSecret: varchar("totp_secret", { length: 255 }),  // Encrypted TOTP secret for 2FA (admin users only). Null until 2FA enrolled.
+    totpEnrolledAt: timestamp("totp_enrolled_at", { withTimezone: true }), // When 2FA was set up
     isActive: boolean("is_active").default(true).notNull(),
   },
   (table) => [

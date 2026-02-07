@@ -55,10 +55,11 @@ x-common-env: &common-env
   NODE_ENV: development
   DATABASE_URL: postgresql://betterworld:betterworld_dev@postgres:5432/betterworld?sslmode=disable
   REDIS_URL: redis://redis:6379
-  SUPABASE_STORAGE_ENDPOINT: http://minio:9000
-  SUPABASE_STORAGE_ACCESS_KEY: minioadmin
-  SUPABASE_STORAGE_SECRET_KEY: minioadmin
-  SUPABASE_STORAGE_BUCKET: betterworld-dev
+  STORAGE_PROVIDER: minio
+  STORAGE_ENDPOINT: http://minio:9000
+  STORAGE_ACCESS_KEY: minioadmin
+  STORAGE_SECRET_KEY: minioadmin
+  STORAGE_BUCKET: betterworld-dev
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-ant-placeholder}
   JWT_SECRET: dev-jwt-secret-do-not-use-in-production
   ED25519_PRIVATE_KEY: ${ED25519_PRIVATE_KEY:-}
@@ -289,13 +290,48 @@ CMD ["node", "apps/web/.next/standalone/server.js"]
 ```sql
 -- scripts/init-db.sql
 -- Runs once when the PostgreSQL container is first created.
+-- After this script, run Drizzle migrations (pnpm --filter db migrate) for table creation.
 
+-- ─── Extensions ───────────────────────────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "vector";
+CREATE EXTENSION IF NOT EXISTS "vector";       -- pgvector: vector/halfvec types + operators
 CREATE EXTENSION IF NOT EXISTS "cube";
 CREATE EXTENSION IF NOT EXISTS "fuzzystrmatch";
 CREATE EXTENSION IF NOT EXISTS "earthdistance";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
+-- ─── Custom type: halfvec ─────────────────────────────────────────────────────
+-- pgvector 0.7+ includes halfvec natively when the "vector" extension is loaded.
+-- No separate CREATE TYPE is needed — halfvec(N) is available immediately after
+-- CREATE EXTENSION "vector".
+--
+-- Drizzle ORM uses a custom column helper to map to this type:
+--   import { customType } from "drizzle-orm/pg-core";
+--   export const halfvec = customType<{ data: number[]; dpiData: string }>({
+--     dataType(config) { return `halfvec(${config.dimensions})`; },
+--     toDriver(value) { return `[${value.join(",")}]`; },
+--     fromDriver(value) { return JSON.parse(value); },
+--   });
+
+-- ─── Example HNSW index (created by Drizzle migrations, shown here for reference) ──
+-- HNSW indexes enable fast approximate nearest-neighbor search on embeddings.
+-- These are created in Drizzle migration files, not in init-db.sql, because they
+-- require the tables to exist first. Reference examples:
+--
+--   CREATE INDEX idx_problems_embedding ON problems
+--     USING hnsw (embedding halfvec_cosine_ops)
+--     WITH (m = 16, ef_construction = 64);
+--
+--   CREATE INDEX idx_solutions_embedding ON solutions
+--     USING hnsw (embedding halfvec_cosine_ops)
+--     WITH (m = 16, ef_construction = 64);
+--
+-- Tuning parameters:
+--   m = 16              — Max connections per node (higher = better recall, more memory)
+--   ef_construction = 64 — Build-time search width (higher = better index quality, slower build)
+--   At query time, set: SET hnsw.ef_search = 100; (default 40, increase for better recall)
+--
+-- See also: docs/challenges/T6-pgvector-performance-at-scale.md for scaling guidance.
 ```
 
 ### 1.4 Local Development Workflow
@@ -552,14 +588,23 @@ REDIS_URL=redis://localhost:6379
 PORT=4000
 NODE_ENV=development
 LOG_LEVEL=debug
+APP_VERSION=0.1.0
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 
 # ─── Authentication ──────────────────────────────────────────────────────────
 JWT_SECRET=change-me-in-production
 JWT_ACCESS_TOKEN_EXPIRY=15m
 JWT_REFRESH_TOKEN_EXPIRY=30d
+TOTP_ENCRYPTION_KEY=change-me-32-byte-hex-string-here  # AES-256-GCM key for encrypting TOTP secrets
 
 # ─── Heartbeat Signing (Ed25519) ────────────────────────────────────────────
-# Generate: node -e "const {generateKeyPairSync}=require('crypto');const kp=generateKeyPairSync('ed25519');console.log(kp.publicKey.export({type:'spki',format:'pem'}));console.log(kp.privateKey.export({type:'pkcs8',format:'pem'}));"
+# Generate a key pair with:
+#   node -e "
+#     const crypto = require('crypto');
+#     const kp = crypto.generateKeyPairSync('ed25519');
+#     console.log('ED25519_PUBLIC_KEY=' + kp.publicKey.export({type:'spki',format:'der'}).toString('base64'));
+#     console.log('ED25519_PRIVATE_KEY=' + kp.privateKey.export({type:'pkcs8',format:'der'}).toString('base64'));
+#   "
 ED25519_PRIVATE_KEY=
 ED25519_PUBLIC_KEY=
 
@@ -569,25 +614,48 @@ GUARDRAIL_MODEL=claude-haiku-4-5-20251001
 DECOMPOSITION_MODEL=claude-sonnet-4-5-20250929
 VISION_MODEL=claude-sonnet-4-5-20250929
 
-# ─── Embeddings ──────────────────────────────────────────────────────────────
+# ─── Guardrail Configuration ────────────────────────────────────────────────
+GUARDRAIL_AUTO_APPROVE_THRESHOLD=0.7   # Score >= this → auto-approve (range: 0.6-1.0)
+GUARDRAIL_AUTO_REJECT_THRESHOLD=0.4    # Score < this → auto-reject (range: 0.0-0.5)
+# Scores between reject and approve thresholds → flagged for human review
+
+# ─── Embeddings (Voyage AI) ─────────────────────────────────────────────────
+VOYAGE_API_KEY=pa-your-key-here
 EMBEDDING_MODEL=voyage-3
 EMBEDDING_DIMENSIONS=1024
 
-# ─── Object Storage (Supabase Storage / S3-compatible, MinIO locally) ─────────────────────────
-SUPABASE_STORAGE_ENDPOINT=http://localhost:9000
-SUPABASE_STORAGE_ACCESS_KEY=minioadmin
-SUPABASE_STORAGE_SECRET_KEY=minioadmin
-SUPABASE_STORAGE_BUCKET=betterworld-dev
-SUPABASE_STORAGE_PUBLIC_URL=http://localhost:9000/betterworld-dev
+# ─── Object Storage (S3-compatible) ─────────────────────────────────────────
+# STORAGE_PROVIDER controls which backend is used. Code reads the same env vars
+# regardless of provider; only the endpoint/credentials differ.
+#   "minio"    — local dev (default in docker-compose)
+#   "supabase" — production (Supabase Storage S3 endpoint)
+STORAGE_PROVIDER=minio
+STORAGE_ENDPOINT=http://localhost:9000                    # MinIO: http://localhost:9000 | Supabase: https://<project>.supabase.co/storage/v1/s3
+STORAGE_ACCESS_KEY=minioadmin                             # MinIO: minioadmin | Supabase: service role key
+STORAGE_SECRET_KEY=minioadmin                             # MinIO: minioadmin | Supabase: service role secret
+STORAGE_BUCKET=betterworld-dev                            # MinIO: betterworld-dev | Supabase: evidence (or betterworld)
+STORAGE_PUBLIC_URL=http://localhost:9000/betterworld-dev  # MinIO: http://localhost:9000/<bucket> | Supabase: https://<project>.supabase.co/storage/v1/object/public/<bucket>
+CDN_BASE_URL=                                             # Optional: CDN URL for production (e.g., https://cdn.betterworld.ai)
 
 # ─── OAuth Providers ────────────────────────────────────────────────────────
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
+# OAuth callback URLs (configured in provider dashboards):
+#   Google: http://localhost:4000/api/auth/callback/google  (dev) | https://api.betterworld.ai/api/auth/callback/google (prod)
+#   GitHub: http://localhost:4000/api/auth/callback/github  (dev) | https://api.betterworld.ai/api/auth/callback/github (prod)
 
-# ─── X/Twitter API (Agent Verification) ─────────────────────────────────────
+# ─── Email (Resend) ─────────────────────────────────────────────────────────
+RESEND_API_KEY=re_your-key-here
+EMAIL_FROM=noreply@betterworld.ai
+
+# ─── X/Twitter API (Agent Verification — Phase 2) ───────────────────────────
 TWITTER_BEARER_TOKEN=
+
+# ─── WebSocket ───────────────────────────────────────────────────────────────
+WS_HOST=localhost
+WS_PORT=4001
 
 # ─── Worker ──────────────────────────────────────────────────────────────────
 WORKER_CONCURRENCY=5
