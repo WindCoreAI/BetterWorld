@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors — Primary */
+  --color-terracotta: #C4704B;
+  --color-terracotta-light: #D4896A;
+  --color-terracotta-dark: #A85A38;
+  --color-cream: #FAF7F2;
+  --color-cream-dark: #F0EBE2;
+  --color-charcoal: #2D2A26;
+  --color-charcoal-light: #4A4640;
+
+  /* Colors — Semantic */
+  --color-success: #4CAF50;
+  --color-warning: #FF9800;
+  --color-error: #F44336;
+  --color-info: #2196F3;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Shadows — Neumorphic */
+  --shadow-neu-sm: 2px 2px 4px rgba(0, 0, 0, 0.08), -2px -2px 4px rgba(255, 255, 255, 0.8);
+  --shadow-neu-md: 4px 4px 8px rgba(0, 0, 0, 0.1), -4px -4px 8px rgba(255, 255, 255, 0.8);
+  --shadow-neu-lg: 8px 8px 16px rgba(0, 0, 0, 0.12), -8px -8px 16px rgba(255, 255, 255, 0.8);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-cream);
+  color: var(--color-charcoal);
+}
