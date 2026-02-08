@@ -1,0 +1,123 @@
+# Forbidden Patterns - Constitutional Boundaries
+# These 12 patterns define content that violates platform boundaries and must be rejected
+
+patterns:
+  - name: surveillance
+    description: Monitoring, tracking, or spying on people without consent
+    regex: \b(surveillance|spy|monitor.*people|track.*citizens|wiretap|camera.*watch|stalk|monitor.*location)\b
+    severity: critical
+    examples:
+      - Install surveillance cameras to monitor neighbors
+      - Track citizens' movements
+      - Spy on community members
+      - Wiretap phone conversations
+
+  - name: weapons
+    description: Weapons, firearms, explosives, or ammunition
+    regex: \b(weapon|gun|firearm|explosive|bomb|ammunition|arsenal|grenade|rifle|pistol|assault)\b
+    severity: critical
+    examples:
+      - Distribute weapons to community
+      - Build explosive devices
+      - Gun distribution program
+      - Arsenal for neighborhood defense
+
+  - name: political_manipulation
+    description: Political campaigns, voting manipulation, or partisan propaganda
+    regex: \b(political.*campaign|elect.*candidate|vote.*manipulation|propaganda|partisan|ballot.*stuff|voter.*suppress)\b
+    severity: critical
+    examples:
+      - Organize political campaign rally
+      - Manipulate voting results
+      - Create partisan propaganda
+      - Suppress voter turnout
+
+  - name: financial_exploitation
+    description: Scams, fraud, pyramid schemes, or predatory lending
+    regex: \b(pyramid.*scheme|ponzi|scam|fraud|predatory.*len|multi.*level.*market|mlm|get.*rich.*quick)\b
+    severity: critical
+    examples:
+      - Multi-level marketing scheme
+      - Predatory lending to low-income families
+      - Get-rich-quick investment program
+      - Ponzi scheme for community fundraising
+
+  - name: discrimination
+    description: Discrimination based on protected characteristics
+    regex: \b(discriminat.*against|segregat|exclude.*based.*on|ban.*(race|religion|gender|orientation|disability))\b
+    severity: critical
+    examples:
+      - Exclude members based on religion
+      - Segregate community by race
+      - Ban people with disabilities
+      - Discriminate against LGBTQ+ individuals
+
+  - name: pseudo_science
+    description: Medical misinformation or unproven health claims
+    regex: \b(miracle.*cure|anti.*vax|vaccine.*danger|crystal.*heal|homeopath.*cure|essential.*oil.*cure)\b
+    severity: high
+    examples:
+      - Promote anti-vaccine misinformation
+      - Miracle cure for chronic diseases
+      - Essential oils cure cancer
+      - Crystal healing replaces medicine
+
+  - name: privacy_violation
+    description: Unauthorized collection or sharing of personal data
+    regex: \b(collect.*personal.*data|share.*private.*info|dox|publish.*address|leak.*contact)\b
+    severity: critical
+    examples:
+      - Collect personal data without consent
+      - Share private medical information
+      - Publish home addresses of community members
+      - Dox political opponents
+
+  - name: deepfakes
+    description: AI-generated fake media to deceive or manipulate
+    regex: \b(deepfake|fake.*video|manipulated.*image|synthetic.*media.*deceive|ai.*generated.*fake)\b
+    severity: high
+    examples:
+      - Create deepfake videos of public figures
+      - Generate fake news with AI
+      - Manipulated images to spread misinformation
+      - Synthetic media to deceive voters
+
+  - name: social_engineering
+    description: Manipulation tactics to extract information or money
+    regex: \b(phish|social.*engineer|impersonat.*official|fake.*charity|donation.*scam)\b
+    severity: high
+    examples:
+      - Phishing emails targeting seniors
+      - Impersonate government officials
+      - Fake charity donation drive
+      - Social engineering to steal credentials
+
+  - name: market_manipulation
+    description: Insider trading, price fixing, or market fraud
+    regex: \b(insider.*trad|price.*fix|market.*manipul|pump.*and.*dump|stock.*fraud)\b
+    severity: high
+    examples:
+      - Insider trading coordination
+      - Price fixing among local businesses
+      - Pump and dump cryptocurrency scheme
+      - Market manipulation for profit
+
+  - name: labor_exploitation
+    description: Unfair labor practices or human trafficking
+    regex: \b(child.*labor|human.*traffick|forced.*labor|sweatshop|exploit.*worker|slave.*labor)\b
+    severity: critical
+    examples:
+      - Child labor in manufacturing
+      - Human trafficking network
+      - Forced labor camp
+      - Exploit undocumented workers
+
+  - name: hate_speech
+    description: Content promoting violence or hatred against groups
+    regex: \b(hate.*speech|incite.*violence|ethnic.*cleansing|genocide|lynch|supremac(y|ist))\b
+    severity: critical
+    examples:
+      - Incite violence against minority groups
+      - Promote ethnic cleansing
+      - White supremacist propaganda
+      - Call for genocide

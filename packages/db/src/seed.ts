@@ -4,6 +4,11 @@ import postgres from "postgres";
 
 import { agents } from "./schema/agents";
 import { debates } from "./schema/debates";
+import {
+  forbiddenPatterns,
+  approvedDomains,
+  trustTiers,
+} from "./schema/guardrails";
 import { humans } from "./schema/humans";
 import { problems } from "./schema/problems";
 import { solutions } from "./schema/solutions";
@@ -21,6 +26,7 @@ async function seed() {
   await db.transaction(async (tx) => {
     // Truncate tables in reverse dependency order
     await tx.execute(sql`TRUNCATE debates, solutions, problems, agents, humans CASCADE`);
+    await tx.execute(sql`TRUNCATE flagged_content, guardrail_evaluations, evaluation_cache, forbidden_patterns, approved_domains, trust_tiers CASCADE`);
 
     // Insert humans
     const [adminUser, _regularUser] = await tx
@@ -493,6 +499,356 @@ async function seed() {
     ]);
 
     console.log("  Inserted 10 debates");
+
+    // Insert forbidden patterns (Layer A configuration)
+    await tx.insert(forbiddenPatterns).values([
+      {
+        name: "surveillance",
+        description: "Monitoring, tracking, or spying on people without consent",
+        regexPattern: "\\b(surveillance|spy|monitor.*people|track.*citizens|wiretap|camera.*watch|stalk|monitor.*location)\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Install surveillance cameras to monitor neighbors",
+          "Track citizens' movements",
+          "Spy on community members",
+        ],
+      },
+      {
+        name: "weapons",
+        description: "Weapons, firearms, explosives, or ammunition",
+        regexPattern: "\\b(weapon|gun|firearm|explosive|bomb|ammunition|arsenal|grenade|rifle|pistol|assault)\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Distribute weapons to community",
+          "Build explosive devices",
+          "Gun distribution program",
+        ],
+      },
+      {
+        name: "political_manipulation",
+        description: "Political campaigns, voting manipulation, or partisan propaganda",
+        regexPattern: "\\b(political.*campaign|elect.*candidate|vote.*manipulation|propaganda|partisan|ballot.*stuff|voter.*suppress)\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Organize political campaign rally",
+          "Manipulate voting results",
+          "Create partisan propaganda",
+        ],
+      },
+      {
+        name: "financial_exploitation",
+        description: "Scams, fraud, pyramid schemes, or predatory lending",
+        regexPattern: "\\b(pyramid.*scheme|ponzi|scam|fraud|predatory.*len|multi.*level.*market|mlm|get.*rich.*quick)\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Multi-level marketing scheme",
+          "Predatory lending to low-income families",
+          "Ponzi scheme for community fundraising",
+        ],
+      },
+      {
+        name: "discrimination",
+        description: "Discrimination based on protected characteristics",
+        regexPattern: "\\b(discriminat.*against|segregat|exclude.*based.*on|ban.*(race|religion|gender|orientation|disability))\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Exclude members based on religion",
+          "Segregate community by race",
+          "Discriminate against LGBTQ+ individuals",
+        ],
+      },
+      {
+        name: "pseudo_science",
+        description: "Medical misinformation or unproven health claims",
+        regexPattern: "\\b(miracle.*cure|anti.*vax|vaccine.*danger|crystal.*heal|homeopath.*cure|essential.*oil.*cure)\\b",
+        severity: "high",
+        exampleViolations: [
+          "Promote anti-vaccine misinformation",
+          "Miracle cure for chronic diseases",
+          "Crystal healing replaces medicine",
+        ],
+      },
+      {
+        name: "privacy_violation",
+        description: "Unauthorized collection or sharing of personal data",
+        regexPattern: "\\b(collect.*personal.*data|share.*private.*info|dox|publish.*address|leak.*contact)\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Collect personal data without consent",
+          "Publish home addresses of community members",
+          "Dox political opponents",
+        ],
+      },
+      {
+        name: "deepfakes",
+        description: "AI-generated fake media to deceive or manipulate",
+        regexPattern: "\\b(deepfake|fake.*video|manipulated.*image|synthetic.*media.*deceive|ai.*generated.*fake)\\b",
+        severity: "high",
+        exampleViolations: [
+          "Create deepfake videos of public figures",
+          "Generate fake news with AI",
+          "Synthetic media to deceive voters",
+        ],
+      },
+      {
+        name: "social_engineering",
+        description: "Manipulation tactics to extract information or money",
+        regexPattern: "\\b(phish|social.*engineer|impersonat.*official|fake.*charity|donation.*scam)\\b",
+        severity: "high",
+        exampleViolations: [
+          "Phishing emails targeting seniors",
+          "Impersonate government officials",
+          "Fake charity donation drive",
+        ],
+      },
+      {
+        name: "market_manipulation",
+        description: "Insider trading, price fixing, or market fraud",
+        regexPattern: "\\b(insider.*trad|price.*fix|market.*manipul|pump.*and.*dump|stock.*fraud)\\b",
+        severity: "high",
+        exampleViolations: [
+          "Insider trading coordination",
+          "Price fixing among local businesses",
+          "Pump and dump cryptocurrency scheme",
+        ],
+      },
+      {
+        name: "labor_exploitation",
+        description: "Unfair labor practices or human trafficking",
+        regexPattern: "\\b(child.*labor|human.*traffick|forced.*labor|sweatshop|exploit.*worker|slave.*labor)\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Child labor in manufacturing",
+          "Human trafficking network",
+          "Exploit undocumented workers",
+        ],
+      },
+      {
+        name: "hate_speech",
+        description: "Content promoting violence or hatred against groups",
+        regexPattern: "\\b(hate.*speech|incite.*violence|ethnic.*cleansing|genocide|lynch|supremac(y|ist))\\b",
+        severity: "critical",
+        exampleViolations: [
+          "Incite violence against minority groups",
+          "Promote ethnic cleansing",
+          "White supremacist propaganda",
+        ],
+      },
+    ]);
+
+    console.log("  Inserted 12 forbidden patterns");
+
+    // Insert approved domains (Layer B configuration)
+    await tx.insert(approvedDomains).values([
+      {
+        domainKey: "poverty_reduction",
+        displayName: "Poverty Reduction",
+        description: "Initiatives that reduce economic hardship and improve access to basic needs",
+        unSdgAlignment: [1, 10],
+        exampleTopics: [
+          "Food banks and meal distribution",
+          "Microfinance and financial literacy",
+          "Affordable housing initiatives",
+          "Job training and employment programs",
+        ],
+      },
+      {
+        domainKey: "education_access",
+        displayName: "Education Access",
+        description: "Programs that increase access to quality education for underserved communities",
+        unSdgAlignment: [4],
+        exampleTopics: [
+          "Tutoring and mentorship programs",
+          "Scholarship funds",
+          "Literacy programs",
+          "School supply distribution",
+        ],
+      },
+      {
+        domainKey: "healthcare_improvement",
+        displayName: "Healthcare Improvement",
+        description: "Initiatives that improve healthcare access and outcomes",
+        unSdgAlignment: [3],
+        exampleTopics: [
+          "Free clinics and health screenings",
+          "Medication assistance programs",
+          "Health education campaigns",
+          "Mental health support groups",
+        ],
+      },
+      {
+        domainKey: "environmental_protection",
+        displayName: "Environmental Protection",
+        description: "Projects that protect ecosystems and combat climate change",
+        unSdgAlignment: [13, 15],
+        exampleTopics: [
+          "Tree planting and reforestation",
+          "Beach and river cleanup",
+          "Recycling programs",
+          "Air quality monitoring",
+        ],
+      },
+      {
+        domainKey: "food_security",
+        displayName: "Food Security",
+        description: "Programs ensuring access to nutritious food",
+        unSdgAlignment: [2],
+        exampleTopics: [
+          "Community gardens",
+          "Meal delivery for seniors",
+          "Food rescue and redistribution",
+          "Nutrition education",
+        ],
+      },
+      {
+        domainKey: "mental_health_wellbeing",
+        displayName: "Mental Health & Wellbeing",
+        description: "Support for mental health and emotional wellness",
+        unSdgAlignment: [3],
+        exampleTopics: [
+          "Peer support groups",
+          "Crisis hotlines",
+          "Mindfulness and stress reduction programs",
+          "Grief counseling",
+        ],
+      },
+      {
+        domainKey: "community_building",
+        displayName: "Community Building",
+        description: "Initiatives that strengthen social connections and neighborhoods",
+        unSdgAlignment: [11],
+        exampleTopics: [
+          "Neighborhood watch programs",
+          "Community events and festivals",
+          "Youth mentorship",
+          "Senior companionship",
+        ],
+      },
+      {
+        domainKey: "disaster_response",
+        displayName: "Disaster Response",
+        description: "Emergency aid and disaster recovery efforts",
+        unSdgAlignment: [11],
+        exampleTopics: [
+          "Emergency shelter coordination",
+          "Disaster supply distribution",
+          "Search and rescue support",
+          "Recovery and rebuilding",
+        ],
+      },
+      {
+        domainKey: "digital_inclusion",
+        displayName: "Digital Inclusion",
+        description: "Bridging the digital divide and increasing tech access",
+        unSdgAlignment: [9],
+        exampleTopics: [
+          "Free wifi for underserved areas",
+          "Computer literacy training",
+          "Refurbished device distribution",
+          "Online skills training",
+        ],
+      },
+      {
+        domainKey: "human_rights",
+        displayName: "Human Rights",
+        description: "Protecting and advancing fundamental human rights",
+        unSdgAlignment: [16],
+        exampleTopics: [
+          "Legal aid for marginalized groups",
+          "Anti-trafficking initiatives",
+          "Refugee support services",
+          "Civic education",
+        ],
+      },
+      {
+        domainKey: "clean_water_sanitation",
+        displayName: "Clean Water & Sanitation",
+        description: "Ensuring access to safe water and sanitation",
+        unSdgAlignment: [6],
+        exampleTopics: [
+          "Well construction",
+          "Water quality testing",
+          "Sanitation infrastructure",
+          "Hygiene education",
+        ],
+      },
+      {
+        domainKey: "sustainable_energy",
+        displayName: "Sustainable Energy",
+        description: "Promoting renewable energy and energy efficiency",
+        unSdgAlignment: [7],
+        exampleTopics: [
+          "Solar panel installation",
+          "Energy efficiency audits",
+          "Renewable energy education",
+          "Green technology adoption",
+        ],
+      },
+      {
+        domainKey: "gender_equality",
+        displayName: "Gender Equality",
+        description: "Advancing gender equality and women's empowerment",
+        unSdgAlignment: [5],
+        exampleTopics: [
+          "Women's entrepreneurship programs",
+          "Girls' education initiatives",
+          "Gender-based violence prevention",
+          "Leadership development for women",
+        ],
+      },
+      {
+        domainKey: "biodiversity_conservation",
+        displayName: "Biodiversity Conservation",
+        description: "Protecting wildlife and natural habitats",
+        unSdgAlignment: [14, 15],
+        exampleTopics: [
+          "Wildlife habitat restoration",
+          "Endangered species protection",
+          "Marine conservation",
+          "Urban biodiversity projects",
+        ],
+      },
+      {
+        domainKey: "elder_care",
+        displayName: "Elder Care",
+        description: "Supporting the health and dignity of older adults",
+        unSdgAlignment: [3],
+        exampleTopics: [
+          "Senior meal delivery",
+          "Companionship programs",
+          "Home maintenance assistance",
+          "Age-friendly community initiatives",
+        ],
+      },
+    ]);
+
+    console.log("  Inserted 15 approved domains");
+
+    // Insert trust tiers (2-tier MVP model)
+    await tx.insert(trustTiers).values([
+      {
+        tierName: "new",
+        displayName: "New Agent",
+        minAccountAgeDays: 0,
+        minApprovedSubmissions: 0,
+        autoApproveThreshold: "1.00", // Impossible score - all content to human review
+        autoFlagThresholdMin: "0.00", // All content flagged
+        autoRejectThresholdMax: "0.00", // Reject only if Layer A catches it
+        description: "New agents - all content routed to human review for safety and training data collection",
+      },
+      {
+        tierName: "verified",
+        displayName: "Verified Agent",
+        minAccountAgeDays: 8,
+        minApprovedSubmissions: 3,
+        autoApproveThreshold: null, // Use default 0.70
+        autoFlagThresholdMin: null, // Use default 0.40
+        autoRejectThresholdMax: null, // Use default 0.40
+        description: "Verified agents - normal thresholds apply (0.70 approve, 0.40-0.70 flag, <0.40 reject)",
+      },
+    ]);
+
+    console.log("  Inserted 2 trust tiers");
   });
 
   console.log("Seeding complete!");

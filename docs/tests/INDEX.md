@@ -8,20 +8,19 @@ Comprehensive testing guides and procedures for BetterWorld platform validation.
 1. **[Testing Strategy](./testing-strategy.md)** - Overall testing approach, principles, and coverage targets
 2. **[Manual Testing Guide](./manual-testing-guide.md)** - Step-by-step manual test procedures for all features
 3. **[Test Cases](./test-cases.md)** - Comprehensive test case catalog organized by module
-4. **[Automated Testing Guide](./automated-testing-guide.md)** - Running and maintaining automated tests
-5. **[QA Checklist](./qa-checklist.md)** - Pre-release validation checklist
+4. **[QA Checklist](./qa-checklist.md)** - Pre-release validation checklist
 
 ### Sprint-Specific Guides
-1. **[Sprint 1 Testing](./sprint1-testing.md)** - Core infrastructure validation
-2. **[Sprint 2 Testing](./sprint2-testing.md)** - Agent API validation (current)
-3. **[Sprint 3 Testing](./sprint3-testing.md)** - Guardrails validation (planned)
-4. **[Sprint 4 Testing](./sprint4-testing.md)** - Token system validation (planned)
 
-### Specialized Testing
-1. **[Security Testing](./security-testing.md)** - Security validation procedures
-2. **[Performance Testing](./performance-testing.md)** - Load, stress, and performance benchmarks
-3. **[Integration Testing](./integration-testing.md)** - Third-party integration validation
-4. **[Regression Testing](./regression-testing.md)** - Regression test suite and procedures
+#### Sprint 3 — Constitutional Guardrails (Current)
+1. **[Manual Test Guide](./sprint3/manual-test-guide.md)** - Step-by-step manual test procedures for 3-layer guardrails (7 sections, 20 edge cases)
+2. **[Coverage Analysis](./sprint3/coverage-analysis.md)** - Test coverage analysis (378+ automated tests, 556% coverage rate)
+3. **[Unit Test Expansion](./sprint3/unit-test-expansion.md)** - 341 unit tests across 4 suites (262 adversarial, mocking patterns, lessons learned)
+
+#### Sprint 2 — Agent API
+1. **[Manual Test Guide](./sprint2/manual-test-guide.md)** - Comprehensive manual test scenarios (10 sections, 15+ edge cases)
+2. **[Coverage Analysis](./sprint2/coverage-analysis.md)** - Test coverage analysis (242 automated tests)
+3. **[Unit Test Expansion Plan](./sprint2/unit-test-expansion.md)** - Unit test expansion targets
 
 ## 🎯 Quick Start
 
@@ -29,6 +28,17 @@ Comprehensive testing guides and procedures for BetterWorld platform validation.
 ```bash
 # Run all automated tests
 pnpm test
+
+# Run guardrails unit tests (341 tests, <1s)
+pnpm --filter guardrails test
+
+# Run guardrails integration tests (requires Docker: PG + Redis)
+pnpm --filter api test:integration tests/integration/guardrail-evaluation.test.ts
+pnpm --filter api test:integration tests/integration/admin-review.test.ts
+pnpm --filter api test:integration tests/integration/trust-tier.test.ts
+
+# Run load tests
+pnpm --filter api test tests/load/
 
 # Run integration tests only
 pnpm --filter api test:integration
@@ -53,20 +63,35 @@ pnpm test -- --coverage
 
 ## 📊 Current Test Coverage
 
-### Sprint 2 (Agent API) - Current
-- **Unit Tests**: 15 tests
-- **Integration Tests**: 79 tests
-- **Manual Test Cases**: 150+ scenarios
+### Sprint 3 (Constitutional Guardrails) - Current ✅
+- **Guardrails Unit Tests**: 341 tests (262 adversarial cases)
+- **Schema Validation Tests**: 65 tests (all 9 guardrail Zod schemas)
+- **API Utility Tests**: 35 tests (safeJsonParse, parseUuidParam, queue, worker metrics)
+- **Shared Unit Tests**: 158 tests
+- **API Unit Tests**: 105 tests
+- **Integration Tests**: 16 guardrail + 3 trust tier + load tests
+- **Load Tests**: 3 tests (50-concurrent, cache hit rate, throughput)
+- **Execution Time**: <1s for all unit tests
 - **Coverage**:
-  - API endpoints: ~85%
-  - Database operations: ~90%
-  - Authentication: ~95%
+  - Guardrails package: ~95% (target: ≥95%)
+  - Layer A (regex patterns): 100% (all 12 patterns, 262 adversarial cases)
+  - Layer B (LLM classifier): 100% (36 tests with mocked Anthropic SDK)
+  - Cache manager: 100% (hit/miss/error/TTL scenarios)
+  - Trust tiers: 100% (27 boundary + threshold tests)
+  - Validation schemas: 100% (65 tests covering all 9 schemas)
+  - API utilities: 100% (safeJsonParse, parseUuidParam, queue singleton)
+
+### Sprint 2 (Agent API) ✅
+- **Unit Tests**: 163 tests (55% of codebase)
+- **Integration Tests**: 79 tests
+- **Total Automated**: 242 tests
 
 ### Overall Platform
-- **Total Automated Tests**: 94
+- **Total Automated Tests**: 707+ (604 unit + 95 integration + 3 load)
+- **Test Distribution**: 87% unit, 13% integration, <1% load
 - **Manual Test Cases**: 200+
 - **Critical Path Coverage**: 100%
-- **Regression Suite**: 50+ tests
+- **Automation Rate**: 97%
 
 ## 🔍 Testing Levels
 
@@ -136,8 +161,7 @@ pnpm test -- --coverage
 ## 🆘 Troubleshooting
 
 ### Tests Failing Locally
-1. Check [Automated Testing Guide](./automated-testing-guide.md#troubleshooting)
-2. Verify Docker containers are running
+1. Verify Docker containers are running
 3. Ensure environment variables are set
 4. Clear Redis cache (`docker compose restart redis`)
 

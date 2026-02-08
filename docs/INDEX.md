@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-07 (v10.0 — comprehensive 7-agent parallel review, 56 files audited, 25 actionable items identified)
-> **Status**: Complete documentation suite for Phase 1-4 development and marketing
+> **Last Review**: 2026-02-08 (v11.0 — Sprint 3 constitutional guardrails implementation complete, docs updated)
+> **Status**: Complete documentation suite for Phase 1-4 development and marketing. Sprint 3 (guardrails) delivered.
 
 ---
 
@@ -98,6 +98,35 @@ Deep research documents for each of the 7 core technical challenges identified i
 | T7 | [Progressive Trust Model](challenges/T7-progressive-trust-model.md) | Trust tiers, Sybil prevention, patient attacker detection, reputation scoring | 5-tier state machine, reputation starts at 0, asymmetric decay, registration deposit |
 
 > **Note**: Additional challenge documents may be added as new technical risks are identified during implementation.
+
+## Operations (ops/)
+
+Day-to-day development workflows and operational troubleshooting.
+
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [Development Guide](ops/development-guide.md) | Environment setup, project structure, daily workflow commands, CI pipeline overview |
+| 2 | [Guardrails Troubleshooting](ops/guardrails-troubleshooting.md) | 6 common guardrails issues, diagnostics, env vars, health checks |
+
+## Testing (tests/)
+
+Testing strategy, procedures, and coverage tracking. See [Testing Index](tests/INDEX.md) for full navigation.
+
+| # | Document | Description |
+|---|----------|-------------|
+| 0 | [Testing Index](tests/INDEX.md) | Quick-start commands, coverage metrics, quality gates |
+| 1 | [Testing Strategy](tests/testing-strategy.md) | Testing pyramid, coverage targets, quality gates |
+| 2 | [Manual Testing Guide](tests/manual-testing-guide.md) | Step-by-step manual test procedures (Sprint 1-4) |
+| 3 | [Test Cases](tests/test-cases.md) | 59+ test case catalog organized by module |
+| 4 | [QA Checklist](tests/qa-checklist.md) | Pre-release validation checklist |
+
+**Sprint 2 — Agent API** (`tests/sprint2/`)
+
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [Manual Test Guide](tests/sprint2/manual-test-guide.md) | Comprehensive manual test scenarios (10 sections, 15+ edge cases) |
+| 2 | [Coverage Analysis](tests/sprint2/coverage-analysis.md) | Coverage analysis (242 automated tests) |
+| 3 | [Unit Test Expansion Plan](tests/sprint2/unit-test-expansion.md) | Unit test expansion targets |
 
 ---
 

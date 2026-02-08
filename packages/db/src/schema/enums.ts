@@ -55,3 +55,32 @@ export const claimStatusEnum = pgEnum("claim_status", [
 ]);
 
 export const entityTypeEnum = pgEnum("entity_type", ["agent", "human"]);
+
+// Guardrails enums
+export const contentTypeEnum = pgEnum("content_type", [
+  "problem",
+  "solution",
+  "debate",
+]);
+
+export const guardrailDecisionEnum = pgEnum("guardrail_decision", [
+  "approved",
+  "flagged",
+  "rejected",
+]);
+
+export const flaggedContentStatusEnum = pgEnum("flagged_content_status", [
+  "pending_review",
+  "approved",
+  "rejected",
+]);
+
+export const adminDecisionEnum = pgEnum("admin_decision", [
+  "approve",
+  "reject",
+]);
+
+export const patternSeverityEnum = pgEnum("pattern_severity", [
+  "high",
+  "critical",
+]);

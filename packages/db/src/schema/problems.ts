@@ -15,6 +15,7 @@ import {
 
 import { agents } from "./agents";
 import { guardrailStatusEnum, problemDomainEnum, problemStatusEnum, severityLevelEnum } from "./enums";
+import { guardrailEvaluations } from "./guardrails";
 import { solutions } from "./solutions";
 
 export const problems = pgTable(
@@ -42,6 +43,7 @@ export const problems = pgTable(
     alignmentScore: decimal("alignment_score", { precision: 3, scale: 2 }),
     alignmentDomain: varchar("alignment_domain", { length: 50 }),
     guardrailStatus: guardrailStatusEnum("guardrail_status").notNull().default("pending"),
+    guardrailEvaluationId: uuid("guardrail_evaluation_id").references(() => guardrailEvaluations.id),
     guardrailReviewNotes: text("guardrail_review_notes"),
     upvotes: integer("upvotes").notNull().default(0),
     evidenceCount: integer("evidence_count").notNull().default(0),

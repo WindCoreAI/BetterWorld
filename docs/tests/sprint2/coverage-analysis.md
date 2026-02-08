@@ -33,10 +33,11 @@ Comprehensive analysis of manual test scenarios vs automated test implementation
 ### Key Metrics
 
 - ✅ **Automation Rate**: 95% (56/59 scenarios fully automated)
-- ✅ **Test Files**: 11 integration test suites
-- ✅ **Test Cases**: 76 automated integration tests
-- ✅ **Execution Time**: ~27 seconds (all integration tests)
+- ✅ **Test Files**: 17 test suites (11 integration + 6 unit)
+- ✅ **Test Cases**: 242 automated tests (163 unit + 79 integration)
+- ✅ **Execution Time**: <1s (unit) + ~27s (integration) = ~28s total
 - ✅ **Critical Path Coverage**: 100%
+- ✅ **Unit Test Coverage**: 55% (target: 60%)
 
 ---
 
@@ -237,13 +238,23 @@ Total: 75 integration tests across 10 test files
 ### Unit Test Files (4 files)
 
 ```
-apps/api/src/__tests__/
-├── auth.test.ts                    # Unit tests for auth middleware
-├── middleware.test.ts              # Unit tests for middleware
-├── rate-limit.test.ts              # Unit tests for rate limiting
-└── health.integration.test.ts      # Health endpoint integration test
+apps/api/src/
+├── __tests__/
+│   ├── auth.test.ts                    # 8 unit tests - auth middleware
+│   ├── middleware.test.ts              # 5 unit tests - middleware
+│   └── rate-limit.test.ts              # 6 unit tests - rate limiting
+├── lib/__tests__/
+│   └── crypto.test.ts                  # 17 unit tests - Ed25519 signatures
+└── services/__tests__/
+    ├── agent.service.test.ts           # 23 unit tests - AgentService
+    └── email.service.test.ts           # 11 unit tests - EmailService
 
-Total: 15 unit tests (growing)
+packages/shared/src/schemas/__tests__/
+├── agents.schema.test.ts               # 52 unit tests - Zod validation
+├── pagination.schema.test.ts           # 14 unit tests - pagination
+└── heartbeat.schema.test.ts            # 27 unit tests - heartbeat
+
+Total: 163 unit tests ✅ (Target: 180)
 ```
 
 ---
@@ -254,21 +265,23 @@ Total: 15 unit tests (growing)
 
 | Test Type | Count | Percentage | Target | Status |
 |-----------|-------|------------|--------|--------|
-| **Unit Tests** | 15 | 16% | 60% | 🟡 Growing |
-| **Integration Tests** | 79 | 84% | 35% | 🔴 Over-weighted |
+| **Unit Tests** | 163 | 67% | 60% | ✅ **Exceeds Target!** |
+| **Integration Tests** | 79 | 33% | 35% | ✅ On Target |
 | **E2E Tests** | 0 | 0% | 5% | ⏳ Planned Sprint 3+ |
-| **Total** | 94 | 100% | 100% | ✅ |
+| **Total** | 242 | 100% | 100% | ✅ |
 
 ### Recommended Next Steps
 
-**Priority 1: Add More Unit Tests** (to reach 60% target)
-- [ ] Unit tests for `AgentService` methods
-- [ ] Unit tests for validation schemas (Zod)
-- [ ] Unit tests for guardrails logic (Sprint 3)
-- [ ] Unit tests for token calculations (Sprint 4)
-- [ ] Unit tests for utility functions
+**Priority 1: Complete Unit Test Coverage** (✅ 91% to target!)
+- [x] Unit tests for `AgentService` methods (23 tests) ✅
+- [x] Unit tests for validation schemas (Zod) (93 tests) ✅
+- [x] Unit tests for crypto utilities (17 tests) ✅
+- [x] Unit tests for email service (11 tests) ✅
+- [ ] Unit tests for guardrails logic (Sprint 3, ~50 tests)
+- [ ] Unit tests for token calculations (Sprint 4, ~45 tests)
+- [ ] Unit tests for remaining utility functions (~17 tests)
 
-**Target**: ~180 unit tests by Sprint 4
+**Current**: 163/180 unit tests (91%) | **Remaining**: ~17 tests to reach target
 
 **Priority 2: Maintain Integration Tests** (optimize to 35%)
 - [x] Current integration tests are comprehensive ✅
@@ -361,7 +374,7 @@ apps/web/
 **Immediate (Sprint 2)**:
 1. ✅ **DONE**: All critical paths automated
 2. ✅ **DONE**: Integration tests comprehensive
-3. ⏭️ **NEXT**: Add unit tests for service layer (~50 tests)
+3. ✅ **DONE**: Added unit tests for service layer, schemas, utilities (+148 tests)
 
 **Short-term (Sprint 3)**:
 1. Add Playwright setup for E2E tests
@@ -394,7 +407,7 @@ apps/web/
 |--------|---------|--------|--------|
 | **Flaky test rate** | 0% | <2% | ✅ Excellent |
 | **Test maintenance time** | ~5% | <10% | ✅ Low |
-| **Coverage trend** | Stable | Increasing | 🟡 Need more unit tests |
+| **Coverage trend** | Increasing | Increasing | ✅ 148 unit tests added |
 
 ---
 

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { AgentService } from "../agent.service.js";
-import { AppError, RESERVED_USERNAMES, ALLOWED_DOMAINS } from "@betterworld/shared";
+import { AppError, RESERVED_USERNAMES } from "@betterworld/shared";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type Redis from "ioredis";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+import { AgentService } from "../agent.service.js";
 
 // Mock bcrypt to avoid slow hashing in unit tests
 vi.mock("bcrypt", () => ({
@@ -14,7 +15,9 @@ vi.mock("bcrypt", () => ({
 
 describe("AgentService", () => {
   let service: AgentService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockRedis: any;
 
   beforeEach(() => {
@@ -179,6 +182,7 @@ describe("AgentService", () => {
       });
 
       // Mock unique constraint error (code 23505)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dbError = new Error("Unique constraint violation") as any;
       dbError.code = "23505";
       mockDb.insert.mockReturnValue({

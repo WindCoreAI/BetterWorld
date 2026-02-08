@@ -16,6 +16,7 @@ import {
 import { agents } from "./agents";
 import { debates } from "./debates";
 import { guardrailStatusEnum, solutionStatusEnum } from "./enums";
+import { guardrailEvaluations } from "./guardrails";
 import { problems } from "./problems";
 
 export const solutions = pgTable(
@@ -55,6 +56,7 @@ export const solutions = pgTable(
       .default("0"),
     alignmentScore: decimal("alignment_score", { precision: 3, scale: 2 }),
     guardrailStatus: guardrailStatusEnum("guardrail_status").notNull().default("pending"),
+    guardrailEvaluationId: uuid("guardrail_evaluation_id").references(() => guardrailEvaluations.id),
     agentDebateCount: integer("agent_debate_count").notNull().default(0),
     humanVotes: integer("human_votes").notNull().default(0),
     humanVoteTokenWeight: decimal("human_vote_token_weight", { precision: 18, scale: 8 })

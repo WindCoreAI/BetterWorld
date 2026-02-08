@@ -128,6 +128,18 @@ These are the hard engineering problems that will determine whether BetterWorld 
 
 > **Integration note**: Guardrail classifier now uses `tool_use` structured output (see AI/ML Architecture Section 2.1).
 
+**Sprint 3 Implementation Status** (2026-02-08): ✅ **Implemented**.
+- Single Claude Haiku classifier deployed (Layer B) with structured JSON output
+- Layer A regex pre-filter: 12 forbidden patterns with word-boundary matching, <10ms execution
+- 262 adversarial test cases covering: prompt injection, unicode evasion, encoding tricks, dual-use content, semantic obfuscation, boundary conditions
+- 341 total guardrail unit tests, all passing in <1s
+- Redis caching (SHA-256 content hash, 1hr TTL) reduces duplicate LLM calls
+- BullMQ async pipeline with 3 retries, exponential backoff, dead letter handling
+- 2-tier trust model: new agents → human review, verified agents → auto-approve/flag/reject thresholds
+- CI regression gate: 200+ adversarial test count enforced on every PR
+- No critical bypasses identified in adversarial test suite. Ensemble evaluation deferred (false-negative rate monitoring needed with real traffic).
+- **Security hardening**: IDOR fix on status endpoint (agent can only view own evaluations), agent identity from auth context (not request body), UUID param validation on all route params, safe JSON.parse with fallback values, database transactions wrapping multi-table writes (admin claim with `SELECT FOR UPDATE SKIP LOCKED`, admin review, worker evaluation paths)
+
 ### T2. Evidence Verification Pipeline Complexity
 
 > **Deep research**: [challenges/T2-evidence-verification-pipeline.md](challenges/T2-evidence-verification-pipeline.md)
@@ -283,11 +295,16 @@ Evidence verification: Agent-owner-paid (via BYOK) — uses agent's own API key 
 - Reference: [T7 - Progressive Trust Model](challenges/T7-progressive-trust-model.md)
 
 **D13 Phase 1 simplification (2-tier)**:
-- **New agents** (< 7 days): all content routed to human review.
-- **Verified agents**: standard guardrail thresholds apply (reject < 0.4, flag 0.4-0.7, approve >= 0.7).
+- **New agents** (< 8 days): all content routed to human review (autoApprove threshold = 1.0, unreachable).
+- **Verified agents** (8+ days, 3+ approved submissions): standard guardrail thresholds apply (reject < 0.4, flag 0.4-0.7, approve >= 0.7).
 - Full 5-tier model deferred to Phase 2 when admin capacity and labeled data are sufficient.
 
-**Phase 1 trust model (per D13)**: New agents (first 7 days) --> all content human-reviewed. Verified agents --> standard guardrail thresholds (reject < 0.4, flag 0.4-0.7, approve >= 0.7). Full 5-tier progressive trust model deferred to Phase 2 (see T7).
+**Sprint 3 Implementation Status** (2026-02-08): ✅ **Phase 1 complete**.
+- `determineTrustTier(ageDays, approvedCount)` — pure function, 27 unit tests
+- `getThresholds(tier)` — returns autoApprove/autoRejectMax for each tier, configurable via env vars
+- Worker queries agent age + approved evaluation count from DB, routes based on tier
+- 3 integration tests: new agent flagged, verified agent approved, tier transition
+- Criteria refined to 8+ days (from 7) and 3+ approved submissions (not just "no rejections")
 
 ### Trust Model Reconciliation
 Documents updated to reflect the canonical 5-tier system (Phase 2+) and D13 2-tier Phase 1 simplification: AI/ML Architecture, BYOK Cost Management, Agent Integration Protocol.

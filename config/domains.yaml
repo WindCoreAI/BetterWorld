@@ -1,0 +1,153 @@
+# Approved UN SDG-Aligned Domains
+# These 15 domains define the scope of acceptable content for the BetterWorld platform
+
+domains:
+  - key: poverty_reduction
+    name: Poverty Reduction
+    description: Initiatives that reduce economic hardship and improve access to basic needs
+    un_sdgs: [1, 10]
+    examples:
+      - Food banks and meal distribution
+      - Microfinance and financial literacy
+      - Affordable housing initiatives
+      - Job training and employment programs
+
+  - key: education_access
+    name: Education Access
+    description: Programs that increase access to quality education for underserved communities
+    un_sdgs: [4]
+    examples:
+      - Tutoring and mentorship programs
+      - Scholarship funds
+      - Literacy programs
+      - School supply distribution
+
+  - key: healthcare_improvement
+    name: Healthcare Improvement
+    description: Initiatives that improve healthcare access and outcomes
+    un_sdgs: [3]
+    examples:
+      - Free clinics and health screenings
+      - Medication assistance programs
+      - Health education campaigns
+      - Mental health support groups
+
+  - key: environmental_protection
+    name: Environmental Protection
+    description: Projects that protect ecosystems and combat climate change
+    un_sdgs: [13, 15]
+    examples:
+      - Tree planting and reforestation
+      - Beach and river cleanup
+      - Recycling programs
+      - Air quality monitoring
+
+  - key: food_security
+    name: Food Security
+    description: Programs ensuring access to nutritious food
+    un_sdgs: [2]
+    examples:
+      - Community gardens
+      - Meal delivery for seniors
+      - Food rescue and redistribution
+      - Nutrition education
+
+  - key: mental_health_wellbeing
+    name: Mental Health & Wellbeing
+    description: Support for mental health and emotional wellness
+    un_sdgs: [3]
+    examples:
+      - Peer support groups
+      - Crisis hotlines
+      - Mindfulness and stress reduction programs
+      - Grief counseling
+
+  - key: community_building
+    name: Community Building
+    description: Initiatives that strengthen social connections and neighborhoods
+    un_sdgs: [11]
+    examples:
+      - Neighborhood watch programs
+      - Community events and festivals
+      - Youth mentorship
+      - Senior companionship
+
+  - key: disaster_response
+    name: Disaster Response
+    description: Emergency aid and disaster recovery efforts
+    un_sdgs: [11]
+    examples:
+      - Emergency shelter coordination
+      - Disaster supply distribution
+      - Search and rescue support
+      - Recovery and rebuilding
+
+  - key: digital_inclusion
+    name: Digital Inclusion
+    description: Bridging the digital divide and increasing tech access
+    un_sdgs: [9]
+    examples:
+      - Free wifi for underserved areas
+      - Computer literacy training
+      - Refurbished device distribution
+      - Online skills training
+
+  - key: human_rights
+    name: Human Rights
+    description: Protecting and advancing fundamental human rights
+    un_sdgs: [16]
+    examples:
+      - Legal aid for marginalized groups
+      - Anti-trafficking initiatives
+      - Refugee support services
+      - Civic education
+
+  - key: clean_water_sanitation
+    name: Clean Water & Sanitation
+    description: Ensuring access to safe water and sanitation
+    un_sdgs: [6]
+    examples:
+      - Well construction
+      - Water quality testing
+      - Sanitation infrastructure
+      - Hygiene education
+
+  - key: sustainable_energy
+    name: Sustainable Energy
+    description: Promoting renewable energy and energy efficiency
+    un_sdgs: [7]
+    examples:
+      - Solar panel installation
+      - Energy efficiency audits
+      - Renewable energy education
+      - Green technology adoption
+
+  - key: gender_equality
+    name: Gender Equality
+    description: Advancing gender equality and women's empowerment
+    un_sdgs: [5]
+    examples:
+      - Women's entrepreneurship programs
+      - Girls' education initiatives
+      - Gender-based violence prevention
+      - Leadership development for women
+
+  - key: biodiversity_conservation
+    name: Biodiversity Conservation
+    description: Protecting wildlife and natural habitats
+    un_sdgs: [14, 15]
+    examples:
+      - Wildlife habitat restoration
+      - Endangered species protection
+      - Marine conservation
+      - Urban biodiversity projects
+
+  - key: elder_care
+    name: Elder Care
+    description: Supporting the health and dignity of older adults
+    un_sdgs: [3]
+    examples:
+      - Senior meal delivery
+      - Companionship programs
+      - Home maintenance assistance
+      - Age-friendly community initiatives

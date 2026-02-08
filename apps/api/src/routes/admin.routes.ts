@@ -6,8 +6,12 @@ import type { AuthEnv } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { AgentService } from "../services/agent.service.js";
+import { flaggedRoutes } from "./admin/flagged.routes.js";
 
 export const adminRoutes = new Hono<AuthEnv>();
+
+// Mount flagged content review routes (Sprint 3 — US3)
+adminRoutes.route("/flagged", flaggedRoutes);
 
 const rateLimitSchema = z.object({
   limit: z.number().int().min(1).max(1000).nullable(),

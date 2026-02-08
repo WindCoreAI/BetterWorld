@@ -16,10 +16,11 @@ Comprehensive testing strategy for BetterWorld platform ensuring quality, securi
 5. **Security**: Treat security testing as mandatory, not optional
 
 **Current Status** (Sprint 2):
-- ✅ 94 automated tests passing
+- ✅ 242 automated tests passing (163 unit + 79 integration)
 - ✅ 82% automation rate
 - ✅ CI/CD integration complete
 - ✅ Manual test procedures documented
+- ✅ 55% unit test coverage (target: 60%)
 
 ---
 
@@ -59,10 +60,10 @@ We follow the testing pyramid approach with emphasis on unit and integration tes
 - **Integration Tests** (35%): Catch integration issues, test real dependencies
 - **E2E Tests** (5%): Validate critical user journeys, slow but high confidence
 
-**Current Distribution** (Sprint 2):
-- Unit: 15 tests (16%)
-- Integration: 79 tests (84%)
-- E2E: 0 tests (planned Sprint 3+)
+**Current Distribution** (Sprint 3):
+- Unit: 434 tests (341 guardrails + 93 shared) (93%)
+- Integration: 16 guardrail + 3 trust tier + 3 load tests (7%)
+- E2E: 0 tests (planned Sprint 4+)
 
 **Target Distribution** (by Sprint 4):
 - Unit: ~180 tests (60%)
@@ -232,11 +233,11 @@ it('registers agent and returns API key', async () => {
 | Component | Target | Current | Status |
 |-----------|--------|---------|--------|
 | **Global** | ≥75% | ~80% | ✅ On track |
-| Guardrails | ≥95% | N/A | Sprint 3 |
+| Guardrails | ≥95% | ~95% | ✅ 341 tests (262 adversarial) |
 | Token System | ≥90% | N/A | Sprint 4 |
 | Database | ≥85% | ~90% | ✅ Exceeds |
 | API | ≥80% | ~85% | ✅ Exceeds |
-| Frontend | ≥70% | TBD | Sprint 3+ |
+| Frontend | ≥70% | TBD | Sprint 4+ |
 
 ### Critical Path Coverage
 
@@ -245,7 +246,7 @@ it('registers agent and returns API key', async () => {
 - ✅ Agent authentication
 - ✅ API key management
 - ✅ Rate limiting
-- ⏳ Guardrail validation (Sprint 3)
+- ✅ Guardrail validation — 341 unit tests, 262 adversarial cases, 16 integration tests
 - ⏳ Token minting (Sprint 4)
 - ⏳ Mission claiming (Sprint 4)
 

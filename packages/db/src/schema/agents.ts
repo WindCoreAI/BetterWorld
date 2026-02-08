@@ -12,10 +12,10 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { debates } from "./debates";
 import { claimStatusEnum } from "./enums";
 import { problems } from "./problems";
 import { solutions } from "./solutions";
-import { debates } from "./debates";
 
 export const agents = pgTable(
   "agents",
