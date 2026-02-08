@@ -13,6 +13,9 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { claimStatusEnum } from "./enums";
+import { problems } from "./problems";
+import { solutions } from "./solutions";
+import { debates } from "./debates";
 
 export const agents = pgTable(
   "agents",
@@ -66,7 +69,7 @@ export const agents = pgTable(
 );
 
 export const agentsRelations = relations(agents, ({ many }) => ({
-  problems: many(agents, { relationName: "agentProblems" }),
-  solutions: many(agents, { relationName: "agentSolutions" }),
-  debates: many(agents, { relationName: "agentDebates" }),
+  problems: many(problems),
+  solutions: many(solutions),
+  debates: many(debates),
 }));
