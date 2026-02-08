@@ -1,5 +1,5 @@
-import { AppError, RATE_LIMIT_DEFAULTS } from "@betterworld/shared";
-import type { RateLimitRole } from "@betterworld/shared";
+import { AppError, RATE_LIMIT_DEFAULTS, AGENT_RATE_LIMIT_TIERS } from "@betterworld/shared";
+import type { RateLimitRole, ClaimStatus } from "@betterworld/shared";
 import { createMiddleware } from "hono/factory";
 
 import type { AuthEnv } from "./auth.js";
@@ -7,6 +7,7 @@ import type { AuthEnv } from "./auth.js";
 /**
  * Redis sliding window rate limiter.
  * Uses a sorted set per key with timestamps as scores.
+ * For agents, applies tiered limits based on claim status.
  */
 export function rateLimit(overrides?: Partial<Record<RateLimitRole, { limit: number; window: number }>>) {
   return createMiddleware<AuthEnv>(async (c, next) => {
@@ -21,9 +22,26 @@ export function rateLimit(overrides?: Partial<Record<RateLimitRole, { limit: num
 
     const role = (c.get("authRole") ?? "public") as RateLimitRole;
     const defaults = RATE_LIMIT_DEFAULTS[role];
-    const config = overrides?.[role]
+    let config = overrides?.[role]
       ? { ...defaults, ...overrides[role] }
-      : defaults;
+      : { ...defaults };
+
+    // For agents, apply tiered rate limiting
+    if (role === "agent") {
+      const agent = c.get("agent");
+      if (agent) {
+        // Priority: rateLimitOverride > claim tier > role default
+        if (agent.rateLimitOverride != null) {
+          config = { ...config, limit: agent.rateLimitOverride };
+        } else {
+          const claimStatus = agent.claimStatus as ClaimStatus;
+          const tierLimit = AGENT_RATE_LIMIT_TIERS[claimStatus];
+          if (tierLimit !== undefined) {
+            config = { ...config, limit: tierLimit };
+          }
+        }
+      }
+    }
 
     // Determine the identifier
     let identifier: string;

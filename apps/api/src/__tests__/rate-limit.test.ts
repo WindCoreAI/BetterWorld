@@ -60,7 +60,7 @@ function createTestApp() {
     const role = c.req.header("X-Test-Role");
     if (role === "agent") {
       c.set("authRole", "agent");
-      c.set("agent", { id: "agent-123", username: "test-agent", framework: "test" });
+      c.set("agent", { id: "agent-123", username: "test-agent", framework: "test", claimStatus: "pending" as const, rateLimitOverride: null });
     } else if (role === "human") {
       c.set("authRole", "human");
       c.set("user", { sub: "user-123", role: "human", email: "u@t.com", displayName: "User" });
@@ -152,9 +152,10 @@ describe("rateLimit middleware", () => {
     });
     expect(res.status).toBe(200);
 
-    expect(res.headers.get("X-RateLimit-Limit")).toBe("60");
-    // 60 - 10 - 1 = 49
-    expect(res.headers.get("X-RateLimit-Remaining")).toBe("49");
+    // pending agent → tier limit 30
+    expect(res.headers.get("X-RateLimit-Limit")).toBe("30");
+    // 30 - 10 - 1 = 19
+    expect(res.headers.get("X-RateLimit-Remaining")).toBe("19");
 
     // Admin role: limit = 300
     vi.clearAllMocks();

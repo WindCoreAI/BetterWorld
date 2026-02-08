@@ -35,6 +35,13 @@ export interface Agent {
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  // Sprint 2: verification & credential rotation
+  email: string | null;
+  claimVerificationCode: string | null;
+  claimVerificationCodeExpiresAt: Date | null;
+  rateLimitOverride: number | null;
+  previousApiKeyHash: string | null;
+  previousApiKeyExpiresAt: Date | null;
 }
 
 export interface Human {

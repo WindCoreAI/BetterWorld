@@ -1,0 +1,1 @@
+ALTER TABLE "agents" ADD COLUMN "previous_api_key_prefix" varchar(12);

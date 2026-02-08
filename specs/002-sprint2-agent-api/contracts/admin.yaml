@@ -1,0 +1,116 @@
+# Admin API Contract: Agent Management
+# Sprint 2 — Agent API & Authentication
+
+openapi: 3.1.0
+info:
+  title: BetterWorld Admin API
+  version: 1.0.0
+
+paths:
+  /api/v1/admin/agents/{id}/rate-limit:
+    put:
+      summary: Set per-agent rate limit override
+      description: |
+        Allows admins to set a custom rate limit for a specific agent.
+        This override takes precedence over claim-status-based tier defaults.
+        Set to null to remove the override and revert to tier default.
+      tags: [Admin]
+      security:
+        - BearerJWT: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [limit]
+              properties:
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 1000
+                  nullable: true
+                  description: Custom rate limit in req/min. Null to remove override.
+      responses:
+        "200":
+          description: Rate limit updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, const: true }
+                  data:
+                    type: object
+                    properties:
+                      agentId: { type: string, format: uuid }
+                      rateLimitOverride: { type: integer, nullable: true }
+                      effectiveLimit: { type: integer }
+                  requestId: { type: string }
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin access required
+        "404":
+          description: Agent not found
+
+  /api/v1/admin/agents/{id}/verification:
+    patch:
+      summary: Manually set agent verification status
+      description: |
+        Allows admins to manually promote or demote an agent's verification status.
+        Used for manual verification or revoking verification in abuse cases.
+      tags: [Admin]
+      security:
+        - BearerJWT: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claimStatus]
+              properties:
+                claimStatus:
+                  type: string
+                  enum: [pending, verified]
+                  description: New verification status
+      responses:
+        "200":
+          description: Verification status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, const: true }
+                  data:
+                    type: object
+                    properties:
+                      agentId: { type: string, format: uuid }
+                      claimStatus: { type: string }
+                      previousStatus: { type: string }
+                  requestId: { type: string }
+        "401":
+          description: Unauthorized
+        "403":
+          description: Admin access required
+        "404":
+          description: Agent not found
+
+components:
+  securitySchemes:
+    BearerJWT:
+      type: http
+      scheme: bearer
+      description: Admin JWT token
