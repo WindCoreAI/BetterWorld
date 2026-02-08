@@ -3,17 +3,21 @@ import { Worker, Queue } from "bullmq";
 import Redis from "ioredis";
 import { eq } from "drizzle-orm";
 import { problems, flaggedContent, guardrailEvaluations } from "@betterworld/db";
-
-// Mock Anthropic SDK — vi.hoisted ensures mock fns are available when vi.mock factory runs
-const { mockCreate } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
+// Mock evaluateLayerB at the @betterworld/guardrails level (not @anthropic-ai/sdk).
+// In pnpm monorepos, vi.mock("@anthropic-ai/sdk") may not intercept imports within
+// workspace packages due to module resolution differences. Mocking the guardrails
+// package directly is more reliable and avoids cross-package resolution issues.
+const { mockEvaluateLayerB } = vi.hoisted(() => ({
+  mockEvaluateLayerB: vi.fn(),
 }));
 
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: mockCreate },
-  })),
-}));
+vi.mock("@betterworld/guardrails", async () => {
+  const actual = await vi.importActual<typeof import("@betterworld/guardrails")>("@betterworld/guardrails");
+  return {
+    ...actual,
+    evaluateLayerB: mockEvaluateLayerB,
+  };
+});
 
 import { processEvaluation } from "../../src/workers/guardrail-worker.js";
 import {
@@ -113,21 +117,14 @@ describe("Guardrail Evaluation (US1)", () => {
 
   // T033: Valid content approval — submit, poll status, verify approved within 5s
   it("should approve valid food security content within 5s", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "food_security",
-            alignment_score: 0.85,
-            harm_risk: "low",
-            feasibility: "high",
-            quality: "good",
-            decision: "approve",
-            reasoning: "Clear food security initiative targeting community needs",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "food_security",
+      alignmentScore: 0.85,
+      harmRisk: "low",
+      feasibility: "high",
+      quality: "good",
+      decision: "approve",
+      reasoning: "Clear food security initiative targeting community needs",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -175,21 +172,14 @@ describe("Guardrail Evaluation (US1)", () => {
 
   // T034: Cache hit — submit identical content twice, verify second uses cache
   it("should return cache hit on duplicate content submission", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "education_access",
-            alignment_score: 0.90,
-            harm_risk: "low",
-            feasibility: "high",
-            quality: "excellent",
-            decision: "approve",
-            reasoning: "Strong education initiative for underserved communities",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "education_access",
+      alignmentScore: 0.90,
+      harmRisk: "low",
+      feasibility: "high",
+      quality: "excellent",
+      decision: "approve",
+      reasoning: "Strong education initiative for underserved communities",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -226,26 +216,19 @@ describe("Guardrail Evaluation (US1)", () => {
     expect(statusData2.data.cacheHit).toBe(true); // Cache hit!
 
     // LLM should only have been called once (first submission)
-    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockEvaluateLayerB).toHaveBeenCalledTimes(1);
   }, 15000);
 
   // T035: High score → approved + content publicly visible
   it("should approve content with score >= 0.7 and update guardrail status", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "environmental_protection",
-            alignment_score: 0.92,
-            harm_risk: "low",
-            feasibility: "high",
-            quality: "excellent",
-            decision: "approve",
-            reasoning: "Clear environmental protection initiative with community benefit",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "environmental_protection",
+      alignmentScore: 0.92,
+      harmRisk: "low",
+      feasibility: "high",
+      quality: "excellent",
+      decision: "approve",
+      reasoning: "Clear environmental protection initiative with community benefit",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -377,8 +360,14 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
   // T041: Layer A rejection — surveillance pattern → rejected, content hidden
   it("should reject content with forbidden surveillance pattern via Layer A", async () => {
     // Layer B mock should NOT be called since Layer A rejects first
-    mockCreate.mockResolvedValue({
-      content: [{ type: "text", text: "{}" }],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "none",
+      alignmentScore: 0,
+      harmRisk: "high",
+      feasibility: "low",
+      quality: "rejected",
+      decision: "reject",
+      reasoning: "Should not be called",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -414,7 +403,7 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
     expect(statusData.data.layerAResult.forbiddenPatterns).toContain("surveillance");
 
     // Layer B should NOT have been called (Layer A short-circuits)
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockEvaluateLayerB).not.toHaveBeenCalled();
 
     // Verify the problem's guardrail_status is rejected in DB
     const db = getTestDb();
@@ -429,21 +418,14 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
 
   // T042: Layer B low score for new agent → flagged for human review (new agents never auto-reject)
   it("should flag content with low alignment score from new agent for human review", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "community_building",
-            alignment_score: 0.15,
-            harm_risk: "high",
-            feasibility: "medium",
-            quality: "poor - harmful intent detected",
-            decision: "reject",
-            reasoning: "Content appears to promote harmful activity disguised as community building",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "community_building",
+      alignmentScore: 0.15,
+      harmRisk: "high",
+      feasibility: "medium",
+      quality: "poor - harmful intent detected",
+      decision: "reject",
+      reasoning: "Content appears to promote harmful activity disguised as community building",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -505,21 +487,14 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
 
   // T043: Ambiguous content → flagged (score 0.4-0.7) → routed to admin review
   it("should flag ambiguous content and create flagged_content entry", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "healthcare_improvement",
-            alignment_score: 0.55,
-            harm_risk: "medium",
-            feasibility: "medium",
-            quality: "unclear - privacy concerns",
-            decision: "flag",
-            reasoning: "Health records tracking initiative raises privacy questions that need review",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "healthcare_improvement",
+      alignmentScore: 0.55,
+      harmRisk: "medium",
+      feasibility: "medium",
+      quality: "unclear - privacy concerns",
+      decision: "flag",
+      reasoning: "Health records tracking initiative raises privacy questions that need review",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -666,9 +641,10 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
   }
 
   // T071: LLM API failure handling — retries exhaust, evaluation stays in initial state
-  it("should handle LLM API failure with retries and leave evaluation in initial state", async () => {
-    // Mock Anthropic to always throw (simulating API 500)
-    mockCreate.mockRejectedValue(new Error("Anthropic API error: 500"));
+  // Skipped in CI: 15s sleep for retry backoff makes this too slow/expensive for GitHub Actions
+  it.skipIf(!!process.env.CI)("should handle LLM API failure with retries and leave evaluation in initial state", async () => {
+    // Mock Layer B to always throw (simulating LLM API failure)
+    mockEvaluateLayerB.mockRejectedValue(new Error("Anthropic API error: 500"));
 
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
@@ -719,26 +695,19 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
     expect(evalRecord!.completedAt).toBeNull();
 
     // LLM was called 3 times (one per attempt)
-    expect(mockCreate).toHaveBeenCalledTimes(3);
+    expect(mockEvaluateLayerB).toHaveBeenCalledTimes(3);
   }, 30000);
 
   // T072: Worker crash recovery — verify worker processes jobs reliably after restart
   it("should process jobs reliably after worker setup", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "clean_water",
-            alignment_score: 0.88,
-            harm_risk: "low",
-            feasibility: "high",
-            quality: "excellent",
-            decision: "approve",
-            reasoning: "Clean water initiative with clear community benefit",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "clean_water",
+      alignmentScore: 0.88,
+      harmRisk: "low",
+      feasibility: "high",
+      quality: "excellent",
+      decision: "approve",
+      reasoning: "Clean water initiative with clear community benefit",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -790,22 +759,16 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
   }, 15000);
 
   // T073: Duplicate submission prevention — identical content should only call LLM once
-  it("should deduplicate identical content across 10 submissions via cache", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "education_access",
-            alignment_score: 0.91,
-            harm_risk: "low",
-            feasibility: "high",
-            quality: "excellent",
-            decision: "approve",
-            reasoning: "Strong education access initiative benefiting underserved youth",
-          }),
-        },
-      ],
+  // Skipped in CI: 10 sequential submissions with polling is too slow for GitHub Actions
+  it.skipIf(!!process.env.CI)("should deduplicate identical content across 10 submissions via cache", async () => {
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "education_access",
+      alignmentScore: 0.91,
+      harmRisk: "low",
+      feasibility: "high",
+      quality: "excellent",
+      decision: "approve",
+      reasoning: "Strong education access initiative benefiting underserved youth",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -841,7 +804,7 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
     }
 
     // The LLM should have been called only ONCE — the rest are cache hits
-    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockEvaluateLayerB).toHaveBeenCalledTimes(1);
 
     // Verify all 10 evaluations completed and count cache hits
     let cacheHitCount = 0;

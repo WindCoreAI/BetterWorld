@@ -4,16 +4,20 @@ import Redis from "ioredis";
 import { eq } from "drizzle-orm";
 import { problems, flaggedContent, agents, guardrailEvaluations } from "@betterworld/db";
 
-// Mock Anthropic SDK
-const { mockCreate } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
+// Mock evaluateLayerB at the @betterworld/guardrails level (not @anthropic-ai/sdk).
+// In pnpm monorepos, vi.mock("@anthropic-ai/sdk") may not intercept imports within
+// workspace packages due to module resolution differences.
+const { mockEvaluateLayerB } = vi.hoisted(() => ({
+  mockEvaluateLayerB: vi.fn(),
 }));
 
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: mockCreate },
-  })),
-}));
+vi.mock("@betterworld/guardrails", async () => {
+  const actual = await vi.importActual<typeof import("@betterworld/guardrails")>("@betterworld/guardrails");
+  return {
+    ...actual,
+    evaluateLayerB: mockEvaluateLayerB,
+  };
+});
 
 import { processEvaluation } from "../../src/workers/guardrail-worker.js";
 import {
@@ -27,22 +31,15 @@ import {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function makeLLMResponse(score: number, domain = "food_security") {
+function makeLayerBResult(score: number, domain = "food_security") {
   return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify({
-          aligned_domain: domain,
-          alignment_score: score,
-          harm_risk: "low",
-          feasibility: "high",
-          quality: "good",
-          decision: score >= 0.7 ? "approve" : "flag",
-          reasoning: "Test evaluation for trust tier integration",
-        }),
-      },
-    ],
+    alignedDomain: domain,
+    alignmentScore: score,
+    harmRisk: "low" as const,
+    feasibility: "high" as const,
+    quality: "good",
+    decision: (score >= 0.7 ? "approve" : "flag") as "approve" | "flag",
+    reasoning: "Test evaluation for trust tier integration",
   };
 }
 
@@ -166,7 +163,7 @@ describe("Trust Tier Integration (US4)", () => {
   // T063: New agent — score 0.75 → flagged (not auto-approved)
   // Because new tier: autoApprove = 1.0, so 0.75 < 1.0 → flagged
   it("should flag high-scoring content from new agent instead of auto-approving", async () => {
-    mockCreate.mockResolvedValue(makeLLMResponse(0.75));
+    mockEvaluateLayerB.mockResolvedValue(makeLayerBResult(0.75));
 
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
@@ -223,7 +220,7 @@ describe("Trust Tier Integration (US4)", () => {
   // T064: Verified agent — score 0.75 → auto-approved (no human review)
   // Verified tier: autoApprove = 0.70, so 0.75 >= 0.70 → approved
   it("should auto-approve high-scoring content from verified agent", async () => {
-    mockCreate.mockResolvedValue(makeLLMResponse(0.75));
+    mockEvaluateLayerB.mockResolvedValue(makeLayerBResult(0.75));
 
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
@@ -282,7 +279,7 @@ describe("Trust Tier Integration (US4)", () => {
   // T065: Trust tier transition — agent starts as "new", reaches threshold, becomes "verified"
   // First submission as new → flagged. After backdating + seeding approvals, second → approved.
   it("should transition agent from new to verified and apply different thresholds", async () => {
-    mockCreate.mockResolvedValue(makeLLMResponse(0.75));
+    mockEvaluateLayerB.mockResolvedValue(makeLayerBResult(0.75));
 
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;

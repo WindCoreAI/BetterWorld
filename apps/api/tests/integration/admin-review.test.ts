@@ -4,16 +4,20 @@ import Redis from "ioredis";
 import { eq } from "drizzle-orm";
 import { problems, flaggedContent } from "@betterworld/db";
 
-// Mock Anthropic SDK
-const { mockCreate } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
+// Mock evaluateLayerB at the @betterworld/guardrails level (not @anthropic-ai/sdk).
+// In pnpm monorepos, vi.mock("@anthropic-ai/sdk") may not intercept imports within
+// workspace packages due to module resolution differences.
+const { mockEvaluateLayerB } = vi.hoisted(() => ({
+  mockEvaluateLayerB: vi.fn(),
 }));
 
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: mockCreate },
-  })),
-}));
+vi.mock("@betterworld/guardrails", async () => {
+  const actual = await vi.importActual<typeof import("@betterworld/guardrails")>("@betterworld/guardrails");
+  return {
+    ...actual,
+    evaluateLayerB: mockEvaluateLayerB,
+  };
+});
 
 import { processEvaluation } from "../../src/workers/guardrail-worker.js";
 import {
@@ -119,21 +123,14 @@ describe("Admin Review (US3)", () => {
 
   // T054: Flagging flow — score 0.55 → flagged, appears in queue, not public
   it("should flag ambiguous content and create entry in flagged queue", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "healthcare_improvement",
-            alignment_score: 0.55,
-            harm_risk: "medium",
-            feasibility: "medium",
-            quality: "unclear - privacy concerns",
-            decision: "flag",
-            reasoning: "Health records tracking initiative raises privacy questions",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "healthcare_improvement",
+      alignmentScore: 0.55,
+      harmRisk: "medium",
+      feasibility: "medium",
+      quality: "unclear - privacy concerns",
+      decision: "flag",
+      reasoning: "Health records tracking initiative raises privacy questions",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -182,21 +179,14 @@ describe("Admin Review (US3)", () => {
 
   // T055: Admin approval flow (DB-level test)
   it("should allow admin to approve flagged content via DB operations", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "education_access",
-            alignment_score: 0.60,
-            harm_risk: "medium",
-            feasibility: "high",
-            quality: "needs review",
-            decision: "flag",
-            reasoning: "Education initiative but scope unclear",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "education_access",
+      alignmentScore: 0.60,
+      harmRisk: "medium",
+      feasibility: "high",
+      quality: "needs review",
+      decision: "flag",
+      reasoning: "Education initiative but scope unclear",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -269,21 +259,14 @@ describe("Admin Review (US3)", () => {
 
   // T056: Admin rejection flow (DB-level test)
   it("should allow admin to reject flagged content, keeping it hidden", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "community_building",
-            alignment_score: 0.45,
-            harm_risk: "medium",
-            feasibility: "low",
-            quality: "suspicious",
-            decision: "flag",
-            reasoning: "Content appears borderline with unclear intent",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "community_building",
+      alignmentScore: 0.45,
+      harmRisk: "medium",
+      feasibility: "low",
+      quality: "suspicious",
+      decision: "flag",
+      reasoning: "Content appears borderline with unclear intent",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -347,21 +330,14 @@ describe("Admin Review (US3)", () => {
 
   // T057: Concurrent claim prevention
   it("should prevent double-claiming of flagged items", async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "food_security",
-            alignment_score: 0.50,
-            harm_risk: "medium",
-            feasibility: "medium",
-            quality: "unclear",
-            decision: "flag",
-            reasoning: "Needs human review",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "food_security",
+      alignmentScore: 0.50,
+      harmRisk: "medium",
+      feasibility: "medium",
+      quality: "unclear",
+      decision: "flag",
+      reasoning: "Needs human review",
     });
 
     const { data: regData } = await registerTestAgent(app);

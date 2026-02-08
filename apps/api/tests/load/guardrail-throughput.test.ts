@@ -3,16 +3,18 @@ import { Worker } from "bullmq";
 import Redis from "ioredis";
 import { problems } from "@betterworld/db";
 
-// Mock Anthropic SDK — vi.hoisted ensures mock fns are available when vi.mock factory runs
-const { mockCreate } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
+// Mock evaluateLayerB at the @betterworld/guardrails level (not @anthropic-ai/sdk).
+const { mockEvaluateLayerB } = vi.hoisted(() => ({
+  mockEvaluateLayerB: vi.fn(),
 }));
 
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: mockCreate },
-  })),
-}));
+vi.mock("@betterworld/guardrails", async () => {
+  const actual = await vi.importActual<typeof import("@betterworld/guardrails")>("@betterworld/guardrails");
+  return {
+    ...actual,
+    evaluateLayerB: mockEvaluateLayerB,
+  };
+});
 
 import { processEvaluation } from "../../src/workers/guardrail-worker.js";
 import {
@@ -110,21 +112,14 @@ describe("T070: Guardrail Throughput Load Test", () => {
   }
 
   it(`should process ${ITEM_COUNT} sequential items with < 2s average per item`, async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            aligned_domain: "food_security",
-            alignment_score: 0.85,
-            harm_risk: "low",
-            feasibility: "high",
-            quality: "good",
-            decision: "approve",
-            reasoning: "Valid food security initiative targeting community needs",
-          }),
-        },
-      ],
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "food_security",
+      alignmentScore: 0.85,
+      harmRisk: "low",
+      feasibility: "high",
+      quality: "good",
+      decision: "approve",
+      reasoning: "Valid food security initiative targeting community needs",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -179,6 +174,6 @@ describe("T070: Guardrail Throughput Load Test", () => {
     expect(itemsPerHour).toBeGreaterThan(100);
 
     // Verify LLM was called for each unique item
-    expect(mockCreate).toHaveBeenCalledTimes(ITEM_COUNT);
+    expect(mockEvaluateLayerB).toHaveBeenCalledTimes(ITEM_COUNT);
   }, 60000);
 });
