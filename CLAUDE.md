@@ -62,3 +62,10 @@ docs/challenges/         # 7 deep technical challenge research docs
 - Start with `docs/INDEX.md` for navigation and reading order
 - Engineering reading order: Roadmap → PRD → Tech Arch → DB → API → AI/ML → DevOps
 - The constitution overrides all other docs in case of conflict
+
+## Active Technologies
+- TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API framework), Next.js 15 (App Router, RSC), Drizzle ORM, better-auth, BullMQ, Zod, Pino, ioredis, bcrypt, jose (JWT) (001-sprint1-core-infra)
+- PostgreSQL 16 + pgvector (`halfvec(1024)` via Voyage AI voyage-3) on Docker (dev) / Supabase (prod); Redis 7 on Docker (dev) / Upstash (prod) (001-sprint1-core-infra)
+
+## Recent Changes
+- 001-sprint1-core-infra: Added TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API framework), Next.js 15 (App Router, RSC), Drizzle ORM, better-auth, BullMQ, Zod, Pino, ioredis, bcrypt, jose (JWT)
