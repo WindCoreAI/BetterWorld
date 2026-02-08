@@ -110,10 +110,12 @@ jobs:
         run: pnpm --filter @betterworld/guardrails test:coverage
       - name: Verify guardrail test count (>= 200 adversarial cases)
         run: |
-          TEST_COUNT=$(pnpm --filter @betterworld/guardrails test 2>&1 | grep -oP '\d+ test' | head -1 | grep -oP '\d+')
+          OUTPUT=$(pnpm --filter @betterworld/guardrails test 2>&1)
+          echo "$OUTPUT" | tail -5
+          TEST_COUNT=$(echo "$OUTPUT" | grep -E 'Tests\s+[0-9]+ passed' | sed 's/.*Tests  *\([0-9]*\) passed.*/\1/')
           echo "Guardrail tests: $TEST_COUNT"
-          if [ "$TEST_COUNT" -lt 200 ]; then
-            echo "ERROR: Guardrail regression suite must have >= 200 tests (found $TEST_COUNT)"
+          if [ -z "$TEST_COUNT" ] || [ "$TEST_COUNT" -lt 200 ]; then
+            echo "ERROR: Guardrail regression suite must have >= 200 tests (found ${TEST_COUNT:-0})"
             exit 1
           fi
 
