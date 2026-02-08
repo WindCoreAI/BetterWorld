@@ -89,6 +89,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Setup database extensions
+        run: psql "$DATABASE_URL" -f scripts/init-db.sql
+      - name: Push database schema
+        run: pnpm db:push
       - run: pnpm test:integration
 
   build:

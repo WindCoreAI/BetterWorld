@@ -19,7 +19,9 @@
       "dependsOn": ["^build"]
     },
     "test:integration": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": ["DATABASE_URL", "REDIS_URL", "JWT_SECRET", "NODE_ENV"],
+      "cache": false
     }
   }
 }
