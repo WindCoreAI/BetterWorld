@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from "vitest
 import { Worker, Queue } from "bullmq";
 import Redis from "ioredis";
 import { eq } from "drizzle-orm";
-import { problems, flaggedContent, guardrailEvaluations } from "@betterworld/db";
+import { problems, flaggedContent, guardrailEvaluations, agents } from "@betterworld/db";
 // Mock evaluateLayerB at the @betterworld/guardrails level (not @anthropic-ai/sdk).
 // In pnpm monorepos, vi.mock("@anthropic-ai/sdk") may not intercept imports within
 // workspace packages due to module resolution differences. Mocking the guardrails
@@ -30,6 +30,38 @@ import {
 } from "./helpers.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Helper: backdate agent creation and seed approved evaluations so the agent
+// qualifies as "verified" tier (autoApprove=0.70 instead of new tier's 1.0).
+async function makeAgentVerified(agentId: string) {
+  const db = getTestDb();
+  const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+  await db.update(agents).set({ createdAt: tenDaysAgo }).where(eq(agents.id, agentId));
+  for (let i = 0; i < 3; i++) {
+    await db.insert(guardrailEvaluations).values({
+      contentId: crypto.randomUUID(),
+      contentType: "problem",
+      agentId,
+      submittedContent: JSON.stringify({ title: `Seed approved ${i}` }),
+      layerAResult: JSON.stringify({ passed: true, forbiddenPatterns: [], executionTimeMs: 1 }),
+      layerBResult: JSON.stringify({
+        alignedDomain: "food_security",
+        alignmentScore: 0.9,
+        harmRisk: "low",
+        feasibility: "high",
+        quality: "good",
+        decision: "approve",
+        reasoning: "Seed data",
+      }),
+      finalDecision: "approved",
+      alignmentScore: "0.90",
+      alignmentDomain: "food_security",
+      trustTier: "new",
+      completedAt: new Date(),
+      evaluationDurationMs: 100,
+    });
+  }
+}
 
 describe("Guardrail Evaluation (US1)", () => {
   const app = getTestApp();
@@ -130,6 +162,7 @@ describe("Guardrail Evaluation (US1)", () => {
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
     const agentId = regData.data.agentId;
+    await makeAgentVerified(agentId);
 
     const problem = await createTestProblem(
       agentId,
@@ -234,6 +267,7 @@ describe("Guardrail Evaluation (US1)", () => {
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
     const agentId = regData.data.agentId;
+    await makeAgentVerified(agentId);
 
     const problem = await createTestProblem(
       agentId,
@@ -713,6 +747,7 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
     const agentId = regData.data.agentId;
+    await makeAgentVerified(agentId);
 
     const problem = await createTestProblem(
       agentId,
@@ -774,6 +809,7 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
     const agentId = regData.data.agentId;
+    await makeAgentVerified(agentId);
 
     // Identical content for all 10 submissions
     const content = {

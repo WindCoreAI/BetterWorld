@@ -215,7 +215,7 @@ describe("Admin Review (US3)", () => {
     expect(flaggedEntry).toBeDefined();
 
     // Simulate admin claiming and approving (DB-level since admin auth is complex)
-    const adminId = "admin-test-user-001";
+    const adminId = "00000000-0000-4000-8000-000000000001";
     await db
       .update(flaggedContent)
       .set({
@@ -297,7 +297,7 @@ describe("Admin Review (US3)", () => {
     await db
       .update(flaggedContent)
       .set({
-        assignedAdminId: "admin-test-user-002",
+        assignedAdminId: "00000000-0000-4000-8000-000000000002",
         claimedAt: new Date(),
         adminDecision: "reject",
         adminNotes: "Photo sharing aspect raises privacy concerns beyond stated scope",
@@ -368,7 +368,7 @@ describe("Admin Review (US3)", () => {
     const [claim1] = await db
       .update(flaggedContent)
       .set({
-        assignedAdminId: "admin-001",
+        assignedAdminId: "00000000-0000-4000-8000-000000000001",
         claimedAt: new Date(),
       })
       .where(eq(flaggedContent.id, flaggedEntry!.id))
@@ -383,7 +383,7 @@ describe("Admin Review (US3)", () => {
       .where(eq(flaggedContent.id, flaggedEntry!.id))
       .limit(1);
 
-    expect(claimed?.assignedAdminId).toBe("admin-001");
+    expect(claimed?.assignedAdminId).toBe("00000000-0000-4000-8000-000000000001");
 
     // Second admin tries to claim — the atomic SQL in the route would prevent this
     // At the DB level, we verify the assignedAdminId is already set
