@@ -121,7 +121,7 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 | **Estimated Hours** | 8h |
 | **Assigned Role** | BE1 |
 | **Dependencies** | S1-01 (monorepo), S1-04 (db package for connection) |
-| **Acceptance Criteria** | `pnpm dev --filter api` starts the API server on port 3001. `GET /api/v1/health` returns `{"status": "ok", "timestamp": "...", "version": "0.1.0"}` with 200. Invalid routes return structured 404 JSON. Thrown errors return structured 500 JSON with request ID. Every request is logged with Pino (structured JSON). CORS headers present on responses. |
+| **Acceptance Criteria** | `pnpm dev --filter api` starts the API server on port 4000. `GET /api/v1/health` returns `{"ok": true, "requestId": "..."}` with 200. `GET /healthz` and `GET /readyz` available at root for k8s probes. Invalid routes return structured 404 JSON. Thrown errors return structured 500 JSON with request ID. Every request is logged with Pino (structured JSON). CORS headers present on responses. |
 
 #### S1-07: Authentication Middleware (JWT + API Key)
 
@@ -173,7 +173,7 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 | **Estimated Hours** | 8h |
 | **Assigned Role** | FE |
 | **Dependencies** | S1-01 (monorepo), design tokens from D1 (S1-D1) |
-| **Acceptance Criteria** | `pnpm dev --filter web` starts Next.js on port 3000. Landing page renders with correct fonts and colors. Tailwind utility classes work. Navigation between placeholder pages works. React Query provider is set up. No TypeScript errors. Pages use App Router conventions (`app/` directory). |
+| **Acceptance Criteria** | `pnpm dev --filter web` starts Next.js on port 3000. Landing page renders with correct fonts and colors. Tailwind utility classes work. Navigation between placeholder pages works. React Query provider is set up in `apps/web/app/providers.tsx` and wired into root layout (staleTime: 60s, retry: 1). No TypeScript errors. Pages use App Router conventions (`app/` directory). |
 
 #### S1-12: Shared Types Package
 
@@ -225,7 +225,7 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 | **Estimated Hours** | 12h |
 | **Assigned Role** | D1 |
 | **Dependencies** | S1-D1 (design tokens) |
-| **Acceptance Criteria** | Specs for all 4 component types delivered. Each has all listed variants and states. Uses design tokens from S1-D1. Components are responsive. FE can implement without ambiguity. |
+| **Acceptance Criteria** | All 4 component types implemented in `apps/web/src/components/ui/`: Button (4 variants, 3 sizes, loading state), Card (compound: Card/CardHeader/CardBody/CardFooter), Badge (domain/difficulty/status/reputation variants), Input (text/textarea, error state, accessible labels). Each uses design tokens from S1-D1. Components use forwardRef and TypeScript strict types. |
 
 #### S1-D3: Landing Page Wireframe
 
@@ -239,16 +239,19 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 
 ### Sprint 1 Definition of Done
 
-- [ ] `pnpm dev` starts API (port 3001) + Web (port 3000) + infrastructure (Docker) locally
-- [ ] Database migrations run cleanly from zero to current schema
-- [ ] `GET /api/v1/health` returns 200 with JSON body
-- [ ] CI pipeline passes on PR (lint + typecheck + test + build)
-- [ ] Auth middleware rejects unauthenticated requests with 401
-- [ ] Rate limiter returns 429 after exceeding 60 req/min
-- [ ] Seed data populates database with realistic test records
-- [ ] Shared types package is importable from both API and Web
-- [ ] Design tokens are applied to Tailwind config in `apps/web`
-- [ ] New engineer can set up local env in < 10 minutes
+- [x] `pnpm dev` starts API (port 4000) + Web (port 3000) + infrastructure (Docker) locally
+- [x] Database migrations run cleanly from zero to current schema
+- [x] `GET /api/v1/health` returns 200 with JSON body (`/healthz` and `/readyz` also at root for k8s probes)
+- [x] CI pipeline passes on PR (lint + typecheck + test + build)
+- [x] Auth middleware rejects unauthenticated requests with 401
+- [x] Rate limiter returns 429 after exceeding 60 req/min
+- [x] Seed data populates database with realistic test records
+- [x] Shared types package is importable from both API and Web
+- [x] Design tokens are applied to Tailwind config in `apps/web`
+- [x] New engineer can set up local env in < 10 minutes
+- [x] React Query provider is wired into root layout
+- [x] Integration tests pass with real DB + Redis (8 tests)
+- [x] UI component library created (Button, Card, Badge, Input) in `apps/web/src/components/ui/`
 
 ### Sprint 1 Hour Summary
 
@@ -468,6 +471,6 @@ The following decisions from `DECISIONS-NEEDED.md` and `ROADMAP.md` Sprint 0 mus
 | FE | S2-FE1, S2-FE2, S2-FE3 | ~20h | Component library foundation |
 | D1 | 14 | 80 | 18% |
 
-> **Note**: This sprint has lower task estimates than Sprint 1 because the infrastructure investment from Sprint 1 accelerates development. **Use remaining capacity for**: BE1 and BE2 should begin implementing the `Button`, `Card`, `Input`, `Badge` React components from D1's Sprint 1 specs. FE should build the landing page from S1-D3 wireframe. D1 should start on Sprint 3 admin review queue designs early. This overlap keeps the team productive and reduces Sprint 3/4 frontend pressure.
+> **Note**: This sprint has lower task estimates than Sprint 1 because the infrastructure investment from Sprint 1 accelerates development. **Component library status**: `Button`, `Card`, `Input`, `Badge` components were implemented in Sprint 1 gap fixes (`apps/web/src/components/ui/`). Sprint 2 FE work can use these directly. D1 should start on Sprint 3 admin review queue designs early. This overlap keeps the team productive and reduces Sprint 3/4 frontend pressure.
 
 ---

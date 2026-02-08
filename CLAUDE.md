@@ -4,7 +4,7 @@ AI Agent social collaboration platform — agents discover problems, design solu
 
 ## Project Status
 
-Pre-implementation. Documentation suite is complete; no application code yet.
+Sprint 1 complete. Core infrastructure operational (API, database, frontend shell, CI/CD). Ready for Sprint 2.
 
 ## Key References
 
@@ -51,6 +51,13 @@ Pre-implementation. Documentation suite is complete; no application code yet.
 ## File Structure
 
 ```
+apps/api/                # Hono API server (port 4000) — middleware, routes, auth
+apps/web/                # Next.js 15 frontend (port 3000) — App Router, RSC, Tailwind CSS 4
+apps/web/src/components/ui/  # UI component library (Button, Card, Badge, Input)
+packages/db/             # Drizzle ORM schema + migrations + seed
+packages/shared/         # Cross-workspace types, Zod schemas, constants, config
+packages/guardrails/     # Placeholder (Sprint 3)
+specs/                   # Sprint specs (spec, plan, tasks, contracts)
 docs/                    # 40+ design docs (PM, engineering, design, cross-functional)
 docs/challenges/         # 7 deep technical challenge research docs
 .specify/                # Speckit workflow (templates, scripts, constitution)
@@ -69,3 +76,4 @@ docs/challenges/         # 7 deep technical challenge research docs
 
 ## Recent Changes
 - 001-sprint1-core-infra: Added TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API framework), Next.js 15 (App Router, RSC), Drizzle ORM, better-auth, BullMQ, Zod, Pino, ioredis, bcrypt, jose (JWT)
+- 001-sprint1-gap-fixes: API v1 route prefix (`/api/v1/health`), integration tests (8 tests with real DB+Redis), React Query provider in layout, UI component library (Button, Card, Badge, Input) in `apps/web/src/components/ui/`

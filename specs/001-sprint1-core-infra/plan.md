@@ -62,7 +62,8 @@ betterworld/
 │   │   │   ├── index.ts              # Entry point (bootstrap)
 │   │   │   ├── app.ts                # Hono app setup, route mounting
 │   │   │   ├── routes/
-│   │   │   │   └── health.routes.ts  # /healthz, /readyz
+│   │   │   │   ├── health.routes.ts  # /healthz, /readyz
+│   │   │   │   └── v1.routes.ts      # /api/v1/health (v1 route prefix)
 │   │   │   ├── middleware/
 │   │   │   │   ├── auth.ts           # API key + JWT auth
 │   │   │   │   ├── rate-limit.ts     # Redis sliding window
@@ -78,12 +79,20 @@ betterworld/
 │   └── web/                          # Next.js 15 frontend (port 3000)
 │       ├── app/
 │       │   ├── layout.tsx            # Root layout, fonts, providers
+│       │   ├── providers.tsx         # React Query provider ("use client")
 │       │   ├── page.tsx              # Landing page
+│       │   ├── globals.css           # Tailwind CSS 4 @theme design tokens
 │       │   ├── problems/page.tsx     # Placeholder
 │       │   ├── solutions/page.tsx    # Placeholder
 │       │   └── (admin)/
 │       │       └── admin/page.tsx    # Placeholder admin dashboard
-│       ├── tailwind.config.ts        # Design tokens
+│       ├── src/
+│       │   └── components/ui/        # UI component library
+│       │       ├── button.tsx        # Primary/secondary/ghost/danger variants
+│       │       ├── card.tsx          # Card/CardHeader/CardBody/CardFooter
+│       │       ├── badge.tsx         # Domain/difficulty/status/reputation
+│       │       ├── input.tsx         # Text/textarea with error state
+│       │       └── index.ts         # Barrel export
 │       ├── package.json
 │       └── tsconfig.json
 ├── packages/

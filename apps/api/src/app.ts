@@ -7,6 +7,7 @@ import { loggerMiddleware } from "./middleware/logger.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { requestId } from "./middleware/request-id.js";
 import { healthRoutes } from "./routes/health.routes.js";
+import { v1Routes } from "./routes/v1.routes.js";
 
 export type AppEnv = {
   Variables: {
@@ -26,6 +27,7 @@ export function createApp() {
 
   // Routes
   app.route("/", healthRoutes);
+  app.route("/api/v1", v1Routes);
 
   // 404 fallback
   app.notFound((c) => {

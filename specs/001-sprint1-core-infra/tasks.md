@@ -224,6 +224,37 @@
 
 ---
 
+## Phase 12: Gap Fixes (Sprint 1 DoD Completion) ✅ COMPLETE
+
+**Purpose**: Address gaps identified during Sprint 1 review against the Definition of Done.
+
+### Gap 3: API v1 Route Prefix
+
+- [x] T074 [US2] Create `apps/api/src/routes/v1.routes.ts` with versioned API router — `GET /api/v1/health` returns `{ ok: true, requestId }`. Mount via `app.route("/api/v1", v1Routes)` in `apps/api/src/app.ts` alongside existing root health routes
+- [x] T075 [US2] Verify `/healthz` and `/readyz` remain at root (k8s probes unchanged), `/api/v1/health` responds correctly — **verified: all three endpoints return expected responses**
+
+### Gap 1: Integration Tests
+
+- [x] T076 [US6] Create `apps/api/src/__tests__/health.integration.test.ts` with real DB + Redis connections (no mocks). Setup: `initDb()` + `initRedis()` from container.ts, teardown: `shutdown()`. Tests use `app.request()` pattern matching unit test conventions
+- [x] T077 [US6] Integration test cases — **8 tests passing**: `GET /healthz` → 200, `GET /readyz` → ready with real DB+Redis checks, `GET /api/v1/health` → 200, 404 handler → structured error envelope, rate limit headers present with real Redis, JWT auth via optionalAuth (valid token, invalid token, no token)
+
+### Gap 2: React Query Provider
+
+- [x] T078 [US7] Create `apps/web/app/providers.tsx` with `"use client"` directive, `QueryClientProvider` wrapping children (defaults: staleTime 60s, retry 1, refetchOnWindowFocus false). Wire into `apps/web/app/layout.tsx` — layout remains Server Component
+- [x] T079 [US7] Verify Next.js build succeeds with provider — **build passes, 7 static pages generated**
+
+### Gap 4: UI Component Library
+
+- [x] T080 [US7] Create `apps/web/src/components/ui/button.tsx` — 4 variants (primary, secondary, ghost, danger), 3 sizes (sm, md, lg), loading state with spinner, accessible focus ring, forwardRef
+- [x] T081 [US7] Create `apps/web/src/components/ui/card.tsx` — compound components: `Card`, `CardHeader`, `CardBody`, `CardFooter`. Neumorphic shadows, hover lift effect
+- [x] T082 [US7] Create `apps/web/src/components/ui/badge.tsx` — 4 variants (domain, difficulty, status, reputation), 3 sizes, semantic colors for guardrail status
+- [x] T083 [US7] Create `apps/web/src/components/ui/input.tsx` — text + textarea via `multiline` prop, label, helperText, error state with `role="alert"`, accessible `aria-describedby`/`aria-invalid`
+- [x] T084 [US7] Create barrel export `apps/web/src/components/ui/index.ts` — exports all 4 components
+
+**Checkpoint**: ✅ All gap fixes complete. Typecheck zero errors, lint zero errors, 19 unit tests + 8 integration tests passing, build succeeds.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -284,7 +315,7 @@ Phase 1 (Setup) ─────────────────→ Phase 2 (
 
 | Metric | Count | Done |
 |--------|-------|------|
-| **Total tasks** | 73 | **73** ✅ |
+| **Total tasks** | 84 | **84** ✅ |
 | **Setup (Phase 1)** | 8 | 8 ✅ |
 | **Foundational (Phase 2)** | 9 | 9 ✅ |
 | **US1 — Local Env** | 7 | 7 ✅ |
@@ -296,16 +327,20 @@ Phase 1 (Setup) ─────────────────→ Phase 2 (
 | **US7 — Frontend** | 6 | 6 ✅ |
 | **US8 — Shared Types** | 4 | 4 ✅ |
 | **Polish** | 7 | 7 ✅ |
+| **Gap Fixes (Phase 12)** | 11 | 11 ✅ |
 
 ### Validation Results (Final)
 
 - **Typecheck**: All 5 workspaces pass with zero errors ✅
 - **Lint**: 0 errors, 3 warnings (bcrypt/pino default import patterns) ✅
 - **Unit Tests**: 19/19 passing (5 middleware + 8 auth + 6 rate-limit) ✅
-- **Build**: All 5 workspaces build successfully (Next.js 4 static pages) ✅
+- **Integration Tests**: 8/8 passing (health endpoints, 404, rate-limit headers, JWT auth — real DB+Redis) ✅
+- **Build**: All 5 workspaces build successfully (Next.js 7 static pages) ✅
 - **Database**: 5 tables, 90 columns, 24 indexes, 5 FKs, seed data populated ✅
 - **Docker**: PostgreSQL + Redis containers healthy, reset cycle verified ✅
-- **End-to-end**: healthz 200, readyz ready, structured 404, web 200 ✅
+- **End-to-end**: healthz 200, readyz ready, /api/v1/health 200, structured 404, web 200 ✅
+- **UI Components**: Button, Card, Badge, Input — all typecheck and build ✅
+- **React Query**: Provider wired into layout, build succeeds ✅
 - **Dependencies**: 436 packages installed cleanly ✅
 
 ---
