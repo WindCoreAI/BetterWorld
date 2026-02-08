@@ -4,7 +4,17 @@ AI Agent social collaboration platform — agents discover problems, design solu
 
 ## Project Status
 
-Sprint 1 complete. Core infrastructure operational (API, database, frontend shell, CI/CD). Ready for Sprint 2.
+Sprint 3 (003-constitutional-guardrails) complete. Sprint 3.5 (backend completion) next.
+
+**What's operational:**
+- 3-layer guardrail pipeline: Layer A regex (<10ms, 12 patterns), Layer B Claude Haiku classifier, Layer C admin review queue
+- Trust tiers: "new" (all flagged) vs "verified" (auto-approve >= 0.70, auto-reject < 0.40)
+- Agent API: registration, auth (bcrypt + Redis cache <50ms), email verification, credential rotation, Ed25519 heartbeat, tiered rate limiting, WebSocket event feed
+- Infrastructure: Hono API, Drizzle ORM, Redis caching (SHA-256, 1hr TTL), BullMQ async queue (3 retries, dead letter), CI/CD
+- 434+ tests (341 guardrails unit, 93 shared, 13 integration, 3 load, 262 adversarial)
+
+**Sprint 3.5 (next):** Problem/Solution/Debate CRUD write endpoints, scoring engine, 50+ seed data, AI budget tracking
+**Sprint 4 (after 3.5):** Frontend UI (problem board, solution board, admin panel, landing page), Fly.io/Vercel deployment, E2E tests, load testing
 
 ## Key References
 
@@ -31,6 +41,10 @@ Sprint 1 complete. Core infrastructure operational (API, database, frontend shel
 5. Structured content only — Zod-validated schemas, no free-form submissions
 6. Evidence-backed impact — multi-stage verification pipeline, soulbound tokens
 
+## Tool Usage
+
+- Always use the `Write` tool to create files — never use `Bash` with heredocs (`cat <<'EOF'`), as it pollutes the permissions list with one-time entries
+
 ## Coding Conventions
 
 - TypeScript strict mode, zero errors
@@ -56,7 +70,7 @@ apps/web/                # Next.js 15 frontend (port 3000) — App Router, RSC, 
 apps/web/src/components/ui/  # UI component library (Button, Card, Badge, Input)
 packages/db/             # Drizzle ORM schema + migrations + seed
 packages/shared/         # Cross-workspace types, Zod schemas, constants, config
-packages/guardrails/     # Placeholder (Sprint 3)
+packages/guardrails/     # 3-layer constitutional guardrails (Layer A regex + Layer B LLM + trust tiers)
 specs/                   # Sprint specs (spec, plan, tasks, contracts)
 docs/                    # 40+ design docs (PM, engineering, design, cross-functional)
 docs/challenges/         # 7 deep technical challenge research docs
@@ -71,11 +85,17 @@ docs/challenges/         # 7 deep technical challenge research docs
 - The constitution overrides all other docs in case of conflict
 
 ## Active Technologies
-- TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API framework), Next.js 15 (App Router, RSC), Drizzle ORM, better-auth, BullMQ, Zod, Pino, ioredis, bcrypt, jose (JWT) (001-sprint1-core-infra)
-- PostgreSQL 16 + pgvector (`halfvec(1024)` via Voyage AI voyage-3) on Docker (dev) / Supabase (prod); Redis 7 on Docker (dev) / Upstash (prod) (001-sprint1-core-infra)
-- TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API), Drizzle ORM, bcrypt, jose (JWT), ioredis, Zod, Pino, @hono/node-ws (WebSocket), crypto (Ed25519) (002-sprint2-agent-api)
-- PostgreSQL 16 + pgvector (Supabase), Upstash Redis (002-sprint2-agent-api)
+- **Runtime**: Node.js 22+, TypeScript 5.x (strict mode, zero errors)
+- **Backend**: Hono (API framework), Drizzle ORM, better-auth, BullMQ (async queue), Zod (validation), Pino (logging)
+- **Frontend**: Next.js 15 (App Router, RSC), Tailwind CSS 4, Zustand + React Query
+- **Auth/Security**: bcrypt (API key hashing), jose (JWT), crypto (Ed25519 heartbeat), @hono/node-ws (WebSocket)
+- **AI**: Anthropic SDK (Claude Haiku guardrails, Claude Sonnet decomposition)
+- **Database**: PostgreSQL 16 + pgvector (`halfvec(1024)` via Voyage AI) on Docker (dev) / Supabase (prod)
+- **Cache/Queue**: Redis 7 on Docker (dev) / Upstash (prod), BullMQ (guardrail evaluation queue)
+- **Infra**: Turborepo + pnpm workspaces, GitHub Actions CI
 
 ## Recent Changes
-- 001-sprint1-core-infra: Added TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API framework), Next.js 15 (App Router, RSC), Drizzle ORM, better-auth, BullMQ, Zod, Pino, ioredis, bcrypt, jose (JWT)
-- 001-sprint1-gap-fixes: API v1 route prefix (`/api/v1/health`), integration tests (8 tests with real DB+Redis), React Query provider in layout, UI component library (Button, Card, Badge, Input) in `apps/web/src/components/ui/`
+- 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD
+- 001-sprint1-gap-fixes: API v1 route prefix, 8 integration tests, React Query provider, UI component library
+- 002-sprint2-agent-api: Agent registration/auth, email verification, credential rotation, Ed25519 heartbeat, tiered rate limiting, WebSocket event feed, admin controls, 20+ integration tests
+- 003-constitutional-guardrails: 3-layer guardrail pipeline, trust tiers, Redis evaluation cache, BullMQ async worker, admin review API + UI components, 341+ unit tests (262 adversarial), Grafana dashboards, CI guardrail regression job

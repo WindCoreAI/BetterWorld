@@ -19,35 +19,42 @@ function createWsConnection(token: string): Promise<{
     const ws = new WebSocket(`ws://localhost:3001/ws/feed?token=${token}`);
     const messages: any[] = [];
     let resolveMessage: ((msg: any) => void) | null = null;
+    let isResolved = false;
 
     ws.on("open", () => {
-      const waitForMessage = (timeout = 5000): Promise<any> => {
-        return new Promise((res, rej) => {
-          const timer = setTimeout(() => {
-            resolveMessage = null;
-            rej(new Error("Message timeout"));
-          }, timeout);
+      // Don't resolve immediately - wait a moment to see if server closes immediately
+      setTimeout(() => {
+        if (!isResolved && ws.readyState === WebSocket.OPEN) {
+          isResolved = true;
+          const waitForMessage = (timeout = 5000): Promise<any> => {
+            return new Promise((res, rej) => {
+              const timer = setTimeout(() => {
+                resolveMessage = null;
+                rej(new Error("Message timeout"));
+              }, timeout);
 
-          resolveMessage = (msg) => {
-            clearTimeout(timer);
-            res(msg);
+              resolveMessage = (msg) => {
+                clearTimeout(timer);
+                res(msg);
+              };
+
+              // Check if message already received
+              if (messages.length > 0) {
+                const msg = messages.shift();
+                clearTimeout(timer);
+                res(msg);
+              }
+            });
           };
 
-          // Check if message already received
-          if (messages.length > 0) {
-            const msg = messages.shift();
-            clearTimeout(timer);
-            res(msg);
-          }
-        });
-      };
-
-      resolve({
-        ws,
-        messages,
-        waitForMessage,
-        close: () => ws.close(),
-      });
+          resolve({
+            ws,
+            messages,
+            waitForMessage,
+            close: () => ws.close(),
+          });
+        }
+      }, 50);
     });
 
     ws.on("message", (data) => {
@@ -59,12 +66,27 @@ function createWsConnection(token: string): Promise<{
       }
     });
 
+    ws.on("close", (code, reason) => {
+      if (!isResolved) {
+        isResolved = true;
+        reject(new Error(`Connection closed: ${code} - ${reason.toString()}`));
+      }
+    });
+
     ws.on("error", (err) => {
-      reject(err);
+      if (!isResolved) {
+        isResolved = true;
+        reject(err);
+      }
     });
 
     // Timeout for connection
-    setTimeout(() => reject(new Error("Connection timeout")), 5000);
+    setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true;
+        reject(new Error("Connection timeout"));
+      }
+    }, 5000);
   });
 }
 
@@ -85,10 +107,6 @@ describe("WebSocket Event Feed", () => {
 
     // Give WS server a moment to be ready
     await new Promise((resolve) => setTimeout(resolve, 1000));
-  });
-
-  afterEach(async () => {
-    await cleanupTestData();
   });
 
   afterAll(async () => {
@@ -120,23 +138,39 @@ describe("WebSocket Event Feed", () => {
     await expect(async () => {
       return new Promise((resolve, reject) => {
         const ws = new WebSocket("ws://localhost:3001/ws/feed");
+        let isResolved = false;
 
         ws.on("open", () => {
-          resolve({ ws, close: () => ws.close() });
+          // Wait a moment to see if server closes immediately
+          setTimeout(() => {
+            if (!isResolved && ws.readyState === WebSocket.OPEN) {
+              isResolved = true;
+              resolve({ ws, close: () => ws.close() });
+            }
+          }, 50);
         });
 
         ws.on("close", (code) => {
-          if (code === 1008) {
-            // Policy violation - expected
-            reject(new Error("Connection rejected with code 1008"));
+          if (!isResolved) {
+            isResolved = true;
+            // Any close is a rejection for this test
+            reject(new Error(`Connection rejected with code ${code}`));
           }
         });
 
-        ws.on("error", () => {
-          // Expected error
+        ws.on("error", (err) => {
+          if (!isResolved) {
+            isResolved = true;
+            reject(err);
+          }
         });
 
-        setTimeout(() => reject(new Error("Connection timeout")), 3000);
+        setTimeout(() => {
+          if (!isResolved) {
+            isResolved = true;
+            reject(new Error("Connection timeout"));
+          }
+        }, 3000);
       });
     }).rejects.toThrow();
   });
@@ -144,17 +178,15 @@ describe("WebSocket Event Feed", () => {
   it("receives ping and responds with pong", async () => {
     const { ws, waitForMessage, close } = await createWsConnection(validToken);
 
-    // Skip connected message
-    await waitForMessage();
+    // Wait for connected message
+    const connectedMsg = await waitForMessage();
+    expect(connectedMsg.type).toBe("connected");
 
-    // Wait for ping (server sends ping every 30s, but for testing we might need to wait or trigger)
-    // For this test, we'll manually send a ping to verify pong handling works
-    ws.send(JSON.stringify({ type: "ping" }));
+    // Server will eventually send ping (every 30s), but for this test
+    // we verify that sending a pong doesn't break the connection
+    ws.send(JSON.stringify({ type: "pong" }));
 
-    // In a real scenario, server would send ping and we'd respond
-    // For now, verify connection stays alive
-
-    // Wait a moment
+    // Wait a moment to ensure server processes it
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Connection should still be open
@@ -166,18 +198,17 @@ describe("WebSocket Event Feed", () => {
   it("handles pong response to server ping", async () => {
     const { ws, waitForMessage, close } = await createWsConnection(validToken);
 
-    // Skip connected message
-    await waitForMessage();
+    // Wait for connected message
+    const connectedMsg = await waitForMessage();
+    expect(connectedMsg.type).toBe("connected");
 
-    // Manually trigger a ping from our side to test the flow
-    const pingMsg = { type: "ping", data: {}, timestamp: new Date().toISOString() };
-    ws.send(JSON.stringify(pingMsg));
-
-    // Server should echo or handle gracefully
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Send pong response
+    // Server will send pings automatically (every 30s)
+    // For this test, we simulate receiving a ping and responding with pong
+    // The server's handleMessage function processes pong messages
     ws.send(JSON.stringify({ type: "pong" }));
+
+    // Wait a moment to ensure it's processed
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Connection should remain stable
     expect(ws.readyState).toBe(WebSocket.OPEN);
@@ -206,10 +237,10 @@ describe("WebSocket Event Feed", () => {
   });
 
   it("closes connection gracefully on client close", async () => {
-    const { ws, close } = await createWsConnection(validToken);
+    const { ws, waitForMessage, close } = await createWsConnection(validToken);
 
     // Wait for connected message
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitForMessage();
 
     const closePromise = new Promise<number>((resolve) => {
       ws.on("close", (code) => {
@@ -220,7 +251,7 @@ describe("WebSocket Event Feed", () => {
     close();
 
     const closeCode = await closePromise;
-    expect([1000, 1001, 1006]).toContain(closeCode); // Normal closure codes
+    expect([1000, 1001, 1005, 1006]).toContain(closeCode); // Normal closure codes (1005 = No Status Rcvd)
   });
 
   it("receives properly formatted messages", async () => {

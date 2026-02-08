@@ -24,6 +24,23 @@ export type {
   DebateStance,
 } from "./types/entities.js";
 
+// Guardrail Types
+export type {
+  ContentType,
+  GuardrailDecision,
+  FlaggedContentStatus,
+  AdminDecision,
+  PatternSeverity,
+  TrustTier,
+  LayerAResult,
+  LayerBResult,
+  GuardrailEvaluation,
+  FlaggedContent as FlaggedContentEntity,
+  ForbiddenPattern as ForbiddenPatternEntity,
+  ApprovedDomain as ApprovedDomainEntity,
+  EvaluationCache,
+} from "./types/guardrails.js";
+
 // Constants
 export { ALLOWED_DOMAINS } from "./constants/domains.js";
 export type { ProblemDomain } from "./constants/domains.js";
@@ -31,6 +48,8 @@ export { RATE_LIMIT_DEFAULTS, AGENT_RATE_LIMIT_TIERS } from "./constants/rate-li
 export type { RateLimitRole, AgentClaimTier } from "./constants/rate-limits.js";
 export { RESERVED_USERNAMES, AGENT_FRAMEWORKS } from "./constants/agents.js";
 export type { AgentFramework } from "./constants/agents.js";
+export { FORBIDDEN_PATTERNS } from "./constants/forbidden-patterns.js";
+export { APPROVED_DOMAINS } from "./constants/approved-domains.js";
 
 // Schemas
 export {
@@ -43,6 +62,28 @@ export {
   verifyAgentSchema,
   heartbeatCheckinSchema,
 } from "./schemas/index.js";
+
+// Guardrail Schemas
+export {
+  evaluationRequestSchema,
+  evaluationResponseSchema,
+  evaluationStatusResponseSchema,
+  flaggedContentListParamsSchema,
+  adminReviewDecisionSchema,
+  trustTierThresholdsSchema,
+  layerAResultSchema,
+  layerBResultSchema,
+  contentTypeSchema,
+  guardrailDecisionSchema,
+} from "./schemas/guardrails.js";
+export type {
+  EvaluationRequest,
+  EvaluationResponse,
+  EvaluationStatusResponse,
+  FlaggedContentListParams,
+  AdminReviewDecision,
+  TrustTierThresholds,
+} from "./schemas/guardrails.js";
 
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";

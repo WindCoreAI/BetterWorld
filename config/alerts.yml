@@ -1,0 +1,106 @@
+groups:
+  - name: guardrail_alerts
+    rules:
+      # T076-1: High evaluation latency
+      - alert: GuardrailHighLatency
+        expr: histogram_quantile(0.95, sum(rate(guardrail_evaluation_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: guardrails
+        annotations:
+          summary: "Guardrail evaluation p95 latency exceeds 5s"
+          description: >-
+            The 95th percentile latency for guardrail evaluations has been above 5 seconds
+            for more than 5 minutes. Current value: {{ $value | printf "%.2f" }}s.
+            This may indicate LLM API slowness, queue congestion, or resource exhaustion.
+          runbook_url: "https://runbooks.betterworld.dev/guardrails/high-latency"
+
+      # T076-2: Queue backlog growing
+      - alert: GuardrailQueueBacklog
+        expr: guardrail_queue_depth{queue="evaluation"} > 100
+        for: 10m
+        labels:
+          severity: critical
+          team: platform
+          component: guardrails
+        annotations:
+          summary: "Guardrail evaluation queue depth exceeds 100"
+          description: >-
+            The guardrail evaluation queue has had more than 100 pending items for over
+            10 minutes. Current depth: {{ $value }}. This indicates workers cannot keep up
+            with incoming submissions. Consider scaling workers or investigating processing
+            bottlenecks.
+          runbook_url: "https://runbooks.betterworld.dev/guardrails/queue-backlog"
+
+      # T076-3: High failure rate
+      - alert: GuardrailHighFailureRate
+        expr: >-
+          sum(rate(guardrail_evaluation_errors_total[15m]))
+          / sum(rate(guardrail_evaluations_processed_total[15m])) > 0.05
+        for: 15m
+        labels:
+          severity: critical
+          team: platform
+          component: guardrails
+        annotations:
+          summary: "Guardrail evaluation failure rate exceeds 5%"
+          description: >-
+            More than 5% of guardrail evaluations have failed over the past 15 minutes.
+            Current failure rate: {{ $value | printf "%.2f" }}%. Check application logs
+            for recurring errors, LLM API status, and database connectivity.
+          runbook_url: "https://runbooks.betterworld.dev/guardrails/high-failure-rate"
+
+      # T076-4: Dead letter queue accumulation
+      - alert: GuardrailDeadLetterAccumulation
+        expr: increase(guardrail_dead_letter_queue_size[1h]) > 10
+        for: 0m
+        labels:
+          severity: warning
+          team: platform
+          component: guardrails
+        annotations:
+          summary: "Guardrail dead letter queue accumulated >10 items in 1 hour"
+          description: >-
+            The dead letter queue has accumulated {{ $value | printf "%.0f" }} items in the
+            last hour. These are evaluations that failed all retry attempts. Manual
+            investigation and reprocessing may be required.
+          runbook_url: "https://runbooks.betterworld.dev/guardrails/dead-letter-accumulation"
+
+      # T076-5: LLM API errors
+      - alert: GuardrailLLMApiErrors
+        expr: >-
+          sum(rate(guardrail_llm_api_errors_total[5m]))
+          / sum(rate(guardrail_llm_api_requests_total[5m])) > 0.10
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          component: guardrails
+        annotations:
+          summary: "Guardrail LLM API error rate exceeds 10%"
+          description: >-
+            More than 10% of LLM API calls for guardrail evaluation are failing.
+            Current error rate: {{ $value | printf "%.2f" }}%. Check Anthropic API status,
+            API key validity, rate limits, and network connectivity.
+          runbook_url: "https://runbooks.betterworld.dev/guardrails/llm-api-errors"
+
+      # T076-6: High cache miss rate
+      - alert: GuardrailCacheMissRate
+        expr: >-
+          sum(rate(guardrail_cache_misses_total[30m]))
+          / (sum(rate(guardrail_cache_hits_total[30m])) + sum(rate(guardrail_cache_misses_total[30m]))) > 0.70
+        for: 30m
+        labels:
+          severity: warning
+          team: platform
+          component: guardrails
+        annotations:
+          summary: "Guardrail cache miss rate exceeds 70%"
+          description: >-
+            The guardrail evaluation cache miss rate has been above 70% for over 30 minutes.
+            Current miss rate: {{ $value | printf "%.2f" }}%. This increases LLM API costs
+            and evaluation latency. Check Redis connectivity, TTL configuration, and whether
+            cache key generation has changed.
+          runbook_url: "https://runbooks.betterworld.dev/guardrails/cache-miss-rate"

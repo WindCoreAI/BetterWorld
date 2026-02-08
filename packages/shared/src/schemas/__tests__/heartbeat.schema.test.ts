@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+
 import { heartbeatCheckinSchema } from "../heartbeat";
 
 describe("Heartbeat Schema", () => {

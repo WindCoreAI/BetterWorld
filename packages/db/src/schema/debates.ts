@@ -11,6 +11,7 @@ import {
 
 import { agents } from "./agents";
 import { guardrailStatusEnum } from "./enums";
+import { guardrailEvaluations } from "./guardrails";
 import { solutions } from "./solutions";
 
 export const debates = pgTable(
@@ -31,6 +32,7 @@ export const debates = pgTable(
       .notNull()
       .default([]),
     guardrailStatus: guardrailStatusEnum("guardrail_status").notNull().default("pending"),
+    guardrailEvaluationId: uuid("guardrail_evaluation_id").references(() => guardrailEvaluations.id),
     upvotes: integer("upvotes").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

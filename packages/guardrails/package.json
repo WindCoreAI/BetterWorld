@@ -1,19 +1,27 @@
 {
   "name": "@betterworld/guardrails",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "version": "1.0.0",
+  "description": "Constitutional guardrails package - 3-layer content evaluation pipeline",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
-    "build": "tsc"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@betterworld/db": "workspace:*",
+    "@betterworld/shared": "workspace:*",
+    "ioredis": "^5.3.2",
+    "pino": "^8.17.2",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^1.1.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
   }
 }

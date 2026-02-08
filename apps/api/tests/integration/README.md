@@ -147,6 +147,6 @@ pnpm --filter api dev:ws
 
 ## Related Documentation
 
-- [Manual Test Guide](../../docs/operation/sprint2-manual-test-guide.md) - Original manual test scenarios
+- [Manual Test Guide](../../docs/tests/sprint2/manual-test-guide.md) - Original manual test scenarios
 - [API Design](../../docs/engineering/api-design.md) - API endpoint specifications
 - [Database Schema](../../docs/engineering/database-schema.md) - Data models

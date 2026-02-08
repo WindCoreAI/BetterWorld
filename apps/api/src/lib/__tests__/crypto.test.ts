@@ -1,11 +1,13 @@
+import { generateKeyPairSync } from "crypto";
+
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
 import {
   loadSigningKeyPair,
   signPayload,
   verifySignature,
   getKeyId,
 } from "../crypto";
-import { generateKeyPairSync } from "crypto";
 
 describe("Crypto Utilities", () => {
   let originalPrivateKey: string | undefined;
