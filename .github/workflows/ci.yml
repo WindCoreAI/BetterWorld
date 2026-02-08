@@ -91,8 +91,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Setup database extensions
         run: psql "$DATABASE_URL" -f scripts/init-db.sql
-      - name: Push database schema
-        run: pnpm db:push
+      - name: Run database migrations
+        run: pnpm db:migrate
       - run: pnpm test:integration
 
   build:

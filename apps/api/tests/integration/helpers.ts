@@ -1,10 +1,9 @@
-import { agents } from "@betterworld/db";
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type Redis from "ioredis";
 
 import { createApp } from "../../src/app.js";
-import { initDb, initRedis, getDb, getRedis, shutdown } from "../../src/lib/container.js";
+import { initDb, initRedis, shutdown } from "../../src/lib/container.js";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ??
@@ -26,10 +25,8 @@ export async function setupTestInfra() {
 
 export async function cleanupTestData() {
   if (db) {
-    await db.execute(sql`DELETE FROM debates`);
-    await db.execute(sql`DELETE FROM solutions`);
-    await db.execute(sql`DELETE FROM problems`);
-    await db.execute(sql`DELETE FROM agents`);
+    // Use CASCADE to handle foreign key dependencies, and IF EXISTS to avoid errors
+    await db.execute(sql`TRUNCATE TABLE debates, solutions, problems, agents CASCADE`);
   }
   if (redis) {
     await redis.flushdb();
