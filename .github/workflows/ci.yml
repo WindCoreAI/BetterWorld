@@ -109,10 +109,13 @@ jobs:
       - name: Run guardrail unit tests with coverage
         run: pnpm --filter @betterworld/guardrails test:coverage
       - name: Verify guardrail test count (>= 200 adversarial cases)
+        env:
+          NO_COLOR: 1
         run: |
           OUTPUT=$(pnpm --filter @betterworld/guardrails test 2>&1)
           echo "$OUTPUT" | tail -5
-          TEST_COUNT=$(echo "$OUTPUT" | grep -E 'Tests\s+[0-9]+ passed' | sed 's/.*Tests  *\([0-9]*\) passed.*/\1/')
+          CLEAN=$(printf '%s' "$OUTPUT" | sed $'s/\033\[[0-9;]*m//g')
+          TEST_COUNT=$(printf '%s' "$CLEAN" | grep -E 'Tests[[:space:]]+[0-9]+ passed' | sed 's/.*Tests[[:space:]]*\([0-9][0-9]*\) passed.*/\1/')
           echo "Guardrail tests: $TEST_COUNT"
           if [ -z "$TEST_COUNT" ] || [ "$TEST_COUNT" -lt 200 ]; then
             echo "ERROR: Guardrail regression suite must have >= 200 tests (found ${TEST_COUNT:-0})"

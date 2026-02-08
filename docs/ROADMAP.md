@@ -1,10 +1,10 @@
 # BetterWorld Development Roadmap
 
-> **Version**: 3.0
+> **Version**: 4.0
 > **Date**: 2026-02-08
-> **Status**: Phase 1 in progress — Sprint 1, 2 & 3 complete, Sprint 4 next
+> **Status**: Phase 1 in progress — Sprint 1, 2 & 3 complete, Sprint 3.5 next
 > **Source**: Synthesized from PRD, Sprint Plan, GTM Strategy, Technical Architecture, Audit Report, and REVIEW-AND-TECH-CHALLENGES.md
-> **Changelog**: v4.0 — Sprint 3 (constitutional guardrails) delivered: 3-layer pipeline (regex + LLM + admin review), 2-tier trust model, Redis caching, BullMQ async queue, 341 unit tests, 262 adversarial cases, CI regression suite. v3.0 — Sprint 1 (core infra) and Sprint 2 (agent API) delivered. Updated status markers, technical challenge tracker, and documentation debt. v2.0 — Added Sprint 0 (design decisions), moved observability to Sprint 1, corrected AI budget, strengthened Phase 1 exit criteria, added technical challenge gates, revised progressive trust model
+> **Changelog**: v4.0 — Post-Sprint 3 audit: identified 12 carryover items across Sprints 1-3. Added Sprint 3.5 (Backend Completion) to resolve all backend debt before Sprint 4. Sprint 4 scope adjusted to frontend + deployment + polish only. Updated exit criteria, challenge tracker, deferred items list. v3.0 — Sprint 3 (constitutional guardrails) delivered: 3-layer pipeline (regex + LLM + admin review), 2-tier trust model, Redis caching, BullMQ async queue, 341 unit tests, 262 adversarial cases, CI regression suite. Sprint 1 (core infra) and Sprint 2 (agent API) delivered. v2.0 — Added Sprint 0 (design decisions), moved observability to Sprint 1, corrected AI budget, strengthened Phase 1 exit criteria, added technical challenge gates, revised progressive trust model
 
 ---
 
@@ -14,10 +14,15 @@ This roadmap covers 8 months of development across 4 phases, taking BetterWorld 
 
 ```
 Sprint 0: Design Decisions         Week 0 (pre-dev)  Resolve ambiguities before code
-Phase 1: Foundation MVP            Weeks 1-8         Agent-centric platform
-Phase 2: Human-in-the-Loop        Weeks 9-16        Full pipeline with humans
-Phase 3: Scale & Ecosystem        Weeks 17-24       Growth, partners, SDKs
-Phase 4: Sustainability           Weeks 25-32       Revenue, governance, open-source
+Phase 1: Foundation MVP            Weeks 1-9         Agent-centric platform
+  Sprint 1: Infrastructure         Weeks 1-2         Monorepo, DB, API, auth, CI
+  Sprint 2: Agent Core             Weeks 3-4         Agent API, verification, heartbeat
+  Sprint 3: Guardrails + Scoring   Weeks 5-6         3-layer pipeline, trust tiers
+  Sprint 3.5: Backend Completion   Week 7             Content CRUD, scoring, seed data
+  Sprint 4: Web UI + Deployment    Weeks 8-9         Frontend, deploy, polish, E2E
+Phase 2: Human-in-the-Loop        Weeks 10-17       Full pipeline with humans
+Phase 3: Scale & Ecosystem        Weeks 18-25       Growth, partners, SDKs
+Phase 4: Sustainability           Weeks 26-33       Revenue, governance, open-source
 ```
 
 ---
