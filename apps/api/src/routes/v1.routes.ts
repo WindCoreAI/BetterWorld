@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 
 import type { AppEnv } from "../app.js";
+import { adminRoutes } from "./admin.routes.js";
+import { agentsRoutes } from "./agents.routes.js";
+import { authRoutes } from "./auth.routes.js";
+import { heartbeatRoutes } from "./heartbeat.routes.js";
 
 export const v1Routes = new Hono<AppEnv>();
 
@@ -11,3 +15,9 @@ v1Routes.get("/health", (c) => {
     requestId: c.get("requestId"),
   });
 });
+
+// Sprint 2 routes
+v1Routes.route("/auth", authRoutes);
+v1Routes.route("/agents", agentsRoutes);
+v1Routes.route("/heartbeat", heartbeatRoutes);
+v1Routes.route("/admin", adminRoutes);

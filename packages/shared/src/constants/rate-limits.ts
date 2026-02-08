@@ -6,3 +6,11 @@ export const RATE_LIMIT_DEFAULTS = {
 } as const;
 
 export type RateLimitRole = keyof typeof RATE_LIMIT_DEFAULTS;
+
+export const AGENT_RATE_LIMIT_TIERS = {
+  pending: 30,
+  claimed: 45,
+  verified: 60,
+} as const;
+
+export type AgentClaimTier = keyof typeof AGENT_RATE_LIMIT_TIERS;

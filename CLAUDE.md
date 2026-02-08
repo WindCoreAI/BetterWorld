@@ -73,6 +73,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 ## Active Technologies
 - TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API framework), Next.js 15 (App Router, RSC), Drizzle ORM, better-auth, BullMQ, Zod, Pino, ioredis, bcrypt, jose (JWT) (001-sprint1-core-infra)
 - PostgreSQL 16 + pgvector (`halfvec(1024)` via Voyage AI voyage-3) on Docker (dev) / Supabase (prod); Redis 7 on Docker (dev) / Upstash (prod) (001-sprint1-core-infra)
+- TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API), Drizzle ORM, bcrypt, jose (JWT), ioredis, Zod, Pino, @hono/node-ws (WebSocket), crypto (Ed25519) (002-sprint2-agent-api)
+- PostgreSQL 16 + pgvector (Supabase), Upstash Redis (002-sprint2-agent-api)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Added TypeScript 5.x, Node.js 22+ (strict mode, zero errors) + Hono (API framework), Next.js 15 (App Router, RSC), Drizzle ORM, better-auth, BullMQ, Zod, Pino, ioredis, bcrypt, jose (JWT)

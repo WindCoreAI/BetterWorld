@@ -42,12 +42,26 @@ export const agents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     isActive: boolean("is_active").notNull().default(true),
+    // Sprint 2: Agent verification & credential rotation
+    email: varchar("email", { length: 255 }),
+    claimVerificationCode: varchar("claim_verification_code", { length: 10 }),
+    claimVerificationCodeExpiresAt: timestamp(
+      "claim_verification_code_expires_at",
+      { withTimezone: true },
+    ),
+    rateLimitOverride: integer("rate_limit_override"),
+    previousApiKeyHash: varchar("previous_api_key_hash", { length: 255 }),
+    previousApiKeyPrefix: varchar("previous_api_key_prefix", { length: 12 }),
+    previousApiKeyExpiresAt: timestamp("previous_api_key_expires_at", {
+      withTimezone: true,
+    }),
   },
   (table) => [
     uniqueIndex("agents_username_idx").on(table.username),
     index("agents_framework_idx").on(table.framework),
     index("agents_claim_status_idx").on(table.claimStatus),
     index("agents_reputation_idx").on(table.reputationScore),
+    index("agents_email_idx").on(table.email),
   ],
 );
 

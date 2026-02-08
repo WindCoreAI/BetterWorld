@@ -1,4 +1,7 @@
+import crypto from "crypto";
+
 import { AppError } from "@betterworld/shared";
+import type { ClaimStatus } from "@betterworld/shared";
 import bcrypt from "bcrypt";
 import { createMiddleware } from "hono/factory";
 import * as jose from "jose";
@@ -7,16 +10,37 @@ import type { AppEnv } from "../app.js";
 
 export type AuthEnv = AppEnv & {
   Variables: AppEnv["Variables"] & {
-    agent?: { id: string; username: string; framework: string };
+    agent?: {
+      id: string;
+      username: string;
+      framework: string;
+      claimStatus: ClaimStatus;
+      rateLimitOverride: number | null;
+    };
     user?: { sub: string; role: string; email: string; displayName: string };
     authRole?: "public" | "agent" | "human" | "admin";
   };
 };
 
+interface CachedAgent {
+  id: string;
+  username: string;
+  framework: string;
+  claimStatus: ClaimStatus;
+  rateLimitOverride: number | null;
+}
+
+const AUTH_CACHE_TTL = 300; // 5 minutes
+
+function sha256(data: string): string {
+  return crypto.createHash("sha256").update(data).digest("hex");
+}
+
 /**
  * Require a valid agent API key.
  * Authorization: Bearer <api_key>
- * Lookup by api_key_prefix, then bcrypt verify full key.
+ * Check Redis cache first, fallback to DB prefix lookup + bcrypt verify.
+ * Supports previous key during rotation grace period.
  */
 export function requireAgent() {
   return createMiddleware<AuthEnv>(async (c, next) => {
@@ -30,18 +54,39 @@ export function requireAgent() {
       throw new AppError("API_KEY_INVALID", "API key is empty");
     }
 
-    const prefix = apiKey.slice(0, 12);
-
-    // Lookup agent by prefix
-    const { getDb } = await import("../lib/container.js");
+    const { getDb, getRedis } = await import("../lib/container.js");
     const db = getDb();
+    const redis = getRedis();
+
     if (!db) {
       throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
     }
 
+    // Check Redis cache first
+    const cacheKey = `auth:${sha256(apiKey)}`;
+    if (redis) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          const agent: CachedAgent = JSON.parse(cached);
+          c.set("agent", agent);
+          c.set("authRole", "agent");
+          await next();
+          return;
+        }
+      } catch {
+        // Cache miss or error, proceed to DB lookup
+      }
+    }
+
+    const prefix = apiKey.slice(0, 12);
+
     const { eq } = await import("drizzle-orm");
     const { agents } = await import("@betterworld/db");
 
+    const { or } = await import("drizzle-orm");
+
+    // Look up by current prefix OR previous prefix (for grace period)
     const [agent] = await db
       .select({
         id: agents.id,
@@ -49,9 +94,13 @@ export function requireAgent() {
         framework: agents.framework,
         apiKeyHash: agents.apiKeyHash,
         isActive: agents.isActive,
+        claimStatus: agents.claimStatus,
+        rateLimitOverride: agents.rateLimitOverride,
+        previousApiKeyHash: agents.previousApiKeyHash,
+        previousApiKeyExpiresAt: agents.previousApiKeyExpiresAt,
       })
       .from(agents)
-      .where(eq(agents.apiKeyPrefix, prefix))
+      .where(or(eq(agents.apiKeyPrefix, prefix), eq(agents.previousApiKeyPrefix, prefix)))
       .limit(1);
 
     if (!agent) {
@@ -63,11 +112,50 @@ export function requireAgent() {
     }
 
     const valid = await bcrypt.compare(apiKey, agent.apiKeyHash);
+    let isDeprecatedKey = false;
+
     if (!valid) {
-      throw new AppError("API_KEY_INVALID", "Invalid API key");
+      // Check if this is a previous key during grace period
+      if (
+        agent.previousApiKeyHash &&
+        agent.previousApiKeyExpiresAt &&
+        agent.previousApiKeyExpiresAt > new Date()
+      ) {
+        const previousValid = await bcrypt.compare(apiKey, agent.previousApiKeyHash);
+        if (previousValid) {
+          isDeprecatedKey = true;
+        } else {
+          throw new AppError("API_KEY_INVALID", "Invalid API key");
+        }
+      } else {
+        throw new AppError("API_KEY_INVALID", "Invalid API key");
+      }
     }
 
-    c.set("agent", { id: agent.id, username: agent.username, framework: agent.framework });
+    if (isDeprecatedKey) {
+      c.header("X-BW-Key-Deprecated", "true");
+    }
+
+    const agentData: CachedAgent = {
+      id: agent.id,
+      username: agent.username,
+      framework: agent.framework,
+      claimStatus: agent.claimStatus as ClaimStatus,
+      rateLimitOverride: agent.rateLimitOverride,
+    };
+
+    // Cache the result
+    if (redis) {
+      try {
+        await redis.setex(cacheKey, AUTH_CACHE_TTL, JSON.stringify(agentData));
+        // Store reverse mapping for cache invalidation by agentId
+        await redis.setex(`auth:agent:${agent.id}`, AUTH_CACHE_TTL, cacheKey);
+      } catch {
+        // Cache write failure is non-fatal
+      }
+    }
+
+    c.set("agent", agentData);
     c.set("authRole", "agent");
     await next();
   });
@@ -145,13 +233,32 @@ export function optionalAuth() {
         // Not a valid JWT — might be an API key, try that
       }
 
-      // Try as API key (for agents) — only if prefix matches pattern
+      // Try as API key (for agents)
       const prefix = token.slice(0, 12);
       try {
-        const { getDb } = await import("../lib/container.js");
+        const { getDb, getRedis } = await import("../lib/container.js");
         const db = getDb();
+        const redis = getRedis();
+
+        // Check cache first
+        const cacheKey = `auth:${sha256(token)}`;
+        if (redis) {
+          try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+              const agent: CachedAgent = JSON.parse(cached);
+              c.set("agent", agent);
+              c.set("authRole", "agent");
+              await next();
+              return;
+            }
+          } catch {
+            // Cache miss, proceed to DB
+          }
+        }
+
         if (db) {
-          const { eq } = await import("drizzle-orm");
+          const { eq, or } = await import("drizzle-orm");
           const { agents } = await import("@betterworld/db");
 
           const [agent] = await db
@@ -161,19 +268,56 @@ export function optionalAuth() {
               framework: agents.framework,
               apiKeyHash: agents.apiKeyHash,
               isActive: agents.isActive,
+              claimStatus: agents.claimStatus,
+              rateLimitOverride: agents.rateLimitOverride,
+              previousApiKeyHash: agents.previousApiKeyHash,
+              previousApiKeyExpiresAt: agents.previousApiKeyExpiresAt,
             })
             .from(agents)
-            .where(eq(agents.apiKeyPrefix, prefix))
+            .where(or(eq(agents.apiKeyPrefix, prefix), eq(agents.previousApiKeyPrefix, prefix)))
             .limit(1);
 
           if (agent?.isActive) {
+            let matched = false;
+            let isDeprecated = false;
             const valid = await bcrypt.compare(token, agent.apiKeyHash);
             if (valid) {
-              c.set("agent", {
+              matched = true;
+            } else if (
+              agent.previousApiKeyHash &&
+              agent.previousApiKeyExpiresAt &&
+              agent.previousApiKeyExpiresAt > new Date()
+            ) {
+              const prevValid = await bcrypt.compare(token, agent.previousApiKeyHash);
+              if (prevValid) {
+                matched = true;
+                isDeprecated = true;
+              }
+            }
+
+            if (matched) {
+              if (isDeprecated) {
+                c.header("X-BW-Key-Deprecated", "true");
+              }
+              const agentData: CachedAgent = {
                 id: agent.id,
                 username: agent.username,
                 framework: agent.framework,
-              });
+                claimStatus: agent.claimStatus as ClaimStatus,
+                rateLimitOverride: agent.rateLimitOverride,
+              };
+
+              // Cache
+              if (redis) {
+                try {
+                  await redis.setex(cacheKey, AUTH_CACHE_TTL, JSON.stringify(agentData));
+                  await redis.setex(`auth:agent:${agent.id}`, AUTH_CACHE_TTL, cacheKey);
+                } catch {
+                  // Non-fatal
+                }
+              }
+
+              c.set("agent", agentData);
               c.set("authRole", "agent");
               await next();
               return;

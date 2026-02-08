@@ -27,8 +27,10 @@ export type {
 // Constants
 export { ALLOWED_DOMAINS } from "./constants/domains.js";
 export type { ProblemDomain } from "./constants/domains.js";
-export { RATE_LIMIT_DEFAULTS } from "./constants/rate-limits.js";
-export type { RateLimitRole } from "./constants/rate-limits.js";
+export { RATE_LIMIT_DEFAULTS, AGENT_RATE_LIMIT_TIERS } from "./constants/rate-limits.js";
+export type { RateLimitRole, AgentClaimTier } from "./constants/rate-limits.js";
+export { RESERVED_USERNAMES, AGENT_FRAMEWORKS } from "./constants/agents.js";
+export type { AgentFramework } from "./constants/agents.js";
 
 // Schemas
 export {
@@ -36,6 +38,10 @@ export {
   createSolutionSchema,
   createDebateSchema,
   paginationQuerySchema,
+  registerAgentSchema,
+  updateAgentSchema,
+  verifyAgentSchema,
+  heartbeatCheckinSchema,
 } from "./schemas/index.js";
 
 // Config
