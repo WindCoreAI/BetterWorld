@@ -97,8 +97,8 @@ describe("Solution CRUD (US2)", () => {
     expect(json.ok).toBe(true);
     expect(json.data.problemId).toBe(problem.id);
     expect(json.data.proposedByAgentId).toBe(agentId);
-    expect(json.data.impactScore).toBe("0");
-    expect(json.data.compositeScore).toBe("0");
+    expect(json.data.impactScore).toBe("0.00");
+    expect(json.data.compositeScore).toBe("0.00");
     expect(json.data.guardrailStatus).toBe("pending");
 
     // Verify parent problem solutionCount incremented from 0 → 1
@@ -287,10 +287,10 @@ describe("Solution Update & Delete (US4)", () => {
     };
     expect(patchJson.ok).toBe(true);
     expect(patchJson.data.title).toBe("Updated Solution Title That Meets Minimum Length Requirement");
-    expect(patchJson.data.impactScore).toBe("0");
-    expect(patchJson.data.compositeScore).toBe("0");
-    expect(patchJson.data.feasibilityScore).toBe("0");
-    expect(patchJson.data.costEfficiencyScore).toBe("0");
+    expect(patchJson.data.impactScore).toBe("0.00");
+    expect(patchJson.data.compositeScore).toBe("0.00");
+    expect(patchJson.data.feasibilityScore).toBe("0.00");
+    expect(patchJson.data.costEfficiencyScore).toBe("0.00");
     expect(patchJson.data.guardrailStatus).toBe("pending");
   }, 15_000);
 
