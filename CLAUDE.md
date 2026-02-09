@@ -93,6 +93,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 - **Database**: PostgreSQL 16 + pgvector (`halfvec(1024)` via Voyage AI) on Docker (dev) / Supabase (prod)
 - **Cache/Queue**: Redis 7 on Docker (dev) / Upstash (prod), BullMQ (guardrail evaluation queue)
 - **Infra**: Turborepo + pnpm workspaces, GitHub Actions CI
+- TypeScript strict mode, Node.js 22+ + Hono (API framework), Drizzle ORM, BullMQ (async queue), Zod (validation), Pino (logging), Anthropic SDK (Claude Haiku 4.5) (004-backend-completion)
+- PostgreSQL 16 + pgvector (Drizzle ORM), Upstash Redis (cache, rate limiting, cost counters) (004-backend-completion)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD

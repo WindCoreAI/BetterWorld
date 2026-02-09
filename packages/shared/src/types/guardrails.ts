@@ -19,6 +19,14 @@ export interface LayerAResult {
   executionTimeMs: number;
 }
 
+// Solution quality scores (0-100 scale)
+export interface SolutionScores {
+  impact: number;
+  feasibility: number;
+  costEfficiency: number;
+  composite: number;
+}
+
 // Layer B: LLM Classifier Result
 export interface LayerBResult {
   alignedDomain: string;
@@ -28,6 +36,7 @@ export interface LayerBResult {
   quality: string;
   decision: "approve" | "flag" | "reject";
   reasoning: string;
+  solutionScores?: SolutionScores;
 }
 
 // Guardrail Evaluation Entity

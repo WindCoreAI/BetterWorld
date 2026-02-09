@@ -1,16 +1,31 @@
-import { problems } from "@betterworld/db";
-import { paginationQuerySchema , AppError } from "@betterworld/shared";
+import { problems, solutions, debates, guardrailEvaluations, flaggedContent } from "@betterworld/db";
+import {
+  paginationQuerySchema,
+  AppError,
+  createProblemSchema,
+  updateProblemSchema,
+} from "@betterworld/shared";
 import { and, eq, desc, lt } from "drizzle-orm";
 import { Hono } from "hono";
+import { z } from "zod";
 
-
-import type { AppEnv } from "../app.js";
 import { getDb } from "../lib/container.js";
+import { enqueueForEvaluation } from "../lib/guardrail-helpers.js";
 import { parseUuidParam } from "../lib/validation.js";
+import { requireAgent } from "../middleware/auth.js";
+import type { AuthEnv } from "../middleware/auth.js";
 
-export const problemsRoutes = new Hono<AppEnv>();
+export const problemsRoutes = new Hono<AuthEnv>();
 
-// GET /api/v1/problems — List publicly visible problems (guardrail_status = 'approved' only)
+const problemListQuerySchema = paginationQuerySchema.extend({
+  domain: z.string().optional(),
+  severity: z.string().optional(),
+  status: z.string().optional(),
+  mine: z.enum(["true", "false"]).optional(),
+  sort: z.enum(["recent", "upvotes", "solutions"]).optional(),
+});
+
+// GET /api/v1/problems — List problems
 problemsRoutes.get("/", async (c) => {
   const db = getDb();
   if (!db) {
@@ -18,36 +33,70 @@ problemsRoutes.get("/", async (c) => {
   }
 
   const query = c.req.query();
-  const parsed = paginationQuerySchema.safeParse(query);
+  const parsed = problemListQuerySchema.safeParse(query);
   if (!parsed.success) {
     throw new AppError("VALIDATION_ERROR", "Invalid query parameters", {
       fields: parsed.error.flatten().fieldErrors,
     });
   }
 
-  const { limit, cursor } = parsed.data;
+  const { limit, cursor, domain, severity, status, mine, sort } = parsed.data;
+  const agent = c.get("agent");
+  const isMine = mine === "true" && !!agent;
 
-  // Only return approved content — pending, flagged, and rejected are hidden
-  const conditions = [eq(problems.guardrailStatus, "approved")];
+  const conditions = [];
+
+  if (isMine) {
+    // Agent sees all their own problems regardless of guardrailStatus
+    conditions.push(eq(problems.reportedByAgentId, agent!.id));
+  } else {
+    // Public: approved only
+    conditions.push(eq(problems.guardrailStatus, "approved"));
+  }
+
+  if (domain) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    conditions.push(eq(problems.domain, domain as typeof problems.domain.enumValues[number]));
+  }
+
+  if (severity) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    conditions.push(eq(problems.severity, severity as typeof problems.severity.enumValues[number]));
+  }
+
+  if (status) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    conditions.push(eq(problems.status, status as typeof problems.status.enumValues[number]));
+  }
 
   if (cursor) {
     conditions.push(lt(problems.createdAt, new Date(cursor)));
   }
 
+  const orderBy = sort === "upvotes"
+    ? desc(problems.upvotes)
+    : sort === "solutions"
+      ? desc(problems.solutionCount)
+      : desc(problems.createdAt);
+
   const rows = await db
     .select({
       id: problems.id,
+      reportedByAgentId: problems.reportedByAgentId,
       title: problems.title,
       description: problems.description,
       domain: problems.domain,
       severity: problems.severity,
       guardrailStatus: problems.guardrailStatus,
+      solutionCount: problems.solutionCount,
+      upvotes: problems.upvotes,
+      status: problems.status,
       createdAt: problems.createdAt,
     })
     .from(problems)
     .where(and(...conditions))
-    .orderBy(desc(problems.createdAt))
-    .limit(limit + 1); // Fetch one extra for cursor
+    .orderBy(orderBy)
+    .limit(limit + 1);
 
   const hasMore = rows.length > limit;
   const items = hasMore ? rows.slice(0, limit) : rows;
@@ -65,7 +114,7 @@ problemsRoutes.get("/", async (c) => {
   });
 });
 
-// GET /api/v1/problems/:id — Get single problem (only if approved)
+// GET /api/v1/problems/:id — Get single problem
 problemsRoutes.get("/:id", async (c) => {
   const db = getDb();
   if (!db) {
@@ -73,25 +122,219 @@ problemsRoutes.get("/:id", async (c) => {
   }
 
   const id = parseUuidParam(c.req.param("id"));
+  const agent = c.get("agent");
 
   const [problem] = await db
     .select()
     .from(problems)
-    .where(
-      and(
-        eq(problems.id, id),
-        eq(problems.guardrailStatus, "approved"),
-      ),
-    )
+    .where(eq(problems.id, id))
     .limit(1);
 
   if (!problem) {
     throw new AppError("NOT_FOUND", "Problem not found");
   }
 
+  // Non-approved content: only visible to owning agent
+  if (problem.guardrailStatus !== "approved") {
+    if (!agent || problem.reportedByAgentId !== agent.id) {
+      throw new AppError("FORBIDDEN", "You do not have access to this problem");
+    }
+  }
+
   return c.json({
     ok: true,
     data: problem,
+    requestId: c.get("requestId"),
+  });
+});
+
+// POST /api/v1/problems — Create a problem report
+problemsRoutes.post("/", requireAgent(), async (c) => {
+  const db = getDb();
+  if (!db) {
+    throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
+  }
+
+  const body = await c.req.json();
+  const parsed = createProblemSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new AppError("VALIDATION_ERROR", "Invalid request body", {
+      fields: parsed.error.flatten().fieldErrors,
+    });
+  }
+
+  const agent = c.get("agent")!;
+  const data = parsed.data;
+
+  const result = await db.transaction(async (tx) => {
+    const { latitude, longitude, ...rest } = data;
+    const [problem] = await tx
+      .insert(problems)
+      .values({
+        ...rest,
+        reportedByAgentId: agent.id,
+        latitude: latitude != null ? String(latitude) : null,
+        longitude: longitude != null ? String(longitude) : null,
+        existingSolutions: data.existingSolutions ?? [],
+        dataSources: data.dataSources ?? [],
+        evidenceLinks: data.evidenceLinks ?? [],
+        guardrailStatus: "pending",
+      })
+      .returning();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const evaluationId = await enqueueForEvaluation(tx as any, {
+      contentId: problem!.id,
+      contentType: "problem",
+      content: JSON.stringify({
+        title: data.title,
+        description: data.description,
+        domain: data.domain,
+      }),
+      agentId: agent.id,
+    });
+
+    return { ...problem!, guardrailEvaluationId: evaluationId };
+  });
+
+  return c.json({
+    ok: true,
+    data: result,
+    requestId: c.get("requestId"),
+  }, 201);
+});
+
+// PATCH /api/v1/problems/:id — Update problem (owning agent only)
+problemsRoutes.patch("/:id", requireAgent(), async (c) => {
+  const db = getDb();
+  if (!db) {
+    throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
+  }
+
+  const id = parseUuidParam(c.req.param("id"));
+  const agent = c.get("agent")!;
+
+  const body = await c.req.json();
+  const parsed = updateProblemSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new AppError("VALIDATION_ERROR", "Invalid request body", {
+      fields: parsed.error.flatten().fieldErrors,
+    });
+  }
+
+  const [existing] = await db
+    .select()
+    .from(problems)
+    .where(eq(problems.id, id))
+    .limit(1);
+
+  if (!existing) {
+    throw new AppError("NOT_FOUND", "Problem not found");
+  }
+
+  if (existing.reportedByAgentId !== agent.id) {
+    throw new AppError("FORBIDDEN", "You can only update your own problems");
+  }
+
+  const { latitude, longitude, ...updateRest } = parsed.data;
+  const updateData: Record<string, unknown> = {
+    ...updateRest,
+    guardrailStatus: "pending",
+    updatedAt: new Date(),
+  };
+  if (latitude !== undefined) updateData.latitude = latitude != null ? String(latitude) : null;
+  if (longitude !== undefined) updateData.longitude = longitude != null ? String(longitude) : null;
+
+  const result = await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(problems)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .set(updateData as any)
+      .where(eq(problems.id, id))
+      .returning();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await enqueueForEvaluation(tx as any, {
+      contentId: id,
+      contentType: "problem",
+      content: JSON.stringify({
+        title: updated!.title,
+        description: updated!.description,
+        domain: updated!.domain,
+      }),
+      agentId: agent.id,
+    });
+
+    return updated!;
+  });
+
+  return c.json({
+    ok: true,
+    data: result,
+    requestId: c.get("requestId"),
+  });
+});
+
+// DELETE /api/v1/problems/:id — Delete problem with cascade
+problemsRoutes.delete("/:id", requireAgent(), async (c) => {
+  const db = getDb();
+  if (!db) {
+    throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
+  }
+
+  const id = parseUuidParam(c.req.param("id"));
+  const agent = c.get("agent")!;
+
+  const [existing] = await db
+    .select({ id: problems.id, reportedByAgentId: problems.reportedByAgentId })
+    .from(problems)
+    .where(eq(problems.id, id))
+    .limit(1);
+
+  if (!existing) {
+    throw new AppError("NOT_FOUND", "Problem not found");
+  }
+
+  if (existing.reportedByAgentId !== agent.id) {
+    throw new AppError("FORBIDDEN", "You can only delete your own problems");
+  }
+
+  await db.transaction(async (tx) => {
+    // Get solution IDs for this problem to cascade debates
+    const solutionRows = await tx
+      .select({ id: solutions.id })
+      .from(solutions)
+      .where(eq(solutions.problemId, id));
+
+    const solutionIds = solutionRows.map(s => s.id);
+
+    // Delete debates on all solutions for this problem
+    for (const solId of solutionIds) {
+      await tx.delete(debates).where(eq(debates.solutionId, solId));
+    }
+
+    // Delete solutions
+    await tx.delete(solutions).where(eq(solutions.problemId, id));
+
+    // Delete flagged content referencing this problem or its solutions
+    await tx.delete(flaggedContent).where(eq(flaggedContent.contentId, id));
+    for (const solId of solutionIds) {
+      await tx.delete(flaggedContent).where(eq(flaggedContent.contentId, solId));
+    }
+
+    // Delete guardrail evaluations referencing this problem or its solutions
+    await tx.delete(guardrailEvaluations).where(eq(guardrailEvaluations.contentId, id));
+    for (const solId of solutionIds) {
+      await tx.delete(guardrailEvaluations).where(eq(guardrailEvaluations.contentId, solId));
+    }
+
+    // Delete the problem
+    await tx.delete(problems).where(eq(problems.id, id));
+  });
+
+  return c.json({
+    ok: true,
+    data: { deleted: true },
     requestId: c.get("requestId"),
   });
 });
