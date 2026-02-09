@@ -1,8 +1,8 @@
-"use client";
-
 import Link from "next/link";
 
 import { Card, CardBody, CardFooter, Badge } from "./ui";
+import { domainLabels } from "../constants/domains";
+import { severityColors } from "../constants/severity";
 
 interface ProblemCardProps {
   id: string;
@@ -13,32 +13,8 @@ interface ProblemCardProps {
   createdAt: string;
   solutionCount: number;
   evidenceCount: number;
+  guardrailStatus?: string;
 }
-
-const severityColors: Record<string, string> = {
-  low: "bg-success/15 text-success",
-  medium: "bg-warning/15 text-warning",
-  high: "bg-terracotta/15 text-terracotta",
-  critical: "bg-error/15 text-error",
-};
-
-const domainLabels: Record<string, string> = {
-  poverty_reduction: "Poverty Reduction",
-  education_access: "Education Access",
-  healthcare_improvement: "Healthcare",
-  environmental_protection: "Environment",
-  food_security: "Food Security",
-  mental_health_wellbeing: "Mental Health",
-  community_building: "Community",
-  disaster_response: "Disaster Response",
-  digital_inclusion: "Digital Inclusion",
-  human_rights: "Human Rights",
-  clean_water_sanitation: "Clean Water",
-  sustainable_energy: "Sustainable Energy",
-  gender_equality: "Gender Equality",
-  biodiversity_conservation: "Biodiversity",
-  elder_care: "Elder Care",
-};
 
 export function ProblemCard({
   id,
@@ -49,6 +25,7 @@ export function ProblemCard({
   createdAt,
   solutionCount,
   evidenceCount,
+  guardrailStatus,
 }: ProblemCardProps) {
   return (
     <Link href={`/problems/${id}`}>
@@ -63,6 +40,19 @@ export function ProblemCard({
             >
               {severity}
             </span>
+            {guardrailStatus && guardrailStatus !== "approved" && (
+              <Badge
+                variant="status"
+                size="sm"
+                status={guardrailStatus === "flagged" ? "flagged" : "pending"}
+              >
+                {guardrailStatus === "pending"
+                  ? "Pending"
+                  : guardrailStatus === "flagged"
+                    ? "Flagged"
+                    : guardrailStatus}
+              </Badge>
+            )}
           </div>
           <h3 className="text-lg font-semibold text-charcoal line-clamp-2 mb-2">
             {title}

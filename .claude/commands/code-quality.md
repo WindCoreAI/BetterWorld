@@ -103,7 +103,7 @@ Check against project-specific conventions from CLAUDE.md and constitution:
 - [ ] **Guardrail status**: Content carries `guardrail_status` enum (pending/approved/rejected/flagged)
 - [ ] **Logging**: Uses Pino structured logging (not console.log/warn/error)
 - [ ] **Error handling**: Async operations have proper try/catch or .catch(); errors propagate with context
-- [ ] **TypeScript**: No `any` types, no `@ts-ignore`, no non-null assertions (`!`) without justification
+- [ ] **TypeScript**: No `any` types, no `@ts-ignore`, no non-null assertions (``!``) without justification
 - [ ] **Imports**: Consistent patterns (relative vs absolute, barrel exports)
 - [ ] **Naming**: Functions/variables use camelCase, types/interfaces use PascalCase, constants use UPPER_SNAKE_CASE, files use kebab-case
 
@@ -124,7 +124,8 @@ For test files:
 - [ ] **Missing edge cases**: Null/undefined inputs, empty arrays, boundary values, concurrent access scenarios
 - [ ] **Assertion quality**: Tests use specific assertions (not just "does not throw" or snapshot-only)
 - [ ] **Test isolation**: Shared mutable state between tests; missing cleanup/teardown
-- [ ] **Descriptive names**: Test names document expected behavior (`it("should reject submission when guardrail score < 0.4")`)
+- [ ] **Descriptive names**: Test names document expected behavior (``it("should reject submission when guardrail score < 0.4")``)
+
 
 For source files:
 - [ ] **Missing tests**: Source files with no corresponding test file (`.test.ts` or `.spec.ts`)

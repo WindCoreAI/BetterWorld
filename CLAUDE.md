@@ -4,17 +4,20 @@ AI Agent social collaboration platform — agents discover problems, design solu
 
 ## Project Status
 
-Sprint 3 (003-constitutional-guardrails) complete. Sprint 3.5 (backend completion) next.
+**Phase 1 (Foundation MVP) COMPLETE** — All sprints (1, 2, 3, 3.5, 4) delivered. Phase 2 (Human-in-the-Loop) next.
 
 **What's operational:**
 - 3-layer guardrail pipeline: Layer A regex (<10ms, 12 patterns), Layer B Claude Haiku classifier, Layer C admin review queue
 - Trust tiers: "new" (all flagged) vs "verified" (auto-approve >= 0.70, auto-reject < 0.40)
 - Agent API: registration, auth (bcrypt + Redis cache <50ms), email verification, credential rotation, Ed25519 heartbeat, tiered rate limiting, WebSocket event feed
+- Content CRUD: Problem/Solution/Debate endpoints with guardrail integration, scoring engine (impact×0.4 + feasibility×0.35 + cost×0.25)
+- Frontend: Problem Board, Solution Board (scores + debates), Activity Feed (WebSocket real-time), Admin Panel (auth-gated), Landing Page (impact counters + domain showcase)
 - Infrastructure: Hono API, Drizzle ORM, Redis caching (SHA-256, 1hr TTL), BullMQ async queue (3 retries, dead letter), CI/CD
-- 434+ tests (341 guardrails unit, 93 shared, 13 integration, 3 load, 262 adversarial)
+- Deployment: Dockerfile + Dockerfile.worker, fly.toml, GitHub Actions deploy workflow, Vercel config
+- Security: HSTS, CSP, CORS strict, OWASP Top 10 review, bcrypt keys, Ed25519 heartbeats
+- 652+ tests (354 guardrails + 158 shared + 140 API) + E2E pipeline test + k6 load test baseline
 
-**Sprint 3.5 (next):** Problem/Solution/Debate CRUD write endpoints, scoring engine, 50+ seed data, AI budget tracking
-**Sprint 4 (after 3.5):** Frontend UI (problem board, solution board, admin panel, landing page), Fly.io/Vercel deployment, E2E tests, load testing
+**Phase 2 (next):** Human registration (OAuth), ImpactToken system, mission marketplace, evidence verification, reputation scoring
 
 ## Key References
 
@@ -95,9 +98,13 @@ docs/challenges/         # 7 deep technical challenge research docs
 - **Infra**: Turborepo + pnpm workspaces, GitHub Actions CI
 - TypeScript strict mode, Node.js 22+ + Hono (API framework), Drizzle ORM, BullMQ (async queue), Zod (validation), Pino (logging), Anthropic SDK (Claude Haiku 4.5) (004-backend-completion)
 - PostgreSQL 16 + pgvector (Drizzle ORM), Upstash Redis (cache, rate limiting, cost counters) (004-backend-completion)
+- TypeScript 5.x (strict mode), Node.js 22+ + Next.js 15 (App Router, RSC), React 19, Tailwind CSS 4, React Query v5, Zustand, Hono (API), Vitest (tests), k6 (load tests) (005-web-ui-deployment)
+- PostgreSQL 16 + pgvector (Supabase, existing), Upstash Redis (existing) — no new tables or migrations (005-web-ui-deployment)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD
 - 001-sprint1-gap-fixes: API v1 route prefix, 8 integration tests, React Query provider, UI component library
 - 002-sprint2-agent-api: Agent registration/auth, email verification, credential rotation, Ed25519 heartbeat, tiered rate limiting, WebSocket event feed, admin controls, 20+ integration tests
 - 003-constitutional-guardrails: 3-layer guardrail pipeline, trust tiers, Redis evaluation cache, BullMQ async worker, admin review API + UI components, 341+ unit tests (262 adversarial), Grafana dashboards, CI guardrail regression job
+- 004-backend-completion: Problem/Solution/Debate CRUD with guardrail integration, scoring engine, 45 seed problems (15 domains), AI budget tracking (Redis counters + hard cap), 652 tests total
+- 005-web-ui-deployment: Problem Board, Solution Board (scores + debates), Activity Feed (WebSocket), Admin Panel (auth-gated /admin), Landing Page (hero + counters + domains), Fly.io + Vercel deployment (Dockerfile, fly.toml, deploy workflow), security hardening (HSTS, CSP, CORS, OWASP), E2E pipeline test, k6 load test, 57/61 tasks complete

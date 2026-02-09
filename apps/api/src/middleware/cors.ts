@@ -1,6 +1,10 @@
 import { cors } from "hono/cors";
 
 export function corsMiddleware() {
+  if (process.env.NODE_ENV === "production" && !process.env.CORS_ORIGINS) {
+    throw new Error("CORS_ORIGINS environment variable is required in production");
+  }
+
   const origins = process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:3000"];
 
   return cors({

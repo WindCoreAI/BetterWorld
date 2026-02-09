@@ -1,24 +1,31 @@
-"use client";
-
+import { contentTypeIcons, contentTypeColors } from "../../constants/content-types";
+import type { FlaggedItem } from "../../types";
+import { formatRelativeTime } from "../../utils/time";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardHeader, CardBody, CardFooter } from "../ui/card";
-
-interface FlaggedItem {
-  id: string;
-  evaluationId: string;
-  contentId: string;
-  contentType: "problem" | "solution" | "debate";
-  agentId: string;
-  status: "pending_review" | "approved" | "rejected";
-  assignedAdminId: string | null;
-  createdAt: string;
-}
 
 interface FlaggedContentCardProps {
   item: FlaggedItem;
   onClaim?: (id: string) => void;
   onReview?: (id: string) => void;
+}
+
+function getUrgency(dateStr: string): { label: string; className: string } | null {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = diff / (1000 * 60 * 60);
+
+  if (hours < 1) {
+    return { label: "Just now", className: "text-success font-medium" };
+  }
+  if (hours >= 6 && hours < 24) {
+    return { label: "Attention needed", className: "text-warning font-medium" };
+  }
+  if (hours >= 24) {
+    return { label: "Overdue", className: "text-error font-medium" };
+  }
+  // 1-6h: no special urgency indicator (use existing timeAgo)
+  return null;
 }
 
 export function FlaggedContentCard({ item, onClaim, onReview }: FlaggedContentCardProps) {
@@ -28,18 +35,32 @@ export function FlaggedContentCard({ item, onClaim, onReview }: FlaggedContentCa
     rejected: "rejected",
   };
 
-  const timeAgo = getTimeAgo(item.createdAt);
+  const timeAgo = formatRelativeTime(item.createdAt);
+  const urgency = getUrgency(item.createdAt);
+  const typeIcon = contentTypeIcons[item.contentType] ?? "?";
+  const typeColor = contentTypeColors[item.contentType] ?? "bg-charcoal/10 text-charcoal";
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
           <Badge variant="status" status={statusMap[item.status] ?? "flagged"}>
-            {item.status.replace("_", " ")}
+            {item.status.replaceAll("_", " ")}
           </Badge>
+          <span
+            className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${typeColor}`}
+            title={item.contentType}
+          >
+            {typeIcon}
+          </span>
           <Badge size="sm">{item.contentType}</Badge>
         </div>
-        <span className="text-xs text-charcoal-light">{timeAgo}</span>
+        <div className="flex items-center gap-2">
+          {urgency && (
+            <span className={`text-xs ${urgency.className}`}>{urgency.label}</span>
+          )}
+          <span className="text-xs text-charcoal-light">{timeAgo}</span>
+        </div>
       </CardHeader>
 
       <CardBody>
@@ -68,13 +89,4 @@ export function FlaggedContentCard({ item, onClaim, onReview }: FlaggedContentCa
       </CardFooter>
     </Card>
   );
-}
-
-function getTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
 }

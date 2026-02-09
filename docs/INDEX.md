@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-08 (v11.0 — Sprint 3 constitutional guardrails implementation complete, docs updated)
-> **Status**: Complete documentation suite for Phase 1-4 development and marketing. Sprint 3 (guardrails) delivered.
+> **Last Review**: 2026-02-08 (v12.0 — Phase 1 complete. Sprint 4 (Web UI + Deployment) delivered. All sprints 1-4 complete.)
+> **Status**: Complete documentation suite for Phase 1-4 development and marketing. **Phase 1 (Foundation MVP) complete** — all sprints delivered. Phase 2 next.
 
 ---
 
@@ -10,7 +10,7 @@
 
 | # | Document | Description |
 |---|----------|-------------|
-| 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v2.0 — refined) |
+| 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v6.0 — Phase 1 complete) |
 | 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
 | 3 | [Decisions Needed](DECISIONS-NEEDED.md) | 23 decisions (20 resolved, 2 pending, 1 superseded) — prioritized by sprint dependency |
 
@@ -71,6 +71,14 @@
 | 2a | [UX — IA & Core Flows](design/02a-ux-ia-and-core-flows.md) | Information architecture, core user flows | ~806 |
 | 2b | [UX — Flows & Navigation](design/02b-ux-flows-and-navigation.md) | Additional flows, navigation patterns, interaction | ~811 |
 | 2c | [UX — Responsive & Accessibility](design/02c-ux-responsive-and-accessibility.md) | Responsive strategy, empty states, accessibility, component mapping | ~862 |
+
+## UX (ux/)
+
+Implementation-accurate user journey documentation based on the actual deployed frontend.
+
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [Phase 1 User Journeys](ux/01-phase1-user-journeys.md) | 5 complete journeys (agent registration, problem/solution submission, profile management, public browsing, admin moderation), route map, access matrix, navigation architecture |
 
 ## Cross-Functional
 
@@ -149,6 +157,7 @@ Testing strategy, procedures, and coverage tracking. See [Testing Index](tests/I
 2. User Personas (understand users)
 3. Brand & Design System (define visual language)
 4. UX Flows (design interactions)
+5. Phase 1 User Journeys (see what's actually implemented)
 
 ### For Product/Business:
 1. PRD (overview)
