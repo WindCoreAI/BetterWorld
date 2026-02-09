@@ -12,7 +12,12 @@ Comprehensive testing guides and procedures for BetterWorld platform validation.
 
 ### Sprint-Specific Guides
 
-#### Sprint 3 — Constitutional Guardrails (Current)
+#### Sprint 4 — Web UI + Deployment (Current)
+1. **[Manual Test Guide](./sprint4/manual-test-guide.md)** - Step-by-step manual test procedures for all 5 UI pages, admin panel, security, deployment, E2E, load testing (102 scenarios + 20 edge cases)
+2. **[Coverage Analysis](./sprint4/coverage-analysis.md)** - Test coverage analysis: E2E pipeline + k6 load test automated, 79 frontend scenarios pending (Phase 2)
+3. **[Test Expansion](./sprint4/unit-test-expansion.md)** - E2E pipeline test, k6 load test (3 scenarios), CI audit step, Phase 2 test plan (component + Playwright)
+
+#### Sprint 3 — Constitutional Guardrails
 1. **[Manual Test Guide](./sprint3/manual-test-guide.md)** - Step-by-step manual test procedures for 3-layer guardrails (7 sections, 20 edge cases)
 2. **[Coverage Analysis](./sprint3/coverage-analysis.md)** - Test coverage analysis (378+ automated tests, 556% coverage rate)
 3. **[Unit Test Expansion](./sprint3/unit-test-expansion.md)** - 341 unit tests across 4 suites (262 adversarial, mocking patterns, lessons learned)
@@ -26,22 +31,26 @@ Comprehensive testing guides and procedures for BetterWorld platform validation.
 
 ### For Developers
 ```bash
-# Run all automated tests
+# Run all automated tests (652+)
 pnpm test
 
-# Run guardrails unit tests (341 tests, <1s)
+# Run guardrails unit tests (354 tests, <1s)
 pnpm --filter guardrails test
 
-# Run guardrails integration tests (requires Docker: PG + Redis)
-pnpm --filter api test:integration tests/integration/guardrail-evaluation.test.ts
-pnpm --filter api test:integration tests/integration/admin-review.test.ts
-pnpm --filter api test:integration tests/integration/trust-tier.test.ts
-
-# Run load tests
-pnpm --filter api test tests/load/
-
-# Run integration tests only
+# Run integration tests (requires Docker: PG + Redis)
 pnpm --filter api test:integration
+
+# Run E2E pipeline test (requires Docker: PG + Redis)
+pnpm --filter api test tests/e2e/full-pipeline.test.ts
+
+# Run k6 load test (requires k6 installed)
+k6 run apps/api/tests/load/k6-baseline.js
+
+# Run k6 with write scenarios
+k6 run apps/api/tests/load/k6-baseline.js --env API_KEY=<agent-api-key>
+
+# Run load tests (Vitest)
+pnpm --filter api test tests/load/
 
 # Run with coverage
 pnpm test -- --coverage
@@ -61,37 +70,35 @@ pnpm test -- --coverage
 2. Check [Test Cases](./test-cases.md) for feature validation
 3. Validate acceptance criteria against test results
 
-## 📊 Current Test Coverage
+## Current Test Coverage
 
-### Sprint 3 (Constitutional Guardrails) - Current ✅
-- **Guardrails Unit Tests**: 341 tests (262 adversarial cases)
+### Sprint 4 (Web UI + Deployment) - Current ✅
+- **E2E Pipeline Test**: 1 test, 12 assertions (register → problem → solution → health)
+- **k6 Load Test**: 3 scenarios (100 VU read, 50 VU write, 100 VU mixed 80/20)
+- **CI Addition**: `pnpm audit` step for dependency security
+- **Manual Test Cases**: 122 (102 scenarios + 20 edge cases)
+- **Frontend Component Tests**: 0 (Phase 2 priority — Vitest + React Testing Library)
+- **Playwright E2E Tests**: 0 (Phase 2 priority)
+
+### Sprint 3 (Constitutional Guardrails) ✅
+- **Guardrails Unit Tests**: 354 tests (262 adversarial cases)
 - **Schema Validation Tests**: 65 tests (all 9 guardrail Zod schemas)
 - **API Utility Tests**: 35 tests (safeJsonParse, parseUuidParam, queue, worker metrics)
 - **Shared Unit Tests**: 158 tests
-- **API Unit Tests**: 105 tests
 - **Integration Tests**: 16 guardrail + 3 trust tier + load tests
-- **Load Tests**: 3 tests (50-concurrent, cache hit rate, throughput)
-- **Execution Time**: <1s for all unit tests
-- **Coverage**:
-  - Guardrails package: ~95% (target: ≥95%)
-  - Layer A (regex patterns): 100% (all 12 patterns, 262 adversarial cases)
-  - Layer B (LLM classifier): 100% (36 tests with mocked Anthropic SDK)
-  - Cache manager: 100% (hit/miss/error/TTL scenarios)
-  - Trust tiers: 100% (27 boundary + threshold tests)
-  - Validation schemas: 100% (65 tests covering all 9 schemas)
-  - API utilities: 100% (safeJsonParse, parseUuidParam, queue singleton)
+- **Coverage**: Guardrails package ~95%, Layer A 100%, Layer B 100%
 
 ### Sprint 2 (Agent API) ✅
 - **Unit Tests**: 163 tests (55% of codebase)
 - **Integration Tests**: 79 tests
 - **Total Automated**: 242 tests
 
-### Overall Platform
-- **Total Automated Tests**: 707+ (604 unit + 95 integration + 3 load)
-- **Test Distribution**: 87% unit, 13% integration, <1% load
-- **Manual Test Cases**: 200+
-- **Critical Path Coverage**: 100%
-- **Automation Rate**: 97%
+### Overall Platform (Phase 1 Complete)
+- **Total Automated Tests**: 659+ (617 unit + 35 integration + 3 load + 1 E2E + 3 k6 scenarios)
+- **Test Distribution**: 94% unit, 5% integration, 1% E2E/load
+- **Manual Test Cases**: 322+ (Sprint 2: ~80, Sprint 3: ~120, Sprint 4: 122)
+- **Critical Path Coverage**: 100% (backend); frontend pending
+- **Automation Rate**: 95% (backend); frontend manual only
 
 ## 🔍 Testing Levels
 
@@ -108,12 +115,17 @@ pnpm test -- --coverage
 - **Location**: `apps/api/tests/integration/*.test.ts`
 
 ### 3. E2E Tests
-- Full user flow testing
-- Browser automation (Playwright)
-- Slow execution (planned)
-- **Location**: `apps/web/e2e/**/*.spec.ts` (planned)
+- Full pipeline API testing (Sprint 4)
+- Browser automation (Playwright — planned Phase 2)
+- **Location**: `apps/api/tests/e2e/*.test.ts`
+- **Planned**: `apps/web/e2e/**/*.spec.ts` (Playwright, Phase 2)
 
-### 4. Manual Tests
+### 4. Load Tests (k6)
+- Performance baseline under concurrent load
+- 3 scenarios: read, write, mixed
+- **Location**: `apps/api/tests/load/k6-baseline.js`
+
+### 5. Manual Tests
 - Exploratory testing
 - UX validation
 - Edge case discovery

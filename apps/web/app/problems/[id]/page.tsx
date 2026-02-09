@@ -4,34 +4,36 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { SolutionCard } from "../../../src/components/SolutionCard";
 import { Badge, Button, Card, CardBody } from "../../../src/components/ui";
+import { domainLabels } from "../../../src/constants/domains";
+import { severityColors } from "../../../src/constants/severity";
+import { API_BASE } from "../../../src/lib/api";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+interface DataSource {
+  name: string;
+  url: string;
+  dateAccessed?: string;
+}
 
-const domainLabels: Record<string, string> = {
-  poverty_reduction: "Poverty Reduction",
-  education_access: "Education Access",
-  healthcare_improvement: "Healthcare",
-  environmental_protection: "Environment",
-  food_security: "Food Security",
-  mental_health_wellbeing: "Mental Health",
-  community_building: "Community",
-  disaster_response: "Disaster Response",
-  digital_inclusion: "Digital Inclusion",
-  human_rights: "Human Rights",
-  clean_water_sanitation: "Clean Water",
-  sustainable_energy: "Sustainable Energy",
-  gender_equality: "Gender Equality",
-  biodiversity_conservation: "Biodiversity",
-  elder_care: "Elder Care",
-};
+interface Solution {
+  id: string;
+  title: string;
+  description: string;
+  compositeScore: string;
+  problemTitle: string;
+  problemId: string;
+  agentDebateCount: number;
+  guardrailStatus?: string;
+  status: string;
+  createdAt: string;
+  agent?: { username: string };
+}
 
-const severityColors: Record<string, string> = {
-  low: "bg-success/15 text-success",
-  medium: "bg-warning/15 text-warning",
-  high: "bg-terracotta/15 text-terracotta",
-  critical: "bg-error/15 text-error",
-};
+interface SolutionsResponse {
+  ok: boolean;
+  data: Solution[];
+}
 
 export default function ProblemDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +48,25 @@ export default function ProblemDetailPage() {
     },
     enabled: !!id,
   });
+
+  const {
+    data: solutionsData,
+    isLoading: solutionsLoading,
+  } = useQuery<SolutionsResponse>({
+    queryKey: ["solutions", "byProblem", id],
+    queryFn: async () => {
+      const res = await fetch(
+        `${API_BASE}/api/v1/solutions?problemId=${id}&sort=score&limit=10`,
+      );
+      if (!res.ok) {
+        throw new Error(`Failed to fetch solutions: ${res.status}`);
+      }
+      return res.json();
+    },
+    enabled: !!id,
+  });
+
+  const solutions = solutionsData?.data ?? [];
 
   if (isLoading) {
     return (
@@ -75,21 +96,42 @@ export default function ProblemDetailPage() {
     );
   }
 
+  const domainLabel = domainLabels[data.domain] ?? data.domain;
+
   return (
     <main className="min-h-screen px-4 py-16">
       <div className="max-w-4xl mx-auto">
-        <Link
-          href="/problems"
-          className="text-sm text-charcoal-light hover:text-charcoal mb-6 inline-block"
-        >
-          &larr; Back to Problems
-        </Link>
+        {/* Breadcrumb navigation */}
+        <nav aria-label="Breadcrumb" className="mb-6">
+          <ol className="flex items-center gap-1.5 text-sm text-charcoal-light">
+            <li>
+              <Link href="/problems" className="hover:text-charcoal">
+                Problems
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link
+                href={`/problems?domain=${data.domain}`}
+                className="hover:text-charcoal"
+              >
+                {domainLabel}
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <span className="text-charcoal font-medium line-clamp-1">
+                {data.title}
+              </span>
+            </li>
+          </ol>
+        </nav>
 
         <Card className="mb-6">
           <CardBody>
             <div className="flex items-center gap-2 mb-4">
               <Badge variant="domain">
-                {domainLabels[data.domain] ?? data.domain}
+                {domainLabel}
               </Badge>
               <span
                 className={`inline-flex items-center h-6 px-2 text-xs font-medium rounded-full ${severityColors[data.severity] ?? ""}`}
@@ -132,9 +174,39 @@ export default function ProblemDetailPage() {
                 </ul>
               </div>
             )}
+
+            {/* Data Sources section */}
+            {data.dataSources?.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-charcoal mb-2">
+                  Data Sources
+                </h3>
+                <ul className="space-y-1">
+                  {data.dataSources.map((source: DataSource, i: number) => (
+                    <li key={i} className="text-sm">
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-terracotta hover:underline"
+                      >
+                        {source.name}
+                      </a>
+                      {source.dateAccessed && (
+                        <span className="text-charcoal-light">
+                          {" "}
+                          &mdash; Accessed: {source.dateAccessed}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </CardBody>
         </Card>
 
+        {/* Solutions section */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-charcoal">Solutions</h2>
@@ -143,11 +215,39 @@ export default function ProblemDetailPage() {
             </Link>
           </div>
 
-          <div className="rounded-xl bg-cream p-8 text-center shadow-neu-sm">
-            <p className="text-charcoal-light">
-              No solutions proposed yet. Be the first to propose a solution.
-            </p>
-          </div>
+          {solutionsLoading && (
+            <div className="rounded-xl bg-cream p-8 text-center shadow-neu-sm">
+              <p className="text-charcoal-light">Loading solutions...</p>
+            </div>
+          )}
+
+          {!solutionsLoading && solutions.length === 0 && (
+            <div className="rounded-xl bg-cream p-8 text-center shadow-neu-sm">
+              <p className="text-charcoal-light">
+                No solutions proposed yet. Be the first to propose a solution.
+              </p>
+            </div>
+          )}
+
+          {!solutionsLoading && solutions.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {solutions.map((sol) => (
+                <SolutionCard
+                  key={sol.id}
+                  id={sol.id}
+                  title={sol.title}
+                  description={sol.description}
+                  compositeScore={sol.compositeScore}
+                  problemTitle={sol.problemTitle ?? data.title}
+                  agentDebateCount={sol.agentDebateCount}
+                  guardrailStatus={sol.guardrailStatus}
+                  status={sol.status}
+                  createdAt={sol.createdAt}
+                  agent={sol.agent}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </main>

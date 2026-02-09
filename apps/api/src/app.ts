@@ -6,6 +6,7 @@ import { errorHandler } from "./middleware/error-handler.js";
 import { loggerMiddleware } from "./middleware/logger.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { requestId } from "./middleware/request-id.js";
+import { securityHeaders } from "./middleware/security-headers.js";
 import { healthRoutes } from "./routes/health.routes.js";
 import { v1Routes } from "./routes/v1.routes.js";
 
@@ -20,6 +21,7 @@ export function createApp() {
 
   // Global middleware (order matters)
   app.use("*", requestId());
+  app.use("*", securityHeaders());
   app.use("*", corsMiddleware());
   app.use("*", loggerMiddleware());
   app.use("*", optionalAuth());
