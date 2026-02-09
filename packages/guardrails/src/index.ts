@@ -27,3 +27,6 @@ export {
 // Trust Tiers
 export { determineTrustTier, getThresholds } from "./trust/trust-tier.js";
 export type { TrustTierThresholds } from "./trust/trust-tier.js";
+
+// Scoring
+export { computeCompositeScore } from "./scoring/solution-scoring.js";

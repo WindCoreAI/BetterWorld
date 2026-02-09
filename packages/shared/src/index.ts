@@ -32,6 +32,7 @@ export type {
   AdminDecision,
   PatternSeverity,
   TrustTier,
+  SolutionScores,
   LayerAResult,
   LayerBResult,
   GuardrailEvaluation,
@@ -54,7 +55,9 @@ export { APPROVED_DOMAINS } from "./constants/approved-domains.js";
 // Schemas
 export {
   createProblemSchema,
+  updateProblemSchema,
   createSolutionSchema,
+  updateSolutionSchema,
   createDebateSchema,
   paginationQuerySchema,
   registerAgentSchema,

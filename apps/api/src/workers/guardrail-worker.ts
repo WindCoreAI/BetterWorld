@@ -14,6 +14,7 @@ import {
   setCachedEvaluation,
   determineTrustTier,
   getThresholds,
+  computeCompositeScore,
 } from "@betterworld/guardrails";
 import { Worker, type Job } from "bullmq";
 import { eq , sql } from "drizzle-orm";
@@ -21,6 +22,7 @@ import Redis from "ioredis";
 import pino from "pino";
 
 
+import { checkBudgetAvailable, recordAiCost } from "../lib/budget.js";
 import { initDb, getDb } from "../lib/container.js";
 
 const logger = pino({ name: "guardrail-worker" });
@@ -109,14 +111,47 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
     return { cacheHit: false, layerARejected: true, processingTimeMs: Date.now() - startTime };
   }
 
+  // Budget check: skip Layer B if daily cap reached
+  const budgetAvailable = await checkBudgetAvailable();
+  if (!budgetAvailable) {
+    logger.warn({ evaluationId }, "Budget cap reached — skipping Layer B, flagging for admin review");
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(guardrailEvaluations)
+        .set({
+          layerAResult: JSON.stringify(layerAResult),
+          finalDecision: "flagged",
+          trustTier,
+          completedAt: new Date(),
+          evaluationDurationMs: Date.now() - startTime,
+        })
+        .where(eq(guardrailEvaluations.id, evaluationId));
+
+      await updateContentStatus(tx, contentId, contentType, "flagged");
+
+      await tx.insert(flaggedContent).values({
+        evaluationId,
+        contentId,
+        contentType,
+        agentId,
+        status: "pending_review",
+      });
+    });
+
+    return { cacheHit: false, layerARejected: false, processingTimeMs: Date.now() - startTime };
+  }
+
   // Layer B: LLM classifier (check cache first)
   const cacheKey = generateCacheKey(content);
   let layerBResult = await getCachedEvaluation(content);
   const cacheHit = layerBResult !== null;
 
   if (!layerBResult) {
-    layerBResult = await evaluateLayerB(content);
+    layerBResult = await evaluateLayerB(content, contentType);
     await setCachedEvaluation(content, layerBResult);
+    // Record AI cost (~0.3 cents per call as safety margin)
+    await recordAiCost(1);
   }
 
   if (cacheHit) {
@@ -134,6 +169,22 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
     finalDecision = "flagged";
   } else {
     finalDecision = "rejected";
+  }
+
+  // For solutions: apply composite score-based decision routing
+  if (contentType === "solution" && layerBResult.solutionScores) {
+    const { impact, feasibility, costEfficiency } = layerBResult.solutionScores;
+    const composite = computeCompositeScore(impact, feasibility, costEfficiency);
+    layerBResult.solutionScores.composite = composite;
+
+    // Score-based routing for solutions (in addition to alignment check)
+    if (finalDecision === "approved") {
+      if (composite < 40) {
+        finalDecision = "rejected";
+      } else if (composite < 60) {
+        finalDecision = "flagged";
+      }
+    }
   }
 
   logger.info({ evaluationId, trustTier, score, thresholds, finalDecision }, "Decision made");
@@ -157,6 +208,32 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
       .where(eq(guardrailEvaluations.id, evaluationId));
 
     await updateContentStatus(tx, contentId, contentType, finalDecision);
+
+    // For solutions: persist scores
+    if (contentType === "solution" && layerBResult.solutionScores) {
+      const { impact, feasibility, costEfficiency, composite } = layerBResult.solutionScores;
+      await tx
+        .update(solutions)
+        .set({
+          impactScore: String(impact),
+          feasibilityScore: String(feasibility),
+          costEfficiencyScore: String(costEfficiency),
+          compositeScore: String(composite),
+          alignmentScore: String(score),
+        })
+        .where(eq(solutions.id, contentId));
+    }
+
+    // For problems: persist alignment info
+    if (contentType === "problem") {
+      await tx
+        .update(problems)
+        .set({
+          alignmentScore: String(score),
+          alignmentDomain: layerBResult.alignedDomain,
+        })
+        .where(eq(problems.id, contentId));
+    }
 
     // If flagged, create entry in flagged_content table for admin review
     if (finalDecision === "flagged") {
