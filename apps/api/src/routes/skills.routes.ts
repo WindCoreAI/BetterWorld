@@ -4,8 +4,8 @@ import { fileURLToPath } from "url";
 
 import { Hono } from "hono";
 
-import { logger } from "../middleware/logger.js";
 import type { AppEnv } from "../app.js";
+import { logger } from "../middleware/logger.js";
 
 export const skillsRoutes = new Hono<AppEnv>();
 
