@@ -4,7 +4,8 @@
     "outDir": "./dist",
     "paths": {
       "@betterworld/shared": ["../../packages/shared/src"],
-      "@betterworld/db": ["../../packages/db/src"]
+      "@betterworld/db": ["../../packages/db/src"],
+      "@betterworld/guardrails": ["../../packages/guardrails/src"]
     }
   },
   "include": ["src/**/*.ts"],

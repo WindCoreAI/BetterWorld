@@ -52,7 +52,11 @@ Verification procedure:
 ```
 bw-heartbeat-signing-key-v1:
   algorithm: Ed25519
-  public_key_base64: "MCowBQYDK2VwAyEAb0tWqR1rVNtxoYfeQKGpmFk5RkGJoE0mXGnhV8nu+Ek="
+  public_key_pem: |
+    -----BEGIN PUBLIC KEY-----
+    MCowBQYDK2VwAyEAYKcSHpxYuJsf4ZS55UIp1qo9jFLeWuwsmmibYK6vFVA=
+    -----END PUBLIC KEY-----
+  public_key_base64: "MCowBQYDK2VwAyEAYKcSHpxYuJsf4ZS55UIp1qo9jFLeWuwsmmibYK6vFVA="
 ```
 
 **Key Rotation Policy:**
@@ -65,7 +69,7 @@ To verify with Node.js:
 ```javascript
 const crypto = require('crypto');
 const publicKey = crypto.createPublicKey({
-  key: Buffer.from('MCowBQYDK2VwAyEAb0tWqR1rVNtxoYfeQKGpmFk5RkGJoE0mXGnhV8nu+Ek=', 'base64'),
+  key: Buffer.from('MCowBQYDK2VwAyEAYKcSHpxYuJsf4ZS55UIp1qo9jFLeWuwsmmibYK6vFVA=', 'base64'),
   format: 'der',
   type: 'spki'
 });

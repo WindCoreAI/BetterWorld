@@ -27,6 +27,7 @@ import {
   cleanupTestData,
   registerTestAgent,
   getTestDb,
+  getTestRedis,
 } from "./helpers.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -319,6 +320,11 @@ describe("Trust Tier Integration (US4)", () => {
 
     // -- Step 2: Transition to "verified" (backdate + seed approved evaluations) --
     await makeAgentVerified(agentId);
+
+    // CRITICAL: Clear trust tier cache so worker recalculates on next evaluation
+    // Without this, the worker uses cached "new" tier from step 1, causing flaky test
+    const redis = getTestRedis();
+    await redis.del(`trust:tier:${agentId}`);
 
     // -- Step 3: Submit again as "verified" agent — same score 0.75 → approved --
     // Use different content to avoid cache hit

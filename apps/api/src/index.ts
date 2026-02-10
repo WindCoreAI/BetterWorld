@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { loadConfig } from "@betterworld/shared";
 import { serve } from "@hono/node-server";
 

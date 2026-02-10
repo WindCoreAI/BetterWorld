@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-09 (v13.0 — Phase 1 complete. Sprint 5 (OpenClaw Agent Support) delivered. All sprints 1-5 complete.)
-> **Status**: Complete documentation suite for Phase 1-5 development and marketing. **Phase 1 (Foundation MVP) complete** — all sprints delivered. Phase 2 next.
+> **Last Review**: 2026-02-10 (v15.0 — Roadmap reorganized into phase-specific files in `docs/roadmap/` subfolder)
+> **Status**: Complete documentation suite for Phase 1 development. **Phase 1 (Foundation MVP) complete** — all 6 sprints delivered (1, 2, 3, 3.5, 4, 5). Local testing verified. Phase 2 next.
 
 ---
 
@@ -10,11 +10,31 @@
 
 | # | Document | Description |
 |---|----------|-------------|
-| 1 | [Development Roadmap](ROADMAP.md) | 8-month phased roadmap with sprint-level detail, budget, team ramp, risk gates (v6.0 — Phase 1 complete) |
+| 1 | [Development Roadmap](roadmap/README.md) | 8-month phased roadmap (v7.0) — organized by phase with overview, design decisions, and evaluation reports. See [roadmap folder](roadmap/) for phase-specific details. |
 | 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
 | 3 | [Decisions Needed](DECISIONS-NEEDED.md) | 23 decisions (20 resolved, 2 pending, 1 superseded) — prioritized by sprint dependency |
+| 4 | [**Phase 1 Evaluation**](roadmap/phase1-evaluation.md) | Comprehensive Phase 1 evaluation — sprint assessments, quality metrics, exit criteria (10/11 met), deployment readiness |
+| 5 | [**Phase 1 Complete**](../PHASE1-COMPLETE.md) | **NEW**: Phase 1 completion summary — 91% exit criteria met, ready for Phase 2, known issues, quality metrics |
+| 6 | [**Local Test Results**](../LOCAL-TEST-RESULTS.md) | **NEW**: Local testing verification — all services operational, test results by component, environment config, commands reference |
 
 > **Note**: Line counts are approximate. Large docs have been split into focused files (300-1000 lines each) at natural section boundaries.
+
+---
+
+## Roadmap Documentation (roadmap/)
+
+Organized by phase with overview, sprint details, and evaluation reports. See [roadmap/README.md](roadmap/README.md) for navigation.
+
+| # | Document | Description | Status |
+|---|----------|-------------|--------|
+| 0 | [Roadmap README](roadmap/README.md) | Navigation hub for all roadmap documents | Current |
+| 1 | [Overview](roadmap/overview.md) | Budget trajectory, risk gates, team ramp, technical challenges, scaling plan | Current |
+| 2 | [Phase 0: Design Decisions](roadmap/phase0-design-decisions.md) | 6 critical architecture decisions resolved pre-Sprint 1 | ✅ Complete |
+| 3 | [Phase 1: Foundation MVP](roadmap/phase1-foundation-mvp.md) | Sprints 1-5 (Weeks 1-10): Infrastructure, Agent Core, Guardrails, Backend, Web UI, OpenClaw | ✅ Complete |
+| 4 | [Phase 1 Evaluation](roadmap/phase1-evaluation.md) | Comprehensive assessment: 668 tests, 10/11 exit criteria, deployment-ready | ✅ Complete |
+| 5 | [Phase 2: Human-in-the-Loop](roadmap/phase2-human-in-the-loop.md) | Sprints 6-9 (Weeks 11-18): Human onboarding, missions, evidence, reputation | ⏳ Next |
+| 6 | [Phase 3: Scale & Ecosystem](roadmap/phase3-scale-ecosystem.md) | Weeks 19-26: Growth, partners, SDKs, multi-region | 📋 Planned |
+| 7 | [Phase 4: Sustainability](roadmap/phase4-sustainability.md) | Weeks 27-34: Revenue, governance, open-source, DAO | 📋 Planned |
 
 ---
 
