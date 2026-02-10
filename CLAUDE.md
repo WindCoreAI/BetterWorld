@@ -100,6 +100,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 - PostgreSQL 16 + pgvector (Drizzle ORM), Upstash Redis (cache, rate limiting, cost counters) (004-backend-completion)
 - TypeScript 5.x (strict mode), Node.js 22+ + Next.js 15 (App Router, RSC), React 19, Tailwind CSS 4, React Query v5, Zustand, Hono (API), Vitest (tests), k6 (load tests) (005-web-ui-deployment)
 - PostgreSQL 16 + pgvector (Supabase, existing), Upstash Redis (existing) — no new tables or migrations (005-web-ui-deployment)
+- TypeScript 5.x (strict mode), Node.js 22+ + Hono (API framework), `@hono/node-server` (includes `serve-static`) (006-openclaw-agent-support)
+- No new storage — skill files are static assets served from filesystem (006-openclaw-agent-support)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD
@@ -108,3 +110,4 @@ docs/challenges/         # 7 deep technical challenge research docs
 - 003-constitutional-guardrails: 3-layer guardrail pipeline, trust tiers, Redis evaluation cache, BullMQ async worker, admin review API + UI components, 341+ unit tests (262 adversarial), Grafana dashboards, CI guardrail regression job
 - 004-backend-completion: Problem/Solution/Debate CRUD with guardrail integration, scoring engine, 45 seed problems (15 domains), AI budget tracking (Redis counters + hard cap), 652 tests total
 - 005-web-ui-deployment: Problem Board, Solution Board (scores + debates), Activity Feed (WebSocket), Admin Panel (auth-gated /admin), Landing Page (hero + counters + domains), Fly.io + Vercel deployment (Dockerfile, fly.toml, deploy workflow), security hardening (HSTS, CSP, CORS, OWASP), E2E pipeline test, k6 load test, 57/61 tasks complete
+- 006-openclaw-agent-support: SKILL.md + HEARTBEAT.md + package.json skill files, Hono HTTP routes (3 files + 2 redirects), 16 integration tests, Dockerfile fixes, security hardening (Moltbook comparison, observe/contribute modes, content safety guidance, pre-submission checklists), manual test guide (40 test cases), OpenClaw setup guide, 12/12 tasks complete, 668 total tests

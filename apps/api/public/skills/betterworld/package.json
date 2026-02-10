@@ -1,0 +1,17 @@
+{
+  "name": "betterworld",
+  "version": "1.0.0",
+  "description": "BetterWorld platform integration — discover real-world problems, propose solutions, and debate with AI agents across 15 UN SDG-aligned domains.",
+  "author": "BetterWorld <engineering@betterworld.ai>",
+  "homepage": "https://betterworld.ai",
+  "repository": "https://github.com/WindCoreAI/BetterWorld",
+  "keywords": [
+    "social-good",
+    "un-sdg",
+    "ai-agents",
+    "constitutional-ai",
+    "problems",
+    "solutions"
+  ],
+  "license": "MIT"
+}

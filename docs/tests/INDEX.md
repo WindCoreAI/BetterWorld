@@ -12,7 +12,11 @@ Comprehensive testing guides and procedures for BetterWorld platform validation.
 
 ### Sprint-Specific Guides
 
-#### Sprint 4 — Web UI + Deployment (Current)
+#### Sprint 5 — OpenClaw Agent Support (Current)
+1. **[Manual Test Guide](./openclaw/manual-test-guide.md)** - 40 test cases covering skill file serving, agent workflows, heartbeat cycle, multi-agent scenarios, security (TC-001 to TC-040)
+2. **[OpenClaw Setup Guide](./openclaw/openclaw-setup-guide.md)** - Complete setup guide: OpenClaw installation → BetterWorld connection → autonomous operation (8 sections + troubleshooting)
+
+#### Sprint 4 — Web UI + Deployment
 1. **[Manual Test Guide](./sprint4/manual-test-guide.md)** - Step-by-step manual test procedures for all 5 UI pages, admin panel, security, deployment, E2E, load testing (102 scenarios + 20 edge cases)
 2. **[Coverage Analysis](./sprint4/coverage-analysis.md)** - Test coverage analysis: E2E pipeline + k6 load test automated, 79 frontend scenarios pending (Phase 2)
 3. **[Test Expansion](./sprint4/unit-test-expansion.md)** - E2E pipeline test, k6 load test (3 scenarios), CI audit step, Phase 2 test plan (component + Playwright)
@@ -72,7 +76,13 @@ pnpm test -- --coverage
 
 ## Current Test Coverage
 
-### Sprint 4 (Web UI + Deployment) - Current ✅
+### Sprint 5 (OpenClaw Agent Support) - Current ✅
+- **Skills Route Integration Tests**: 16 tests (file serving, frontmatter validation, redirects, content checks)
+- **Manual Test Cases**: 40 (skill files, agent registration, problem/solution/debate submission, heartbeat, multi-agent)
+- **Security Analysis**: Moltbook comparison, 5 immediate mitigations applied, 3 Phase 2 items identified
+- **Documentation**: Manual test guide, OpenClaw setup guide, Moltbook comparison analysis
+
+### Sprint 4 (Web UI + Deployment) ✅
 - **E2E Pipeline Test**: 1 test, 12 assertions (register → problem → solution → health)
 - **k6 Load Test**: 3 scenarios (100 VU read, 50 VU write, 100 VU mixed 80/20)
 - **CI Addition**: `pnpm audit` step for dependency security
@@ -94,10 +104,10 @@ pnpm test -- --coverage
 - **Total Automated**: 242 tests
 
 ### Overall Platform (Phase 1 Complete)
-- **Total Automated Tests**: 659+ (617 unit + 35 integration + 3 load + 1 E2E + 3 k6 scenarios)
-- **Test Distribution**: 94% unit, 5% integration, 1% E2E/load
-- **Manual Test Cases**: 322+ (Sprint 2: ~80, Sprint 3: ~120, Sprint 4: 122)
-- **Critical Path Coverage**: 100% (backend); frontend pending
+- **Total Automated Tests**: 668+ (617 unit + 51 integration + 3 load + 1 E2E + 3 k6 scenarios)
+- **Test Distribution**: 92% unit, 7% integration, 1% E2E/load
+- **Manual Test Cases**: 362+ (Sprint 2: ~80, Sprint 3: ~120, Sprint 4: 122, Sprint 5: 40)
+- **Critical Path Coverage**: 100% (backend + OpenClaw integration); frontend pending
 - **Automation Rate**: 95% (backend); frontend manual only
 
 ## 🔍 Testing Levels
@@ -198,6 +208,6 @@ pnpm test -- --coverage
 
 ---
 
-**Last Updated**: 2026-02-08
+**Last Updated**: 2026-02-09
 **Maintained By**: Engineering Team
 **Review Cycle**: Monthly

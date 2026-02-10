@@ -6,6 +6,7 @@ node_modules
 docs/
 specs/
 *.md
+!apps/api/public/**/*.md
 !package.json
 !pnpm-workspace.yaml
 !turbo.json
