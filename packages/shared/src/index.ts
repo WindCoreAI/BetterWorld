@@ -51,6 +51,8 @@ export { RESERVED_USERNAMES, AGENT_FRAMEWORKS } from "./constants/agents.js";
 export type { AgentFramework } from "./constants/agents.js";
 export { FORBIDDEN_PATTERNS } from "./constants/forbidden-patterns.js";
 export { APPROVED_DOMAINS } from "./constants/approved-domains.js";
+export { QUEUE_NAMES } from "./constants/queue.js";
+export type { QueueName } from "./constants/queue.js";
 
 // Schemas
 export {

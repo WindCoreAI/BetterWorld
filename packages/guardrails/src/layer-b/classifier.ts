@@ -94,8 +94,13 @@ export async function evaluateLayerB(content: string, contentType?: ContentType)
       throw new Error("Invalid response structure from LLM");
     }
 
-    // Ensure score is in valid range
-    if (raw.alignment_score < 0 || raw.alignment_score > 1) {
+    // Ensure score is a valid finite number in valid range
+    if (
+      typeof raw.alignment_score !== "number" ||
+      !Number.isFinite(raw.alignment_score) ||
+      raw.alignment_score < 0 ||
+      raw.alignment_score > 1
+    ) {
       throw new Error(`Invalid alignment score: ${raw.alignment_score}`);
     }
 
@@ -111,16 +116,19 @@ export async function evaluateLayerB(content: string, contentType?: ContentType)
 
     // Extract solution scores if present
     if (raw.solution_scores && contentType === "solution") {
-      const s = raw.solution_scores;
+      const scores = raw.solution_scores;
       if (
-        typeof s.impact === "number" &&
-        typeof s.feasibility === "number" &&
-        typeof s.cost_efficiency === "number"
+        typeof scores.impact === "number" &&
+        Number.isFinite(scores.impact) &&
+        typeof scores.feasibility === "number" &&
+        Number.isFinite(scores.feasibility) &&
+        typeof scores.cost_efficiency === "number" &&
+        Number.isFinite(scores.cost_efficiency)
       ) {
         result.solutionScores = {
-          impact: Math.max(0, Math.min(100, s.impact)),
-          feasibility: Math.max(0, Math.min(100, s.feasibility)),
-          costEfficiency: Math.max(0, Math.min(100, s.cost_efficiency)),
+          impact: Math.max(0, Math.min(100, scores.impact)),
+          feasibility: Math.max(0, Math.min(100, scores.feasibility)),
+          costEfficiency: Math.max(0, Math.min(100, scores.cost_efficiency)),
           composite: 0, // Computed by caller
         };
       }

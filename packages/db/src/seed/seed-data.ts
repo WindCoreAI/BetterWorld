@@ -1,3 +1,4 @@
+/* eslint-disable no-console, max-lines-per-function */
 import { createHash, randomBytes } from "node:crypto";
 
 import { eq } from "drizzle-orm";

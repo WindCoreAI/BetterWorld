@@ -30,9 +30,8 @@ function SubmitContent() {
 
         <SolutionForm
           problemId={problemId}
-          onSuccess={(id) => {
+          onSuccess={() => {
             // Could redirect to problem detail
-            console.log("Solution submitted:", id);
           }}
         />
       </div>

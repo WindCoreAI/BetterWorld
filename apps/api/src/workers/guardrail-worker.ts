@@ -1,3 +1,4 @@
+/* eslint-disable complexity, max-lines-per-function */
 import {
   guardrailEvaluations,
   flaggedContent,
@@ -16,6 +17,7 @@ import {
   getThresholds,
   computeCompositeScore,
 } from "@betterworld/guardrails";
+import { QUEUE_NAMES } from "@betterworld/shared";
 import { Worker, type Job } from "bullmq";
 import { eq , sql } from "drizzle-orm";
 import Redis from "ioredis";
@@ -23,7 +25,7 @@ import pino from "pino";
 
 
 import { checkBudgetAvailable, recordAiCost } from "../lib/budget.js";
-import { initDb, getDb } from "../lib/container.js";
+import { initDb, getDb, getRedis } from "../lib/container.js";
 
 const logger = pino({ name: "guardrail-worker" });
 
@@ -57,31 +59,42 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 
   logger.info({ evaluationId, contentType, agentId }, "Processing evaluation");
 
-  // Determine agent trust tier from DB
-  const [agentRow] = await db
-    .select({
-      createdAt: agents.createdAt,
-    })
-    .from(agents)
-    .where(eq(agents.id, agentId))
-    .limit(1);
+  // Determine agent trust tier (cached for 1 hour)
+  const redis = getRedis();
+  const tierCacheKey = `trust:tier:${agentId}`;
+  let trustTier = redis ? await redis.get(tierCacheKey) : null;
 
-  let trustTier = "new";
-  if (agentRow) {
-    const ageDays = Math.floor(
-      (Date.now() - new Date(agentRow.createdAt).getTime()) / (1000 * 60 * 60 * 24),
-    );
+  if (!trustTier) {
+    const [agentRow] = await db
+      .select({
+        createdAt: agents.createdAt,
+      })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
 
-    // Count approved evaluations for this agent
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(guardrailEvaluations)
-      .where(
-        sql`${guardrailEvaluations.agentId} = ${agentId} AND ${guardrailEvaluations.finalDecision} = 'approved'`,
+    trustTier = "new";
+    if (agentRow) {
+      const ageDays = Math.floor(
+        (Date.now() - new Date(agentRow.createdAt).getTime()) / (1000 * 60 * 60 * 24),
       );
 
-    const approvedCount = countResult?.count ?? 0;
-    trustTier = determineTrustTier(ageDays, approvedCount);
+      // Count approved evaluations for this agent
+      const [countResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(guardrailEvaluations)
+        .where(
+          sql`${guardrailEvaluations.agentId} = ${agentId} AND ${guardrailEvaluations.finalDecision} = 'approved'`,
+        );
+
+      const approvedCount = countResult?.count ?? 0;
+      trustTier = determineTrustTier(ageDays, approvedCount);
+    }
+
+    // Cache for 1 hour if Redis is available
+    if (redis) {
+      await redis.setex(tierCacheKey, 3600, trustTier);
+    }
   }
 
   // Layer A: Rule engine (fast pre-filter, <10ms target)
@@ -315,7 +328,7 @@ export function createGuardrailWorker(): Worker<EvaluationJobData> {
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
   const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
   const concurrency = parseInt(process.env.GUARDRAIL_CONCURRENCY_LIMIT || "5", 10);
-  const queueName = process.env.BULLMQ_QUEUE_NAME || "guardrail-evaluation";
+  const queueName = process.env.BULLMQ_QUEUE_NAME || QUEUE_NAMES.GUARDRAIL_EVALUATION;
   const metrics = createMetrics();
 
   // Initialize DB connection once at worker startup (singleton)

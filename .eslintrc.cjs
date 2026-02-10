@@ -19,6 +19,7 @@ module.exports = {
     "prettier",
   ],
   rules: {
+    // TypeScript rules
     "@typescript-eslint/no-unused-vars": [
       "error",
       { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -27,6 +28,9 @@ module.exports = {
       "error",
       { prefer: "type-imports" },
     ],
+    "@typescript-eslint/no-explicit-any": "error",
+
+    // Import rules
     "import/order": [
       "error",
       {
@@ -42,6 +46,11 @@ module.exports = {
       },
     ],
     "import/no-duplicates": "error",
+
+    // Code quality rules
+    "no-console": "error",
+    "complexity": ["error", 15],
+    "max-lines-per-function": ["warn", { max: 100, skipBlankLines: true, skipComments: true }],
   },
   settings: {
     "import/resolver": {

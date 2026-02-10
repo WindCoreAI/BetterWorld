@@ -1,29 +1,38 @@
+import { loadConfig } from "@betterworld/shared";
 import { serve } from "@hono/node-server";
 
 import { createApp } from "./app.js";
 import { initDb, initRedis } from "./lib/container.js";
+import { logger } from "./middleware/logger.js";
 
-const port = Number(process.env.API_PORT) || 4000;
-const databaseUrl =
-  process.env.DATABASE_URL ??
-  "postgresql://betterworld:betterworld_dev@localhost:5432/betterworld";
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+// Load and validate environment variables (fails fast on missing/invalid vars)
+const config = loadConfig();
+
+const port = config.API_PORT;
+const databaseUrl = config.DATABASE_URL;
+const redisUrl = config.REDIS_URL;
 
 // Initialize infrastructure connections
 try {
   initDb(databaseUrl);
 } catch (err) {
-  console.warn("Failed to connect to database:", err);
+  logger.warn(
+    { error: err instanceof Error ? err.message : "Unknown error" },
+    "Failed to connect to database",
+  );
 }
 
 try {
   initRedis(redisUrl);
 } catch (err) {
-  console.warn("Failed to connect to Redis:", err);
+  logger.warn(
+    { error: err instanceof Error ? err.message : "Unknown error" },
+    "Failed to connect to Redis",
+  );
 }
 
 const app = createApp();
 
 serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`BetterWorld API running on http://localhost:${info.port}`);
+  logger.info({ port: info.port }, "BetterWorld API started");
 });

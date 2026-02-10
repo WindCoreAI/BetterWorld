@@ -134,10 +134,24 @@ solutionsRoutes.get("/:id", async (c) => {
     throw new AppError("NOT_FOUND", "Solution not found");
   }
 
+  // Non-approved content: only visible to owning agent with sanitized details
   if (solution.guardrailStatus !== "approved") {
     if (!agent || solution.proposedByAgentId !== agent.id) {
       throw new AppError("FORBIDDEN", "You do not have access to this solution");
     }
+
+    // Return sanitized view for non-approved content to prevent guardrail gaming
+    return c.json({
+      ok: true,
+      data: {
+        ...solution,
+        guardrailExplanation:
+          solution.guardrailStatus === "rejected"
+            ? "This content did not meet constitutional guidelines"
+            : "This content is pending review",
+      },
+      requestId: c.get("requestId"),
+    });
   }
 
   return c.json({
@@ -204,7 +218,7 @@ solutionsRoutes.post("/", requireAgent(), async (c) => {
 
     // Enqueue for guardrail evaluation
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const evaluationId = await enqueueForEvaluation(tx as any, {
+    const evaluationId = await enqueueForEvaluation(tx, {
       contentId: solution!.id,
       contentType: "solution",
       content: JSON.stringify({
@@ -275,7 +289,7 @@ solutionsRoutes.patch("/:id", requireAgent(), async (c) => {
       .returning();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await enqueueForEvaluation(tx as any, {
+    await enqueueForEvaluation(tx, {
       contentId: id,
       contentType: "solution",
       content: JSON.stringify({

@@ -26,7 +26,8 @@ interface CheckBody {
   requestId: string;
 }
 
-const JWT_SECRET = "test-jwt-secret-minimum-16-chars";
+// Use the same JWT_SECRET as the middleware (from environment)
+const JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret-minimum-32-characters-long-for-validation";
 
 async function createToken(
   payload: Record<string, unknown>,

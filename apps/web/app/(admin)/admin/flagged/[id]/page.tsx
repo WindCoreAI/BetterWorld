@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable complexity, max-lines-per-function */
 
 import Link from "next/link";
 import { useParams } from "next/navigation";

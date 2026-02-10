@@ -39,7 +39,7 @@ export function createApp() {
       {
         ok: false,
         error: {
-          code: "NOT_FOUND",
+          code: "NOT_FOUND" as const,
           message: `Route ${c.req.method} ${c.req.path} not found`,
         },
         requestId: c.get("requestId"),

@@ -15,10 +15,11 @@ import { Hono } from "hono";
 
 
 import { getDb } from "../../lib/container.js";
-import { safeJsonParse } from "../../lib/json.js";
+import { parseJsonWithFallback } from "../../lib/json.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import type { AuthEnv } from "../../middleware/auth.js";
 import { requireAdmin } from "../../middleware/auth.js";
+import { logger } from "../../middleware/logger.js";
 
 export const flaggedRoutes = new Hono<AuthEnv>();
 
@@ -115,28 +116,51 @@ flaggedRoutes.get("/:id", requireAdmin(), async (c) => {
     .where(eq(guardrailEvaluations.id, item.evaluationId))
     .limit(1);
 
+  // Safely parse evaluation data with error handling
+  let parsedEvaluation = null;
+  if (evaluation) {
+    try {
+      const submittedContent = parseJsonWithFallback(evaluation.submittedContent, {});
+      const layerAResult = parseJsonWithFallback(evaluation.layerAResult, {
+        passed: false,
+        forbiddenPatterns: [],
+        executionTimeMs: 0,
+      });
+      const layerBResult = evaluation.layerBResult
+        ? parseJsonWithFallback(evaluation.layerBResult, null)
+        : null;
+
+      parsedEvaluation = {
+        submittedContent,
+        layerAResult,
+        layerBResult,
+        alignmentScore: evaluation.alignmentScore
+          ? parseFloat(evaluation.alignmentScore)
+          : null,
+        alignmentDomain: evaluation.alignmentDomain,
+        trustTier: evaluation.trustTier,
+      };
+    } catch (err) {
+      logger.warn(
+        { evaluationId: evaluation.id, error: err instanceof Error ? err.message : "Unknown" },
+        "Failed to parse evaluation data",
+      );
+      parsedEvaluation = {
+        submittedContent: { _error: "Invalid content format" },
+        layerAResult: { passed: false, forbiddenPatterns: [], executionTimeMs: 0, _error: "Invalid format" },
+        layerBResult: null,
+        alignmentScore: null,
+        alignmentDomain: null,
+        trustTier: evaluation.trustTier,
+      };
+    }
+  }
+
   return c.json({
     ok: true,
     data: {
       ...item,
-      evaluation: evaluation
-        ? {
-            submittedContent: safeJsonParse(evaluation.submittedContent, {}),
-            layerAResult: safeJsonParse(evaluation.layerAResult, {
-              passed: false,
-              forbiddenPatterns: [],
-              executionTimeMs: 0,
-            }),
-            layerBResult: evaluation.layerBResult
-              ? safeJsonParse(evaluation.layerBResult, null)
-              : null,
-            alignmentScore: evaluation.alignmentScore
-              ? parseFloat(evaluation.alignmentScore)
-              : null,
-            alignmentDomain: evaluation.alignmentDomain,
-            trustTier: evaluation.trustTier,
-          }
-        : null,
+      evaluation: parsedEvaluation,
     },
     requestId: c.get("requestId"),
   });
@@ -194,17 +218,11 @@ flaggedRoutes.post("/:id/claim", requireAdmin(), async (c) => {
   });
 
   if (!result) {
-    // SKIP LOCKED returned nothing — check if row exists or is being claimed concurrently
-    const [existing] = await db
-      .select({ id: flaggedContent.id })
-      .from(flaggedContent)
-      .where(eq(flaggedContent.id, id))
-      .limit(1);
-
-    if (!existing) {
-      throw new AppError("NOT_FOUND", "Flagged content not found");
-    }
-    throw new AppError("ALREADY_CLAIMED", "Item is currently being claimed by another admin");
+    // SKIP LOCKED returned nothing — item doesn't exist or is locked by concurrent operation
+    throw new AppError(
+      "CONFLICT" as const,
+      "Item is unavailable (already claimed, being processed, or does not exist)",
+    );
   }
 
   return c.json({

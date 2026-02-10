@@ -1,12 +1,17 @@
+/* eslint-disable complexity, max-lines-per-function */
 import crypto from "crypto";
 
-import { AppError } from "@betterworld/shared";
+import { AppError, loadConfig } from "@betterworld/shared";
 import type { ClaimStatus } from "@betterworld/shared";
 import bcrypt from "bcrypt";
 import { createMiddleware } from "hono/factory";
 import * as jose from "jose";
 
 import type { AppEnv } from "../app.js";
+import { logger } from "./logger.js";
+
+// Lazy-load config to avoid initialization errors in tests
+const getConfig = () => loadConfig();
 
 export type AuthEnv = AppEnv & {
   Variables: AppEnv["Variables"] & {
@@ -74,8 +79,11 @@ export function requireAgent() {
           await next();
           return;
         }
-      } catch {
-        // Cache miss or error, proceed to DB lookup
+      } catch (err) {
+        logger.warn(
+          { error: err instanceof Error ? err.message : "Unknown", cacheKey },
+          "Auth cache read failed, falling back to DB",
+        );
       }
     }
 
@@ -150,8 +158,11 @@ export function requireAgent() {
         await redis.setex(cacheKey, AUTH_CACHE_TTL, JSON.stringify(agentData));
         // Store reverse mapping for cache invalidation by agentId
         await redis.setex(`auth:agent:${agent.id}`, AUTH_CACHE_TTL, cacheKey);
-      } catch {
-        // Cache write failure is non-fatal
+      } catch (err) {
+        logger.warn(
+          { error: err instanceof Error ? err.message : "Unknown", agentId: agent.id },
+          "Auth cache write failed",
+        );
       }
     }
 
@@ -172,7 +183,7 @@ export function requireAdmin() {
     }
 
     const token = authHeader.slice(7);
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "");
+    const secret = new TextEncoder().encode(getConfig().JWT_SECRET);
 
     try {
       const { payload } = await jose.jwtVerify(token, secret);
@@ -216,7 +227,7 @@ export function optionalAuth() {
     // Try JWT first (for human/admin)
     if (authHeader.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "");
+      const secret = new TextEncoder().encode(getConfig().JWT_SECRET);
 
       try {
         const { payload } = await jose.jwtVerify(token, secret);

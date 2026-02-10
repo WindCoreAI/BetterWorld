@@ -5,7 +5,7 @@ import { Hono } from "hono";
 
 
 import { getDb } from "../../lib/container.js";
-import { safeJsonParse } from "../../lib/json.js";
+import { parseJsonWithFallback } from "../../lib/json.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import type { AuthEnv } from "../../middleware/auth.js";
 import { requireAgent } from "../../middleware/auth.js";
@@ -56,13 +56,13 @@ statusRoutes.get("/:id", requireAgent(), async (c) => {
   }
 
   // Completed — return full results
-  const layerAResult = safeJsonParse(evaluation.layerAResult, {
+  const layerAResult = parseJsonWithFallback(evaluation.layerAResult, {
     passed: false,
     forbiddenPatterns: [],
     executionTimeMs: 0,
   });
   const layerBResult = evaluation.layerBResult
-    ? safeJsonParse(evaluation.layerBResult, null)
+    ? parseJsonWithFallback(evaluation.layerBResult, null)
     : null;
 
   return c.json({

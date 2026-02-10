@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable complexity, max-lines-per-function */
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState, useCallback } from "react";

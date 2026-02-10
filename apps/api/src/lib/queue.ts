@@ -1,3 +1,5 @@
+/* eslint-disable complexity, max-lines-per-function */
+import { QUEUE_NAMES } from "@betterworld/shared";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
 import pino from "pino";
@@ -21,7 +23,7 @@ function getRedisConnection(): Redis {
 export function getGuardrailEvaluationQueue(): Queue {
   if (!queue) {
     queue = new Queue(
-      process.env.BULLMQ_QUEUE_NAME || "guardrail-evaluation",
+      process.env.BULLMQ_QUEUE_NAME || QUEUE_NAMES.GUARDRAIL_EVALUATION,
       {
         connection: getRedisConnection(),
         defaultJobOptions: {

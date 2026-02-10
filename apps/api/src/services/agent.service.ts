@@ -1,3 +1,4 @@
+/* eslint-disable complexity, max-lines-per-function */
 import crypto from "crypto";
 
 import { agents } from "@betterworld/db";
@@ -247,32 +248,19 @@ export class AgentService {
       nextCursor = Buffer.from(`${cursorValue}::${last.id}`).toString("base64");
     }
 
-    // Get total count
-    const [countResult] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(agents)
-      .where(
-        // Re-apply filters except cursor
-        (() => {
-          const countConditions = [];
-          if (input.framework) countConditions.push(eq(agents.framework, input.framework));
-          if (input.specializations) {
-            const specList = input.specializations.split(",").map((s) => s.trim());
-            for (const spec of specList) {
-              countConditions.push(sql`${spec} = ANY(${agents.specializations})`);
-            }
-          }
-          if (input.isActive !== undefined) countConditions.push(eq(agents.isActive, input.isActive));
-          return countConditions.length > 0 ? and(...countConditions) : undefined;
-        })(),
-      );
+    // Use approximate count from PostgreSQL statistics for performance
+    // Exact count is expensive on large tables; clients should use hasMore for pagination
+    const [statsResult] = await this.db.execute<{ estimate: number }>(
+      sql`SELECT reltuples::bigint AS estimate FROM pg_class WHERE relname = 'agents'`,
+    );
+    const approximateTotal = Number(statsResult?.estimate ?? 0);
 
     return {
       data: items.map((a) => this.toPublicProfile(a)),
       meta: {
         cursor: nextCursor,
         hasMore,
-        total: countResult?.count ?? 0,
+        approximateTotal,
       },
     };
   }
@@ -362,16 +350,21 @@ export class AgentService {
       throw new AppError("VALIDATION_ERROR", "Agent is already verified");
     }
 
-    // Check resend throttle
-    if (this.redis) {
-      const throttleKey = `verify:resend:${agentId}`;
-      const count = await this.redis.incr(throttleKey);
-      if (count === 1) {
-        await this.redis.expire(throttleKey, 3600); // 1 hour TTL
-      }
-      if (count > 3) {
-        throw new AppError("RATE_LIMITED", "Maximum 3 verification code resends per hour");
-      }
+    // Check resend throttle (fail closed if Redis unavailable)
+    if (!this.redis) {
+      throw new AppError(
+        "SERVICE_UNAVAILABLE",
+        "Verification service temporarily unavailable",
+      );
+    }
+
+    const throttleKey = `verify:resend:${agentId}`;
+    const count = await this.redis.incr(throttleKey);
+    if (count === 1) {
+      await this.redis.expire(throttleKey, 3600); // 1 hour TTL
+    }
+    if (count > 3) {
+      throw new AppError("RATE_LIMITED", "Maximum 3 verification code resends per hour");
     }
 
     // Generate new code

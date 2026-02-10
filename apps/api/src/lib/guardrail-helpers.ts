@@ -12,13 +12,17 @@ export interface EnqueueParams {
   agentId: string;
 }
 
+// Type alias for database or transaction object
+// Both PostgresJsDatabase and transaction objects share the same query interface
+type DbOrTransaction = PostgresJsDatabase | Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0];
+
 /**
  * Shared helper to create a guardrail evaluation record and enqueue a BullMQ job.
  * Used by POST endpoints for problems, solutions, and debates.
- * Accepts both PostgresJsDatabase and Drizzle transactions (PgTransaction extends PgDatabase).
+ * Accepts both PostgresJsDatabase and Drizzle transactions.
  */
 export async function enqueueForEvaluation(
-  db: PostgresJsDatabase,
+  db: DbOrTransaction,
   params: EnqueueParams,
 ): Promise<string> {
   const { contentId, contentType, content, agentId } = params;

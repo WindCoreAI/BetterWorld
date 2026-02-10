@@ -5,7 +5,7 @@ import {
   createProblemSchema,
   updateProblemSchema,
 } from "@betterworld/shared";
-import { and, eq, desc, lt } from "drizzle-orm";
+import { and, eq, desc, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
@@ -69,8 +69,14 @@ problemsRoutes.get("/", async (c) => {
     conditions.push(eq(problems.status, status as typeof problems.status.enumValues[number]));
   }
 
+  // Composite cursor (timestamp::id) for stable pagination
   if (cursor) {
-    conditions.push(lt(problems.createdAt, new Date(cursor)));
+    const [cursorTime, cursorId] = cursor.split("::");
+    if (cursorTime && cursorId) {
+      conditions.push(
+        sql`(${problems.createdAt}, ${problems.id}) < (${cursorTime}, ${cursorId})`,
+      );
+    }
   }
 
   const orderBy = sort === "upvotes"
@@ -100,7 +106,9 @@ problemsRoutes.get("/", async (c) => {
 
   const hasMore = rows.length > limit;
   const items = hasMore ? rows.slice(0, limit) : rows;
-  const nextCursor = hasMore ? items[items.length - 1]!.createdAt.toISOString() : null;
+  const nextCursor = hasMore
+    ? `${items[items.length - 1]!.createdAt.toISOString()}::${items[items.length - 1]!.id}`
+    : null;
 
   return c.json({
     ok: true,
@@ -134,11 +142,24 @@ problemsRoutes.get("/:id", async (c) => {
     throw new AppError("NOT_FOUND", "Problem not found");
   }
 
-  // Non-approved content: only visible to owning agent
+  // Non-approved content: only visible to owning agent with sanitized details
   if (problem.guardrailStatus !== "approved") {
     if (!agent || problem.reportedByAgentId !== agent.id) {
       throw new AppError("FORBIDDEN", "You do not have access to this problem");
     }
+
+    // Return sanitized view for non-approved content to prevent guardrail gaming
+    return c.json({
+      ok: true,
+      data: {
+        ...problem,
+        guardrailExplanation:
+          problem.guardrailStatus === "rejected"
+            ? "This content did not meet constitutional guidelines"
+            : "This content is pending review",
+      },
+      requestId: c.get("requestId"),
+    });
   }
 
   return c.json({
@@ -182,8 +203,7 @@ problemsRoutes.post("/", requireAgent(), async (c) => {
       })
       .returning();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const evaluationId = await enqueueForEvaluation(tx as any, {
+    const evaluationId = await enqueueForEvaluation(tx, {
       contentId: problem!.id,
       contentType: "problem",
       content: JSON.stringify({
@@ -253,8 +273,7 @@ problemsRoutes.patch("/:id", requireAgent(), async (c) => {
       .where(eq(problems.id, id))
       .returning();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await enqueueForEvaluation(tx as any, {
+    await enqueueForEvaluation(tx, {
       contentId: id,
       contentType: "problem",
       content: JSON.stringify({
@@ -306,27 +325,29 @@ problemsRoutes.delete("/:id", requireAgent(), async (c) => {
       .from(solutions)
       .where(eq(solutions.problemId, id));
 
-    const solutionIds = solutionRows.map(s => s.id);
+    const solutionIds = solutionRows.map((s) => s.id);
+    const allContentIds = [id, ...solutionIds];
 
-    // Delete debates on all solutions for this problem
-    for (const solId of solutionIds) {
-      await tx.delete(debates).where(eq(debates.solutionId, solId));
+    // Batch delete all related content
+    if (solutionIds.length > 0) {
+      // Delete debates for all solutions in one query
+      await tx.delete(debates).where(inArray(debates.solutionId, solutionIds));
+
+      // Delete flagged content for problem + all solutions in one query
+      await tx.delete(flaggedContent).where(inArray(flaggedContent.contentId, allContentIds));
+
+      // Delete guardrail evaluations for problem + all solutions in one query
+      await tx
+        .delete(guardrailEvaluations)
+        .where(inArray(guardrailEvaluations.contentId, allContentIds));
+    } else {
+      // No solutions, only delete flagged content and evaluations for the problem
+      await tx.delete(flaggedContent).where(eq(flaggedContent.contentId, id));
+      await tx.delete(guardrailEvaluations).where(eq(guardrailEvaluations.contentId, id));
     }
 
     // Delete solutions
     await tx.delete(solutions).where(eq(solutions.problemId, id));
-
-    // Delete flagged content referencing this problem or its solutions
-    await tx.delete(flaggedContent).where(eq(flaggedContent.contentId, id));
-    for (const solId of solutionIds) {
-      await tx.delete(flaggedContent).where(eq(flaggedContent.contentId, solId));
-    }
-
-    // Delete guardrail evaluations referencing this problem or its solutions
-    await tx.delete(guardrailEvaluations).where(eq(guardrailEvaluations.contentId, id));
-    for (const solId of solutionIds) {
-      await tx.delete(guardrailEvaluations).where(eq(guardrailEvaluations.contentId, solId));
-    }
 
     // Delete the problem
     await tx.delete(problems).where(eq(problems.id, id));

@@ -243,8 +243,7 @@ debatesRoutes.post("/", requireAgent(), async (c) => {
     }
 
     // Enqueue for guardrail evaluation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const evaluationId = await enqueueForEvaluation(tx as any, {
+    const evaluationId = await enqueueForEvaluation(tx, {
       contentId: debate!.id,
       contentType: "debate",
       content: JSON.stringify({

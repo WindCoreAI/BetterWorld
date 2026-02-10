@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable complexity, max-lines-per-function */
 
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
