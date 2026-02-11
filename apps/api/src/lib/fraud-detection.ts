@@ -41,8 +41,9 @@ export async function checkVelocity(
     const key = `fraud:velocity:${humanId}:${windowName}`;
     const windowStart = now - config.windowMinutes * 60 * 1000;
 
-    // Add current timestamp
-    await redis.zadd(key, now.toString(), `${now}`);
+    // Add current timestamp with random suffix to prevent dedup on same-ms events
+    const uniqueMember = `${now}:${Math.random().toString(36).slice(2, 8)}`;
+    await redis.zadd(key, now.toString(), uniqueMember);
     // Remove old entries
     await redis.zremrangebyscore(key, "-inf", windowStart.toString());
     // Set TTL

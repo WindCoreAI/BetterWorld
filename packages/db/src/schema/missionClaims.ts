@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -41,6 +42,10 @@ export const missionClaims = pgTable(
       "progress_percent_range",
       sql`${table.progressPercent} BETWEEN 0 AND 100`,
     ),
+    // Prevent duplicate active claims: one human can only have one active claim per mission
+    uniqueIndex("idx_claims_unique_active")
+      .on(table.missionId, table.humanId)
+      .where(sql`${table.status} = 'active'`),
   ],
 );
 

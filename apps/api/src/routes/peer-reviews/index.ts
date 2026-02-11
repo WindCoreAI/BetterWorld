@@ -14,14 +14,17 @@ import {
   verificationAuditLog,
 } from "@betterworld/db";
 import { AppError } from "@betterworld/shared";
-import { and, eq, desc, lt, sql } from "drizzle-orm";
+import { and, eq, desc, lt, sql, isNull, ne } from "drizzle-orm";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Hono } from "hono";
 import { z } from "zod";
 
 import type { AppEnv } from "../../app.js";
 import { getDb, getRedis } from "../../lib/container.js";
 import { haversineDistance } from "../../lib/evidence-helpers.js";
+import { updateReputation } from "../../lib/reputation-engine.js";
 import { distributeEvidenceReward, distributePeerReviewReward } from "../../lib/reward-helpers.js";
+import { recordActivity } from "../../lib/streak-tracker.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import { humanAuth } from "../../middleware/humanAuth.js";
 import { broadcast } from "../../ws/feed.js";
@@ -51,8 +54,11 @@ peerReviewRoutes.get("/pending", humanAuth(), async (c) => {
 
   // Find evidence in peer_review stage that this human hasn't voted on yet
   // and where the human is NOT the submitter
-  const conditions = [
+  // Uses LEFT JOIN to avoid N+1 per-row vote check
+  const conditions: ReturnType<typeof eq>[] = [
     eq(evidence.verificationStage, "peer_review"),
+    ne(evidence.submittedByHumanId, human.id),
+    isNull(peerReviews.id),
   ];
 
   if (cursor) {
@@ -84,36 +90,19 @@ peerReviewRoutes.get("/pending", humanAuth(), async (c) => {
     })
     .from(evidence)
     .innerJoin(missions, eq(evidence.missionId, missions.id))
+    .leftJoin(
+      peerReviews,
+      and(
+        eq(peerReviews.evidenceId, evidence.id),
+        eq(peerReviews.reviewerHumanId, human.id),
+      ),
+    )
     .where(and(...conditions))
     .orderBy(desc(evidence.createdAt))
     .limit(limit + 1);
 
-  // Filter: exclude own submissions and already-voted ones
-  const filteredRows = [];
-  for (const row of rows) {
-    if (row.submittedByHumanId === human.id) continue;
-
-    // Check if already voted
-    const [existingVote] = await db
-      .select({ id: peerReviews.id })
-      .from(peerReviews)
-      .where(
-        and(
-          eq(peerReviews.evidenceId, row.evidenceId),
-          eq(peerReviews.reviewerHumanId, human.id),
-        ),
-      )
-      .limit(1);
-
-    if (!existingVote) {
-      filteredRows.push(row);
-    }
-
-    if (filteredRows.length > limit) break;
-  }
-
-  const hasMore = filteredRows.length > limit;
-  const items = hasMore ? filteredRows.slice(0, limit) : filteredRows;
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
 
   const reviews = items.map((row) => {
     const eLat = row.evidenceLatitude ? Number(row.evidenceLatitude) : null;
@@ -219,6 +208,11 @@ async function computeAndApplyVerdict(
 
   if (finalVerdict === "verified") {
     try { await distributeEvidenceReward(db, evidenceId); } catch { /* Non-fatal */ }
+    // Update submitter reputation and streak after peer-review approval
+    try {
+      await updateReputation(db as PostgresJsDatabase, evidenceRow.submittedByHumanId, "peer_review_verified", evidenceId, "evidence");
+      await recordActivity(db as PostgresJsDatabase, evidenceRow.submittedByHumanId);
+    } catch { /* Non-fatal */ }
     broadcast({ type: "evidence:verified", data: { evidenceId, missionId: evidenceRow.missionId, humanId: evidenceRow.submittedByHumanId, finalConfidence } });
   } else {
     broadcast({ type: "evidence:rejected", data: { evidenceId, missionId: evidenceRow.missionId, humanId: evidenceRow.submittedByHumanId, reason: `Peer review verdict: ${peerVerdict}` } });
@@ -304,36 +298,41 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
     throw new AppError("CONFLICT", "Already voted on this evidence");
   }
 
-  // Create peer review record
-  const [review] = await db
-    .insert(peerReviews)
-    .values({
-      evidenceId,
+  // Create peer review record, increment count, add history, and compute verdict in a transaction
+  const { review, newCount: _newCount } = await db.transaction(async (tx) => {
+    const [reviewRow] = await tx
+      .insert(peerReviews)
+      .values({
+        evidenceId,
+        reviewerHumanId: human.id,
+        verdict: parsed.data.verdict,
+        confidence: String(parsed.data.confidence),
+        reasoning: parsed.data.reasoning,
+      })
+      .returning();
+
+    const txNewCount = evidenceRow.peerReviewCount + 1;
+    await tx
+      .update(evidence)
+      .set({
+        peerReviewCount: sql`${evidence.peerReviewCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(evidence.id, evidenceId));
+
+    await tx.insert(reviewHistory).values({
       reviewerHumanId: human.id,
-      verdict: parsed.data.verdict,
-      confidence: String(parsed.data.confidence),
-      reasoning: parsed.data.reasoning,
-    })
-    .returning();
+      submitterHumanId: evidenceRow.submittedByHumanId,
+      evidenceId,
+    });
 
-  // Update peer review count (atomic increment to avoid race conditions)
-  const newCount = evidenceRow.peerReviewCount + 1;
-  await db
-    .update(evidence)
-    .set({
-      peerReviewCount: sql`${evidence.peerReviewCount} + 1`,
-      updatedAt: new Date(),
-    })
-    .where(eq(evidence.id, evidenceId));
+    // Compute and apply verdict if enough reviews collected
+    await computeAndApplyVerdict(tx as unknown as ReturnType<typeof getDb>, evidenceId, txNewCount, evidenceRow);
 
-  // Create review history entry
-  await db.insert(reviewHistory).values({
-    reviewerHumanId: human.id,
-    submitterHumanId: evidenceRow.submittedByHumanId,
-    evidenceId,
+    return { review: reviewRow, newCount: txNewCount };
   });
 
-  // Distribute peer review reward
+  // Distribute peer review reward (outside transaction — non-critical)
   let rewardAmount = 2;
   try {
     const result = await distributePeerReviewReward(
@@ -342,7 +341,6 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
     if (result) {
       rewardAmount = result.rewardAmount;
 
-      // Update peer review with reward transaction ID
       await db
         .update(peerReviews)
         .set({ rewardTransactionId: result.transactionId })
@@ -352,8 +350,13 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
     // Non-fatal: reward distribution can be retried
   }
 
-  // Compute and apply verdict if enough reviews collected
-  await computeAndApplyVerdict(db, evidenceId, newCount, evidenceRow);
+  // Update reviewer reputation and streak (outside transaction — non-critical)
+  try {
+    await updateReputation(db, human.id, "peer_review_submitted", review!.id, "peer_review");
+    await recordActivity(db, human.id);
+  } catch {
+    // Non-fatal
+  }
 
   // Increment rate limit
   if (redis) {

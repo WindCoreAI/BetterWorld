@@ -5,10 +5,10 @@ primary_region = "iad"
   dockerfile = "Dockerfile.worker"
 
 [processes]
-  worker = "node apps/api/dist/workers/guardrail-worker.js"
+  worker = "node apps/api/dist/workers/all-workers.js"
 
 # No HTTP service — background worker only
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "512mb"
+  memory = "1024mb"

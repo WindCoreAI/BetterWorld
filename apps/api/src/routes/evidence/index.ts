@@ -6,7 +6,7 @@
  * GET /api/v1/evidence/:evidenceId - Get evidence detail
  */
 
-import { evidence, missions, missionClaims } from "@betterworld/db";
+import { evidence, missions, missionClaims, verificationAuditLog } from "@betterworld/db";
 import { AppError } from "@betterworld/shared";
 import { and, eq, desc, lt } from "drizzle-orm";
 import { Hono } from "hono";
@@ -39,7 +39,7 @@ const RATE_LIMIT_WINDOW_SECONDS = 3600;
  */
 async function checkRateLimit(humanId: string): Promise<boolean> {
   const redis = getRedis();
-  if (!redis) return true; // Fail open if no Redis
+  if (!redis) return false; // Fail closed if no Redis — prevent abuse during outage
 
   const key = `rate:evidence:submit:${humanId}`;
   const count = await redis.get(key);
@@ -174,7 +174,7 @@ async function handleHoneypotDetection(
       await redis.expire(fraudKey, 90 * 24 * 60 * 60);
     }
     if (fraudCount >= 3) {
-      const { verificationAuditLog } = await import("@betterworld/db");
+      
       await db.insert(verificationAuditLog).values({
         evidenceId,
         decisionSource: "system",
@@ -185,7 +185,7 @@ async function handleHoneypotDetection(
     }
   }
 
-  const { verificationAuditLog } = await import("@betterworld/db");
+  
   await db.insert(verificationAuditLog).values({
     evidenceId,
     decisionSource: "system",
@@ -203,6 +203,20 @@ async function enqueueVerification(evidenceId: string): Promise<void> {
     await queue.add("verify", { evidenceId }, {
       attempts: 3,
       backoff: { type: "exponential", delay: 1000 },
+    });
+  } catch {
+    // Queue not available in dev/test - non-fatal
+  }
+}
+
+// --- Helper: Enqueue fraud scoring after evidence submission ---
+async function enqueueFraudScoring(evidenceId: string, humanId: string): Promise<void> {
+  try {
+    const { getFraudScoringQueue } = await import("../../lib/fraud-queue.js");
+    const queue = getFraudScoringQueue();
+    await queue.add("score", { evidenceId, humanId }, {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 2000 },
     });
   } catch {
     // Queue not available in dev/test - non-fatal
@@ -279,6 +293,9 @@ evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
     throw new AppError("RATE_LIMITED", "Evidence submission rate limit exceeded (10/hour)");
   }
 
+  // Increment rate limit BEFORE processing to prevent race conditions
+  await incrementRateLimit(human.id);
+
   const formData = await c.req.formData();
   const files = parseFormFiles(formData);
   validateFormFiles(files);
@@ -318,7 +335,10 @@ evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
     await enqueueVerification(evidenceRecord!.id);
   }
 
-  await incrementRateLimit(human.id);
+  // Enqueue fraud scoring for all submissions (honeypot and normal)
+  await enqueueFraudScoring(evidenceRecord!.id, human.id);
+
+  // Rate limit already incremented before processing (see above)
 
   return c.json({
     ok: true,

@@ -9,6 +9,7 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
+import { sendVerificationEmail } from "../../lib/email.js";
 import { logger } from "../../middleware/logger.js";
 
 const app = new Hono<AppEnv>();
@@ -60,6 +61,10 @@ app.post("/", zValidator("json", ResendCodeSchema), async (c) => {
     }
 
     const code = crypto.randomInt(100000, 999999).toString();
+
+    // Send email BEFORE hashing (need plaintext code)
+    await sendVerificationEmail(email, code);
+
     const codeHash = crypto.createHash("sha256").update(code).digest("hex");
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -77,11 +82,6 @@ app.post("/", zValidator("json", ResendCodeSchema), async (c) => {
       const currentRaw = await redis.get(throttleKey);
       const currentCount = currentRaw ? parseInt(currentRaw, 10) : 0;
       await redis.setex(throttleKey, 3600, (currentCount + 1).toString());
-    }
-
-    // TODO: Send email with verification code via Resend
-    if (process.env.NODE_ENV === "development") {
-      logger.debug("Verification code regenerated for resend");
     }
 
     return c.json({

@@ -74,7 +74,7 @@ export async function distributeEvidenceReward(
       return null;
     }
 
-    const currentBalance = parseFloat(humanRow.token_balance);
+    const currentBalance = parseInt(humanRow.token_balance, 10) || 0;
     const newBalance = currentBalance + rewardAmount;
 
     // Update balance
@@ -92,8 +92,8 @@ export async function distributeEvidenceReward(
       .values({
         humanId: evidenceRow.submittedByHumanId,
         amount: rewardAmount,
-        balanceBefore: Math.round(currentBalance),
-        balanceAfter: Math.round(newBalance),
+        balanceBefore: currentBalance,
+        balanceAfter: newBalance,
         transactionType: "earn_evidence_verified",
         referenceId: evidenceId,
         referenceType: "evidence",
@@ -152,7 +152,7 @@ export async function distributePeerReviewReward(
       return null;
     }
 
-    const currentBalance = parseFloat(humanRow.token_balance);
+    const currentBalance = parseInt(humanRow.token_balance, 10) || 0;
     const newBalance = currentBalance + rewardAmount;
 
     // Update balance
@@ -170,8 +170,8 @@ export async function distributePeerReviewReward(
       .values({
         humanId: reviewerHumanId,
         amount: rewardAmount,
-        balanceBefore: Math.round(currentBalance),
-        balanceAfter: Math.round(newBalance),
+        balanceBefore: currentBalance,
+        balanceAfter: newBalance,
         transactionType: "earn_peer_review",
         referenceId: peerReviewId,
         referenceType: "peer_review",

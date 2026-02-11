@@ -2,13 +2,16 @@
  * POST /auth/login - Email/Password Login (Sprint 6)
  */
 
+import { humans, sessions } from "@betterworld/db";
 import { LoginSchema } from "@betterworld/shared/schemas/human";
 import { zValidator } from "@hono/zod-validator";
 import bcrypt from "bcrypt";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
 import { generateTokenPair } from "../../lib/auth-helpers.js";
+import { getDb, getRedis } from "../../lib/container.js";
 import { logger } from "../../middleware/logger.js";
 
 const app = new Hono<AppEnv>();
@@ -17,12 +20,24 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
 
   try {
-    const { getDb } = await import("../../lib/container.js");
     const db = getDb();
+    const redis = getRedis();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
+    const loginRateKey = `rate:login:${email}`;
+    if (redis) {
+      try {
+        const attempts = await redis.get(loginRateKey);
+        if (attempts && parseInt(attempts, 10) >= 5) {
+          return c.json(
+            { ok: false, error: { code: "RATE_LIMITED" as const, message: "Too many login attempts. Try again in 15 minutes." }, requestId: c.get("requestId") },
+            429,
+          );
+        }
+      } catch {
+        // Fail open: if Redis is unavailable, allow the login attempt
+      }
+    }
 
-    const { eq } = await import("drizzle-orm");
-    const { humans } = await import("@betterworld/db");
 
     const [user] = await db
       .select()
@@ -31,6 +46,13 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
       .limit(1);
 
     if (!user || !user.passwordHash) {
+      // Increment rate limit on failure
+      if (redis) {
+        try {
+          const count = await redis.incr(loginRateKey);
+          if (count === 1) await redis.expire(loginRateKey, 900);
+        } catch { /* fail open */ }
+      }
       return c.json(
         { ok: false, error: { code: "INVALID_CREDENTIALS" as const, message: "Invalid email or password" }, requestId: c.get("requestId") },
         401,
@@ -39,10 +61,22 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
 
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
     if (!passwordValid) {
+      // Increment rate limit on failure
+      if (redis) {
+        try {
+          const count = await redis.incr(loginRateKey);
+          if (count === 1) await redis.expire(loginRateKey, 900);
+        } catch { /* fail open */ }
+      }
       return c.json(
         { ok: false, error: { code: "INVALID_CREDENTIALS" as const, message: "Invalid email or password" }, requestId: c.get("requestId") },
         401,
       );
+    }
+
+    // Successful login: clear rate limit
+    if (redis) {
+      try { await redis.del(loginRateKey); } catch { /* non-fatal */ }
     }
 
     if (!user.emailVerified) {
@@ -62,7 +96,6 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
     const { accessToken, refreshToken, expiresIn } = await generateTokenPair(user.id, user.email);
 
     // Store session for token revocation support
-    const { sessions } = await import("@betterworld/db");
     await db.insert(sessions).values({
       userId: user.id,
       sessionToken: accessToken,

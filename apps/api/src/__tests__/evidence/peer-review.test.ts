@@ -26,7 +26,12 @@ function resetDbChain() {
     where: whereFn,
     limit: limitFn,
     orderBy: orderByFn,
-    innerJoin: vi.fn().mockReturnValue({ where: whereFn, orderBy: orderByFn, limit: limitFn }),
+    innerJoin: vi.fn().mockReturnValue({
+      where: whereFn,
+      orderBy: orderByFn,
+      limit: limitFn,
+      leftJoin: vi.fn().mockReturnValue({ where: whereFn, orderBy: orderByFn, limit: limitFn }),
+    }),
   });
   mockDbSelect.mockReturnValue({ from: fromFn });
   mockDbInsert.mockReturnValue({

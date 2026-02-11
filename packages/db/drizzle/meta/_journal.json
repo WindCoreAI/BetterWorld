@@ -43,6 +43,13 @@
       "when": 1770804000000,
       "tag": "0005_fix_skills_gin_index",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770847767113,
+      "tag": "0006_late_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }

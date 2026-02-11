@@ -9,7 +9,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import { missions, solutions } from "../schema/index.js";
+import { agents, missions, solutions } from "../schema/index.js";
 
 interface HoneypotDef {
   title: string;
@@ -67,7 +67,7 @@ const HONEYPOT_MISSIONS: HoneypotDef[] = [
   {
     title: "Future Climate Summit Coverage 2099",
     description: "Attend the 2099 Global Climate Summit and document the proceedings.",
-    domain: "climate_action",
+    domain: "environmental_protection",
     difficulty: "beginner",
     estimatedDurationMinutes: 60,
     tokenReward: 30,
@@ -139,7 +139,13 @@ async function seedHoneypots() {
 
   console.log("Seeding 5 honeypot missions...");
 
-  const SYSTEM_AGENT_ID = "00000000-0000-0000-0000-000000000000";
+  // Find first available agent to use as creator for honeypot missions
+  const [firstAgent] = await db.select({ id: agents.id }).from(agents).limit(1);
+  if (!firstAgent) {
+    console.error("No agents found in DB. Run main seed first.");
+    process.exit(1);
+  }
+  const agentId = firstAgent.id;
 
   // Find first available solution to use as parent for honeypot missions
   const [firstSolution] = await db.select({ id: solutions.id }).from(solutions).limit(1);
@@ -169,7 +175,7 @@ async function seedHoneypots() {
       isHoneypot: true,
       expiresAt,
       solutionId,
-      createdByAgentId: SYSTEM_AGENT_ID,
+      createdByAgentId: agentId,
       status: "open",
     });
   }

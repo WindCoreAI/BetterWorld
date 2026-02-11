@@ -16,7 +16,10 @@ import pino from "pino";
 
 import { initDb, getDb, getRedis } from "../lib/container.js";
 import { selectPeerReviewers } from "../lib/peer-assignment.js";
+import { updateReputation } from "../lib/reputation-engine.js";
 import { distributeEvidenceReward } from "../lib/reward-helpers.js";
+import { getSignedUrl } from "../lib/storage.js";
+import { recordActivity } from "../lib/streak-tracker.js";
 import { broadcast } from "../ws/feed.js";
 
 const logger = pino({ name: "evidence-verification-worker" });
@@ -115,6 +118,12 @@ async function routeByScore(
 
     try { await distributeEvidenceReward(db, evidenceId); } catch { /* Non-fatal */ }
 
+    // Update reputation and streak after successful verification
+    try {
+      await updateReputation(db, evidenceRow.submittedByHumanId, "evidence_verified", evidenceId, "evidence");
+      await recordActivity(db, evidenceRow.submittedByHumanId);
+    } catch { /* Non-fatal: reputation/streak update failure shouldn't block verification */ }
+
     await db.insert(verificationAuditLog).values({
       evidenceId, decisionSource: "ai", decision: "approved",
       score: String(score.toFixed(2)), reasoning: output.reasoning,
@@ -153,21 +162,9 @@ async function routeByScore(
 }
 
 /**
- * Process evidence verification job.
+ * Fetch evidence and its associated mission from the database.
  */
-export async function processEvidenceVerification(
-  dbOverride?: PostgresJsDatabase | null,
-  redisOverride?: Redis | null,
-  evidenceId?: string,
-): Promise<void> {
-  const db = dbOverride ?? getDb();
-  if (!db) throw new Error("Database not initialized");
-
-  const redis = redisOverride ?? getRedis();
-
-  if (!evidenceId) return;
-
-  // Fetch evidence + mission
+async function fetchEvidenceAndMission(db: PostgresJsDatabase, evidenceId: string) {
   const [evidenceRow] = await db
     .select({
       id: evidence.id,
@@ -183,10 +180,7 @@ export async function processEvidenceVerification(
     .where(eq(evidence.id, evidenceId))
     .limit(1);
 
-  if (!evidenceRow) {
-    logger.warn({ evidenceId }, "Evidence not found for verification");
-    return;
-  }
+  if (!evidenceRow) return null;
 
   const [mission] = await db
     .select({
@@ -200,18 +194,86 @@ export async function processEvidenceVerification(
     .where(eq(missions.id, evidenceRow.missionId))
     .limit(1);
 
-  if (!mission) {
-    logger.warn({ missionId: evidenceRow.missionId }, "Mission not found for verification");
+  if (!mission) return null;
+
+  return { evidenceRow, mission };
+}
+
+/**
+ * Build Claude Vision content blocks (image + text prompt).
+ */
+async function buildVisionContentBlocks(
+  evidenceRow: { evidenceType: string | null; contentUrl: string | null; latitude: string | null; longitude: string | null; capturedAt: Date | null; id: string },
+  mission: { title: string; description: string; evidenceRequired: unknown; requiredLatitude: string | null; requiredLongitude: string | null },
+): Promise<Anthropic.MessageCreateParams["messages"][0]["content"]> {
+  const contentBlocks: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
+  const isImageEvidence = ["photo", "image"].includes(evidenceRow.evidenceType ?? "");
+
+  if (isImageEvidence && evidenceRow.contentUrl) {
+    try {
+      const imageUrl = await getSignedUrl(evidenceRow.contentUrl, 600);
+      const imageResponse = await fetch(imageUrl);
+      if (imageResponse.ok) {
+        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+        const base64Data = imageBuffer.toString("base64");
+        const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
+        const mediaType = contentType as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+        contentBlocks.push({
+          type: "image",
+          source: { type: "base64", media_type: mediaType, data: base64Data },
+        });
+        logger.info({ evidenceId: evidenceRow.id }, "Image included in AI verification request");
+      } else {
+        logger.warn({ evidenceId: evidenceRow.id, status: imageResponse.status }, "Failed to fetch image, using metadata only");
+      }
+    } catch (err) {
+      logger.warn({ evidenceId: evidenceRow.id, error: err instanceof Error ? err.message : "Unknown" }, "Error fetching image, using metadata only");
+    }
+  }
+
+  contentBlocks.push({
+    type: "text",
+    text: `Mission: "${mission.title}"
+Description: ${mission.description}
+Evidence requirements: ${JSON.stringify(mission.evidenceRequired)}
+Evidence type: ${evidenceRow.evidenceType}
+GPS coordinates: ${evidenceRow.latitude}, ${evidenceRow.longitude}
+Mission location: ${mission.requiredLatitude}, ${mission.requiredLongitude}
+Captured at: ${evidenceRow.capturedAt?.toISOString() ?? "unknown"}
+
+Please verify this evidence submission using the verify_evidence tool.`,
+  });
+
+  return contentBlocks;
+}
+
+/**
+ * Process evidence verification job.
+ */
+export async function processEvidenceVerification(
+  dbOverride?: PostgresJsDatabase | null,
+  redisOverride?: Redis | null,
+  evidenceId?: string,
+): Promise<void> {
+  const db = dbOverride ?? getDb();
+  if (!db) throw new Error("Database not initialized");
+
+  const redis = redisOverride ?? getRedis();
+  if (!evidenceId) return;
+
+  const result = await fetchEvidenceAndMission(db, evidenceId);
+  if (!result) {
+    logger.warn({ evidenceId }, "Evidence or mission not found for verification");
     return;
   }
 
-  // Update stage to ai_processing
+  const { evidenceRow, mission } = result;
+
   await db
     .update(evidence)
     .set({ verificationStage: "ai_processing", updatedAt: new Date() })
     .where(eq(evidence.id, evidenceId));
 
-  // Check budget
   const budgetAvailable = await checkVisionBudget(redis);
   if (!budgetAvailable) {
     logger.warn({ evidenceId }, "Vision budget exceeded, routing to peer review");
@@ -220,34 +282,20 @@ export async function processEvidenceVerification(
   }
 
   try {
-    // Call Claude Vision
     const anthropic = new Anthropic();
-
-    const systemPrompt = `You are an evidence verification assistant. Analyze the submitted evidence for a social good mission. Be thorough but fair.`;
-
-    const userMessage = `Mission: "${mission.title}"
-Description: ${mission.description}
-Evidence requirements: ${JSON.stringify(mission.evidenceRequired)}
-Evidence type: ${evidenceRow.evidenceType}
-GPS coordinates: ${evidenceRow.latitude}, ${evidenceRow.longitude}
-Mission location: ${mission.requiredLatitude}, ${mission.requiredLongitude}
-Captured at: ${evidenceRow.capturedAt?.toISOString() ?? "unknown"}
-
-Please verify this evidence submission using the verify_evidence tool.`;
+    const contentBlocks = await buildVisionContentBlocks(evidenceRow, mission);
 
     const response = await anthropic.messages.create({
       model: SONNET_MODEL,
       max_tokens: 1024,
-      system: systemPrompt,
+      system: "You are an evidence verification assistant. Analyze the submitted evidence for a social good mission. Be thorough but fair.",
       tools: [VERIFY_TOOL],
       tool_choice: { type: "tool", name: "verify_evidence" },
-      messages: [{ role: "user", content: userMessage }],
+      messages: [{ role: "user", content: contentBlocks }],
     });
 
-    // Increment cost after successful API call
     await incrementVisionCost(redis);
 
-    // Parse tool_use response
     const toolUse = response.content.find((block) => block.type === "tool_use");
     if (!toolUse || toolUse.type !== "tool_use") {
       logger.warn({ evidenceId }, "No tool_use in response, routing to peer review");
@@ -258,7 +306,6 @@ Please verify this evidence submission using the verify_evidence tool.`;
     const output = toolUse.input as VerifyToolOutput;
     const score = Math.max(0, Math.min(1, output.overallConfidence));
 
-    // Update evidence with AI score
     await db
       .update(evidence)
       .set({
@@ -268,16 +315,14 @@ Please verify this evidence submission using the verify_evidence tool.`;
       })
       .where(eq(evidence.id, evidenceId));
 
-    // Route based on score
     await routeByScore(db, evidenceId, evidenceRow, score, output);
   } catch (error) {
     logger.error(
       { evidenceId, error: error instanceof Error ? error.message : "Unknown" },
       "AI verification failed",
     );
-    // Fallback to peer review on error
     await routeToPeerReview(db, evidenceId, evidenceRow.submittedByHumanId, "AI verification error");
-    throw error; // Re-throw for BullMQ retry
+    throw error;
   }
 }
 

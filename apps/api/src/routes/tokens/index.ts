@@ -6,11 +6,14 @@
 
 import crypto from "crypto";
 
+import { humans, humanProfiles, tokenTransactions } from "@betterworld/db";
 import { SpendTokensSchema } from "@betterworld/shared/schemas/human";
 import { zValidator } from "@hono/zod-validator";
+import { eq, and, lt, desc, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
+import { getDb, getRedis } from "../../lib/container.js";
 import { humanAuth } from "../../middleware/humanAuth";
 import { logger } from "../../middleware/logger.js";
 
@@ -19,12 +22,8 @@ const app = new Hono<AppEnv>();
 // POST /tokens/orientation-reward - Claim Orientation Reward (T058)
 app.post("/orientation-reward", humanAuth(), async (c) => {
   const human = c.get("human");
-  const { getDb } = await import("../../lib/container.js");
   const db = getDb();
   if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-  const { eq } = await import("drizzle-orm");
-  const { humans, humanProfiles, tokenTransactions } = await import("@betterworld/db");
 
   try {
     return await db.transaction(async (tx) => {
@@ -114,13 +113,10 @@ app.post("/spend", humanAuth(), zValidator("json", SpendTokensSchema), async (c)
   const { amount, type, referenceId, referenceType, description, idempotencyKey } = c.req.valid("json");
   const key = idempotencyKey || crypto.randomUUID();
 
-  const { getDb, getRedis } = await import("../../lib/container.js");
   const db = getDb();
   const redis = getRedis();
   if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
 
-  const { eq } = await import("drizzle-orm");
-  const { humans, tokenTransactions } = await import("@betterworld/db");
 
   try {
     // Check idempotency cache
@@ -208,12 +204,10 @@ app.post("/spend", humanAuth(), zValidator("json", SpendTokensSchema), async (c)
 app.get("/balance", humanAuth(), async (c) => {
   const human = c.get("human");
 
-  const { getDb } = await import("../../lib/container.js");
+
   const db = getDb();
   if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
 
-  const { eq, sql } = await import("drizzle-orm");
-  const { humans, humanProfiles, tokenTransactions } = await import("@betterworld/db");
 
   try {
     // All three queries are independent reads — run in parallel
@@ -253,12 +247,10 @@ app.get("/transactions", humanAuth(), async (c) => {
   const limit = Number.isNaN(limitParam) ? 20 : Math.min(Math.max(1, limitParam), 100);
   const cursor = c.req.query("cursor");
 
-  const { getDb } = await import("../../lib/container.js");
+
   const db = getDb();
   if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
 
-  const { eq, and, lt, desc } = await import("drizzle-orm");
-  const { tokenTransactions } = await import("@betterworld/db");
 
   try {
     // Build query with cursor-based pagination

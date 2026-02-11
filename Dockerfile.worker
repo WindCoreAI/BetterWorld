@@ -28,4 +28,4 @@ COPY --from=builder /app/packages/guardrails/package.json ./packages/guardrails/
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-workspace.yaml ./
 ENV NODE_ENV=production
-CMD ["node", "apps/api/dist/workers/guardrail-worker.js"]
+CMD ["node", "apps/api/dist/workers/all-workers.js"]

@@ -10,6 +10,7 @@ import bcrypt from "bcrypt";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
+import { sendVerificationEmail } from "../../lib/email.js";
 import { logger } from "../../middleware/logger.js";
 
 const app = new Hono<AppEnv>();
@@ -60,6 +61,10 @@ app.post("/", zValidator("json", RegisterSchema), async (c) => {
     }
 
     const code = crypto.randomInt(100000, 999999).toString();
+
+    // Send email BEFORE hashing (need plaintext code)
+    await sendVerificationEmail(email, code);
+
     const codeHash = crypto.createHash("sha256").update(code).digest("hex");
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -70,11 +75,6 @@ app.post("/", zValidator("json", RegisterSchema), async (c) => {
       verified: false,
       resendCount: 0,
     });
-
-    // TODO: Send email with verification code via Resend
-    if (process.env.NODE_ENV === "development") {
-      logger.debug("Verification code generated for registration");
-    }
 
     return c.json(
       {

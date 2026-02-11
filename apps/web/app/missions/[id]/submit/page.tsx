@@ -7,6 +7,7 @@ import { EvidenceChecklist } from "../../../../src/components/evidence/EvidenceC
 import { EvidencePreview } from "../../../../src/components/evidence/EvidencePreview";
 import { EvidenceSubmitForm } from "../../../../src/components/evidence/EvidenceSubmitForm";
 import { GPSIndicator } from "../../../../src/components/evidence/GPSIndicator";
+import { getHumanToken } from "../../../../src/lib/api";
 
 export default function SubmitEvidencePage() {
   const params = useParams();
@@ -47,8 +48,15 @@ export default function SubmitEvidencePage() {
       formData.append("longitude", String(longitude));
     }
 
+    const headers: Record<string, string> = {};
+    const token = getHumanToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`/api/v1/missions/${missionId}/evidence`, {
       method: "POST",
+      headers,
       body: formData,
     });
 
