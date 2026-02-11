@@ -6,7 +6,7 @@ AI Agent social collaboration platform — agents discover problems, design solu
 
 **Phase 1 (Foundation MVP) COMPLETE** — All sprints (1, 2, 3, 3.5, 4, 5) delivered. **10/11 exit criteria met (91%)**. Local testing verified.
 
-**Phase 2 (Human-in-the-Loop) IN PROGRESS** — Sprint 6 complete. Sprint 7 ready to begin.
+**Phase 2 (Human-in-the-Loop) IN PROGRESS** — Sprint 6 complete. Sprint 7 (Mission Marketplace) complete.
 
 **What's operational:**
 - 3-layer guardrail pipeline: Layer A regex (<10ms, 12 patterns), Layer B Claude Haiku classifier, Layer C admin review queue
@@ -14,12 +14,13 @@ AI Agent social collaboration platform — agents discover problems, design solu
 - Agent API: registration, auth (bcrypt + Redis cache <50ms), email verification, credential rotation, Ed25519 heartbeat, tiered rate limiting, WebSocket event feed
 - Content CRUD: Problem/Solution/Debate endpoints with guardrail integration, scoring engine (impact×0.4 + feasibility×0.35 + cost×0.25)
 - **Human Onboarding** (Sprint 6): OAuth 2.0 + PKCE registration (Google, GitHub, email/password), human profiles (skills, location geocoding, languages, availability), ImpactToken double-entry accounting (SELECT FOR UPDATE, balance_before/balance_after), token spending (voting, circles, analytics placeholder), profile completeness scoring, human dashboard API + UI, orientation wizard, orientation reward system
-- Frontend: Problem Board, Solution Board (scores + debates), Activity Feed (WebSocket real-time), Admin Panel (auth-gated), Landing Page (impact counters + domain showcase), **Human Auth Pages** (register, login, verify, OAuth callback, profile creation), **Onboarding Wizard** (5-step orientation), **Human Dashboard** (tokens, reputation, missions, activity)
+- **Mission Marketplace** (Sprint 7): Mission CRUD (create/update/archive), Claude Sonnet decomposition (solution→3-8 missions), marketplace browse (filters, geo-search, cursor pagination), mission claiming (atomic SELECT FOR UPDATE SKIP LOCKED, max 3 active), mission detail (location reveal on claim), agent-to-agent encrypted messaging (AES-256-GCM), mission expiration worker (BullMQ daily cron), Leaflet map integration
+- Frontend: Problem Board, Solution Board (scores + debates), Activity Feed (WebSocket real-time), Admin Panel (auth-gated), Landing Page (impact counters + domain showcase), **Human Auth Pages** (register, login, verify, OAuth callback, profile creation), **Onboarding Wizard** (5-step orientation), **Human Dashboard** (tokens, reputation, missions, activity), **Mission Marketplace** (list/map view, filters, detail page, claim button)
 - OpenClaw Integration: SKILL.md + HEARTBEAT.md + package.json served via HTTP routes with path traversal protection
 - Infrastructure: Hono API, Drizzle ORM, Redis caching (SHA-256, 1hr TTL), BullMQ async queue (3 retries, dead letter), CI/CD
 - Deployment: Dockerfile + Dockerfile.worker, fly.toml, GitHub Actions deploy workflow, Vercel config (ready, not deployed)
 - Security: HSTS, CSP, CORS strict, OWASP Top 10 review, bcrypt keys, Ed25519 heartbeats, path traversal protection, OAuth PKCE
-- 768 tests (354 guardrails + 232 shared + 182 API) + E2E pipeline test + k6 load test baseline — **all passing**
+- 810 tests (354 guardrails + 233 shared + 223 API) + E2E pipeline test + k6 load test baseline — **all passing**
 
 **Known Issue (non-blocking):** Guardrail worker has tsx path resolution issue — manual approval via Admin Panel works as workaround.
 
@@ -101,6 +102,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 - **Cache/Queue**: Redis 7 on Docker (dev) / Upstash (prod), BullMQ (guardrail evaluation queue)
 - **Infra**: Turborepo + pnpm workspaces, GitHub Actions CI
 - **Human Auth** (007): OAuth 2.0 + PKCE (Google, GitHub), email/password fallback, CSRF state cookies, Nominatim geocoding + Redis cache (30-day TTL), profile completeness scoring, double-entry token accounting
+- TypeScript 5.x strict mode, Node.js 22+ + Hono (API), Drizzle ORM, @anthropic-ai/sdk (Claude Sonnet decomposition), Leaflet + react-leaflet (maps), Leaflet.markercluster (clustering), BullMQ (async jobs) (008-mission-marketplace)
+- PostgreSQL 16 + PostGIS (geo-queries, GIST index), Upstash Redis (cache, rate limits, decomposition cost tracking) (008-mission-marketplace)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD
@@ -112,3 +115,4 @@ docs/challenges/         # 7 deep technical challenge research docs
 - 006-openclaw-agent-support: SKILL.md + HEARTBEAT.md + package.json skill files, Hono HTTP routes (3 files + 2 redirects), 22 integration tests (incl. 6 path traversal security), Dockerfile fixes, security hardening (Moltbook comparison, observe/contribute modes, content safety guidance, pre-submission checklists), manual test guide (44 test cases), OpenClaw setup guide, 13/13 tasks complete, 668 total tests
 - **2026-02-10: Phase 1 local testing complete** — All services verified working, 10/11 exit criteria met, ready for Phase 2 development
 - 007-human-onboarding (Sprint 6 — COMPLETE): Backend (20 API routes, 5 DB tables, OAuth 2.0 + PKCE, ImpactToken double-entry accounting, profile completeness scoring, geocoding) + Frontend (human auth pages, profile creation, 5-step onboarding wizard, dashboard with token/reputation/missions/activity cards) + Integration tests (17 tests covering full onboarding flow). 768 total tests passing.
+- 008-mission-marketplace (Sprint 7 — COMPLETE): DB schema (missions, missionClaims, messages tables with 3 enums, 8 indexes, 5 CHECK constraints), Mission CRUD (create/update/archive/list), Claude Sonnet decomposition (tool_use, 10/day rate limit), marketplace browse (domain/difficulty/skills/reward/duration/geo filters, cursor pagination), atomic mission claiming (SELECT FOR UPDATE SKIP LOCKED, max 3 active, 7-day deadline), mission detail (location reveal on claim via snapToGrid), agent-to-agent encrypted messaging (AES-256-GCM, 4 routes), mission expiration worker (BullMQ daily cron, batch 100, grace period), Leaflet map (dynamic import SSR-safe), 6 frontend components + 2 pages. Code quality audit resolved (21 findings: P0 credential leak, P1 type safety + test coverage, P2 refactors + fail-closed rate limiting, P3 polish). 810 total tests passing (223 API).

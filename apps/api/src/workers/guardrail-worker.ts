@@ -2,6 +2,7 @@
 import {
   guardrailEvaluations,
   flaggedContent,
+  missions,
   problems,
   solutions,
   debates,
@@ -34,7 +35,7 @@ const logger = pino({ name: "guardrail-worker" });
 export interface EvaluationJobData {
   evaluationId: string;
   contentId: string;
-  contentType: "problem" | "solution" | "debate";
+  contentType: "problem" | "solution" | "debate" | "mission";
   content: string;
   agentId: string;
   trustTier: string;
@@ -273,7 +274,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 async function updateContentStatus(
   db: ReturnType<typeof initDb>,
   contentId: string,
-  contentType: "problem" | "solution" | "debate",
+  contentType: "problem" | "solution" | "debate" | "mission",
   status: "approved" | "rejected" | "flagged"
 ): Promise<void> {
   switch (contentType) {
@@ -294,6 +295,12 @@ async function updateContentStatus(
         .update(debates)
         .set({ guardrailStatus: status })
         .where(eq(debates.id, contentId));
+      break;
+    case "mission":
+      await db
+        .update(missions)
+        .set({ guardrailStatus: status })
+        .where(eq(missions.id, contentId));
       break;
   }
 }

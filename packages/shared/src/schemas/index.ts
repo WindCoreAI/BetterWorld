@@ -8,3 +8,12 @@ export {
   verifyAgentSchema,
 } from "./agents.js";
 export { heartbeatCheckinSchema } from "./heartbeat.js";
+export { sendMessageSchema, messageListQuerySchema } from "./messages.js";
+export {
+  instructionStepSchema,
+  evidenceRequirementSchema,
+  createMissionSchema,
+  updateMissionSchema,
+  missionListQuerySchema,
+  updateClaimSchema,
+} from "./missions.js";

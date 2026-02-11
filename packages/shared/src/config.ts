@@ -31,6 +31,9 @@ const envSchema = z.object({
   ACCESS_TOKEN_EXPIRY: z.string().default("15m"),
   REFRESH_TOKEN_EXPIRY: z.string().default("7d"),
 
+  // Message encryption (Sprint 7: Agent Messaging)
+  MESSAGE_ENCRYPTION_KEY: z.string().min(32, "MESSAGE_ENCRYPTION_KEY must be at least 32 chars (base64-encoded 32 bytes)").optional(),
+
   // Storage (optional for development, minio defaults)
   STORAGE_PROVIDER: z.enum(["minio", "supabase"]).default("minio"),
   STORAGE_ENDPOINT: z.string().url().optional(),

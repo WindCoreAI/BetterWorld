@@ -61,6 +61,7 @@ export const contentTypeEnum = pgEnum("content_type", [
   "problem",
   "solution",
   "debate",
+  "mission",
 ]);
 
 export const guardrailDecisionEnum = pgEnum("guardrail_decision", [
@@ -83,6 +84,32 @@ export const adminDecisionEnum = pgEnum("admin_decision", [
 export const patternSeverityEnum = pgEnum("pattern_severity", [
   "high",
   "critical",
+]);
+
+// Sprint 7: Mission marketplace enums
+export const missionStatusEnum = pgEnum("mission_status", [
+  "open",
+  "claimed",
+  "in_progress",
+  "submitted",
+  "verified",
+  "expired",
+  "archived",
+]);
+
+export const difficultyLevelEnum = pgEnum("difficulty_level", [
+  "beginner",
+  "intermediate",
+  "advanced",
+  "expert",
+]);
+
+export const missionClaimStatusEnum = pgEnum("mission_claim_status", [
+  "active",
+  "submitted",
+  "verified",
+  "abandoned",
+  "released",
 ]);
 
 // Sprint 6: Token transaction types

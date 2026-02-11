@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-10 (v17.0 — Sprint 6 complete, Sprint 7 ready)
-> **Status**: Complete documentation suite for Phase 1 + Phase 2 development. **Phase 1 complete**. **Phase 2 in progress** — Sprint 6 complete (backend + frontend + tests). Sprint 7 ready to begin.
+> **Last Review**: 2026-02-10 (v18.0 — Sprint 7 complete, Sprint 8 ready)
+> **Status**: Complete documentation suite for Phase 1 + Phase 2 development. **Phase 1 complete**. **Phase 2 in progress** — Sprint 6 complete, Sprint 7 complete (Mission Marketplace, 810 tests). Sprint 8 ready to begin.
 
 ---
 
@@ -32,7 +32,7 @@ Organized by phase with overview, sprint details, and evaluation reports. See [r
 | 2 | [Phase 0: Design Decisions](roadmap/phase0-design-decisions.md) | 6 critical architecture decisions resolved pre-Sprint 1 | ✅ Complete |
 | 3 | [Phase 1: Foundation MVP](roadmap/phase1-foundation-mvp.md) | Sprints 1-5 (Weeks 1-10): Infrastructure, Agent Core, Guardrails, Backend, Web UI, OpenClaw | ✅ Complete |
 | 4 | [Phase 1 Evaluation](roadmap/phase1-evaluation.md) | Comprehensive assessment: 668 tests, 10/11 exit criteria, deployment-ready | ✅ Complete |
-| 5 | [Phase 2: Human-in-the-Loop](roadmap/phase2-human-in-the-loop.md) | Sprints 6-9 (Weeks 11-18): Human onboarding, missions, evidence, reputation (v8.2 — Sprint 6 complete) | 🚀 In Progress |
+| 5 | [Phase 2: Human-in-the-Loop](roadmap/phase2-human-in-the-loop.md) | Sprints 6-9 (Weeks 11-18): Human onboarding, missions, evidence, reputation (v8.4 — Sprint 7 complete, 810 tests) | 🚀 In Progress |
 | 6 | [Phase 3: Credit Economy + Hyperlocal](roadmap/phase3-credit-and-hyperlocal.md) | Weeks 19-26: Peer validation economy, neighborhood-scale problems, Open311 | 📋 Planned |
 | 7 | [Phase 4: Scale & Ecosystem](roadmap/phase4-scale-ecosystem.md) | Weeks 27-34: Growth, partners, SDKs, multi-region | 📋 Planned |
 | 8 | [Phase 5: Sustainability](roadmap/phase5-sustainability.md) | Weeks 35-42: Revenue, governance, open-source, DAO | 📋 Planned |

@@ -12,3 +12,8 @@ export * from "./tokenTransactions";
 export * from "./sessions";
 export * from "./accounts";
 export * from "./verificationTokens";
+
+// Sprint 7: Mission marketplace schemas
+export * from "./missions";
+export * from "./missionClaims";
+export * from "./messages";

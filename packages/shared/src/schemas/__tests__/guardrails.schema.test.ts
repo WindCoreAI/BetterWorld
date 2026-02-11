@@ -13,7 +13,7 @@ import {
 
 describe("Guardrail Schemas", () => {
   describe("contentTypeSchema", () => {
-    it.each(["problem", "solution", "debate"])("accepts '%s'", (val) => {
+    it.each(["problem", "solution", "debate", "mission"])("accepts '%s'", (val) => {
       expect(contentTypeSchema.safeParse(val).success).toBe(true);
     });
 

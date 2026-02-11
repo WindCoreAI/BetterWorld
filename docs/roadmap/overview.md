@@ -1,8 +1,8 @@
 # BetterWorld Development Roadmap — Overview
 
-> **Version**: 8.3
+> **Version**: 8.4
 > **Date**: 2026-02-10
-> **Status**: Phase 1 COMPLETE. **Phase 2 IN PROGRESS** — Sprint 6 complete (13/13 exit criteria, 768 tests). Sprint 7 ready to begin.
+> **Status**: Phase 1 COMPLETE. **Phase 2 IN PROGRESS** — Sprint 6 complete (13/13 exit criteria). Sprint 7 complete (Mission Marketplace, 810 tests). Sprint 8 ready to begin.
 > **Source**: Synthesized from PRD, Sprint Plan, GTM Strategy, Technical Architecture, Audit Report, and REVIEW-AND-TECH-CHALLENGES.md
 
 ---
@@ -61,7 +61,14 @@ Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-
 - **Backend**: OAuth 2.0 + PKCE registration (Google, GitHub, email/password), human profiles (skills, location geocoding, languages, availability), ImpactToken double-entry accounting (SELECT FOR UPDATE, balance_before/balance_after), token spending (voting, circles, analytics placeholder), orientation reward, profile completeness scoring, human dashboard API, 5 new DB tables, 20 API routes, Zod validation schemas, humanAuth middleware
 - **Frontend**: Human auth pages (register, login, verify, OAuth callback), profile creation form, 5-step onboarding wizard, human dashboard (token balance, reputation, missions, activity cards)
 - **Tests**: 17 integration tests covering registration, login, profile, orientation reward, token operations, dashboard. 768 total tests passing.
-- **Sprint 7 ready to begin**
+
+**Sprint 7 (Mission Marketplace) — ✅ COMPLETE**:
+- **Database**: 3 tables (missions, missionClaims, messages), 3 enums, 8 indexes, 5 CHECK constraints
+- **Backend**: Mission CRUD (9 routes), Claude Sonnet decomposition (tool_use, 10/day rate limit), marketplace browse (8 filters, Haversine geo-search, cursor pagination), atomic claiming (SELECT FOR UPDATE SKIP LOCKED, max 3 active), encrypted messaging (AES-256-GCM, 4 routes), expiration worker (BullMQ daily cron)
+- **Frontend**: 6 components + 2 pages, Leaflet maps (SSR-safe), XSS-safe popups, mission filters
+- **Quality**: Code quality audit resolved (21 findings across P0-P3: credential leak, type safety, refactors, test coverage, fail-closed rate limiting)
+- **Tests**: 41 new tests (14 CRUD + 5 expiration + 13 message + 9 decompose). 810 total tests passing (354 guardrails + 233 shared + 223 API).
+- **Sprint 8 ready to begin**
 
 **Success Criteria**:
 - 500 registered humans, 100 active weekly
@@ -191,7 +198,7 @@ These are the hardest problems we'll face. Status should be updated at each spri
 | Agent Traction | End Sprint 5 (Week 10) | Registered agents | ≥30 (go) / <10 (pause & diagnose) | ⏳ Agent registration fully operational. Measure after production deployment + onboarding push. |
 | Content Quality | End Sprint 3 (Week 6) | Guardrail pass rate | ≥85% (go) / <70% (recalibrate guardrails) | ✅ Guardrails implemented. 341 tests, 262 adversarial. Pipeline operational. |
 | Human Interest | End Phase 1 (Week 10) | Waitlist signups | ≥500 (go) / <100 (rethink positioning) | ⏳ Landing page live with CTAs. Measure after production deployment. |
-| Mission Viability | End Sprint 7 (Week 14) | Completed missions | ≥20 (go) / <5 (revisit mission design) | Pending |
+| Mission Viability | End Sprint 7 (Week 14) | Completed missions | ≥20 (go) / <5 (revisit mission design) | ✅ Infrastructure operational. Measure after production deployment. |
 
 ---
 
@@ -241,6 +248,7 @@ These doc improvements should be completed alongside development:
 
 ## Changelog
 
+- **v8.4** (2026-02-10): Sprint 7 complete (Mission Marketplace: mission CRUD, decomposition, marketplace, messaging, expiration worker, 810 tests). Code quality audit resolved (21 findings). Sprint 8 ready.
 - **v8.3** (2026-02-10): Sprint 6 fully complete (backend + frontend + tests, 768 tests, 13/13 exit criteria). Sprint 7 ready.
 - **v8.2** (2026-02-10): Sprint 6 backend complete — Phase 2 status updated to IN PROGRESS
 - **v8.1** (2026-02-10): Phase 3 sprint details added (Sprints 10-13 with full task breakdowns, exit criteria, technical considerations)
