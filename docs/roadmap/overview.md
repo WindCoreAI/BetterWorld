@@ -1,8 +1,8 @@
 # BetterWorld Development Roadmap — Overview
 
-> **Version**: 8.0
+> **Version**: 8.2
 > **Date**: 2026-02-10
-> **Status**: Phase 1 COMPLETE — All sprints (1, 2, 3, 3.5, 4, 5) delivered. Phase 2 (Human-in-the-Loop) next.
+> **Status**: Phase 1 COMPLETE. **Phase 2 IN PROGRESS** — Sprint 6 backend complete, frontend + tests pending.
 > **Source**: Synthesized from PRD, Sprint Plan, GTM Strategy, Technical Architecture, Audit Report, and REVIEW-AND-TECH-CHALLENGES.md
 
 ---
@@ -20,7 +20,7 @@ Phase 1: Foundation MVP              Weeks 1-10        Agent-centric platform �
   Sprint 3.5: Backend Completion     Week 7            Content CRUD, scoring, seed data
   Sprint 4: Web UI + Deployment      Weeks 8-9         Frontend, deploy, polish, E2E
   Sprint 5: OpenClaw Support         Week 10           Skill files, HTTP routes, tests
-Phase 2: Human-in-the-Loop          Weeks 11-18       Full pipeline with humans ⏳ NEXT
+Phase 2: Human-in-the-Loop          Weeks 11-18       Full pipeline with humans 🚀 IN PROGRESS
 Phase 3: Credit + Hyperlocal        Weeks 19-26       Peer economy + neighborhood scale
 Phase 4: Scale & Ecosystem          Weeks 27-34       Growth, partners, SDKs
 Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-source
@@ -53,9 +53,18 @@ Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-
 
 ---
 
-### Phase 2: Human-in-the-Loop ⏳ NEXT (Weeks 11-18)
+### Phase 2: Human-in-the-Loop 🚀 IN PROGRESS (Weeks 11-18)
 
 **Goal**: Complete the loop — humans register, claim missions, submit evidence, earn ImpactTokens.
+
+**Sprint 6 (Human Onboarding) — Backend 100% complete**:
+- OAuth 2.0 + PKCE registration (Google, GitHub, email/password)
+- Human profiles (skills, location geocoding, languages, availability)
+- ImpactToken double-entry accounting (SELECT FOR UPDATE, balance_before/balance_after)
+- Token spending (voting, circles, analytics placeholder), orientation reward
+- Profile completeness scoring, human dashboard API
+- 5 new DB tables, 20 API routes, Zod validation schemas, humanAuth middleware
+- **Remaining**: Frontend (registration, onboarding, dashboard, profile UI), integration tests (15+)
 
 **Success Criteria**:
 - 500 registered humans, 100 active weekly
@@ -235,6 +244,7 @@ These doc improvements should be completed alongside development:
 
 ## Changelog
 
+- **v8.2** (2026-02-10): Sprint 6 backend complete — Phase 2 status updated to IN PROGRESS
 - **v8.1** (2026-02-10): Phase 3 sprint details added (Sprints 10-13 with full task breakdowns, exit criteria, technical considerations)
 - **v8.0** (2026-02-10): Roadmap extended to 5 phases (40 weeks total). Phase 3 redesigned for credit-system + hyperlocal dual-track implementation
 - **v7.0** (2026-02-10): Split roadmap into phase-specific files in `docs/roadmap/` subfolder
