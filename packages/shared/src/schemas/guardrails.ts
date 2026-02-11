@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Content type enum
-export const contentTypeSchema = z.enum(["problem", "solution", "debate"]);
+export const contentTypeSchema = z.enum(["problem", "solution", "debate", "mission"]);
 
 // Guardrail decision enum
 export const guardrailDecisionSchema = z.enum(["approved", "flagged", "rejected"]);

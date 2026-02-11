@@ -23,3 +23,7 @@ export { tokenTransactions } from "./schema/tokenTransactions";
 export { accounts } from "./schema/accounts";
 export { verificationTokens } from "./schema/verificationTokens";
 export { sessions } from "./schema/sessions";
+// Sprint 7: Mission marketplace tables
+export { missions } from "./schema/missions";
+export { missionClaims } from "./schema/missionClaims";
+export { messages } from "./schema/messages";

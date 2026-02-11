@@ -9,10 +9,12 @@ import dashboardRoutes from "./dashboard/index.js";
 import { debatesRoutes } from "./debates.routes.js";
 import { guardrailRoutes } from "./guardrails/index.js";
 import { heartbeatRoutes } from "./heartbeat.routes.js";
+import messageRoutes from "./messages/index.js";
+import decomposeRoutes from "./missions/decompose.js";
+import missionRoutes from "./missions/index.js";
 import { problemsRoutes } from "./problems.routes.js";
 import profileRoutes from "./profile/index.js";
 import { solutionsRoutes } from "./solutions.routes.js";
-// Sprint 6: Human onboarding routes
 import tokensRoutes from "./tokens/index.js";
 
 export const v1Routes = new Hono<AppEnv>();
@@ -44,3 +46,8 @@ v1Routes.route("/human-auth", humanAuthRoutes);
 v1Routes.route("/profile", profileRoutes);
 v1Routes.route("/tokens", tokensRoutes);
 v1Routes.route("/dashboard", dashboardRoutes);
+
+// Sprint 7 routes — Mission Marketplace
+v1Routes.route("/missions", missionRoutes);
+v1Routes.route("/internal/solutions", decomposeRoutes);
+v1Routes.route("/messages", messageRoutes);

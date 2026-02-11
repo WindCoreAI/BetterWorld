@@ -24,6 +24,22 @@ export type {
   DebateStance,
 } from "./types/entities.js";
 
+// Mission Types (Sprint 7)
+export type {
+  MissionStatus,
+  DifficultyLevel,
+  MissionClaimStatus,
+  InstructionStep,
+  EvidenceRequirement,
+  Mission,
+  MissionClaim,
+  MissionListItem,
+  MissionDetail,
+  DecomposedMission,
+  Message,
+  MessageThread,
+} from "./types/missions.js";
+
 // Guardrail Types
 export type {
   ContentType,
@@ -66,6 +82,13 @@ export {
   updateAgentSchema,
   verifyAgentSchema,
   heartbeatCheckinSchema,
+  // Sprint 7: Mission marketplace schemas
+  createMissionSchema,
+  updateMissionSchema,
+  missionListQuerySchema,
+  updateClaimSchema,
+  sendMessageSchema,
+  messageListQuerySchema,
 } from "./schemas/index.js";
 
 // Guardrail Schemas

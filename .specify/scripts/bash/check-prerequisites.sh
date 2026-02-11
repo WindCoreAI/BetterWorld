@@ -9,6 +9,7 @@
 #
 # OPTIONS:
 #   --json              Output in JSON format
+#   --require-spec      Require spec.md to exist (for implementation/completeness phase)
 #   --require-tasks     Require tasks.md to exist (for implementation phase)
 #   --include-tasks     Include tasks.md in AVAILABLE_DOCS list
 #   --paths-only        Only output path variables (no validation)
@@ -23,6 +24,7 @@ set -e
 
 # Parse command line arguments
 JSON_MODE=false
+REQUIRE_SPEC=false
 REQUIRE_TASKS=false
 INCLUDE_TASKS=false
 PATHS_ONLY=false
@@ -31,6 +33,9 @@ for arg in "$@"; do
     case "$arg" in
         --json)
             JSON_MODE=true
+            ;;
+        --require-spec)
+            REQUIRE_SPEC=true
             ;;
         --require-tasks)
             REQUIRE_TASKS=true
@@ -49,6 +54,7 @@ Consolidated prerequisite checking for Spec-Driven Development workflow.
 
 OPTIONS:
   --json              Output in JSON format
+  --require-spec      Require spec.md to exist (for implementation/completeness phase)
   --require-tasks     Require tasks.md to exist (for implementation phase)
   --include-tasks     Include tasks.md in AVAILABLE_DOCS list
   --paths-only        Only output path variables (no prerequisite validation)
@@ -57,10 +63,10 @@ OPTIONS:
 EXAMPLES:
   # Check task prerequisites (plan.md required)
   ./check-prerequisites.sh --json
-  
-  # Check implementation prerequisites (plan.md + tasks.md required)
-  ./check-prerequisites.sh --json --require-tasks --include-tasks
-  
+
+  # Check full implementation prerequisites (spec.md + plan.md + tasks.md required)
+  ./check-prerequisites.sh --json --require-spec --require-tasks --include-tasks
+
   # Get feature paths only (no validation)
   ./check-prerequisites.sh --paths-only
   
@@ -103,6 +109,12 @@ fi
 if [[ ! -d "$FEATURE_DIR" ]]; then
     echo "ERROR: Feature directory not found: $FEATURE_DIR" >&2
     echo "Run /speckit.specify first to create the feature structure." >&2
+    exit 1
+fi
+
+if $REQUIRE_SPEC && [[ ! -f "$FEATURE_SPEC" ]]; then
+    echo "ERROR: spec.md not found in $FEATURE_DIR" >&2
+    echo "Run /speckit.specify first to create the feature specification." >&2
     exit 1
 fi
 

@@ -16,6 +16,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
     "@betterworld/db": "workspace:*",
     "@betterworld/guardrails": "workspace:*",
     "@betterworld/shared": "workspace:*",
