@@ -1,0 +1,294 @@
+openapi: 3.1.0
+info:
+  title: BetterWorld Human Dashboard API
+  version: 1.0.0
+  description: |
+    Dashboard aggregation endpoint for human users (Sprint 6).
+
+    Features:
+    - Single endpoint returns all dashboard data (tokens, profile, missions, reputation, activity)
+    - Real-time updates via WebSocket (separate connection, not documented here)
+    - Efficient aggregation with minimal DB queries
+
+servers:
+  - url: https://api.betterworld.ai/v1
+    description: Production
+  - url: http://localhost:4000/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Dashboard
+    description: Dashboard data aggregation
+
+paths:
+  /dashboard:
+    get:
+      summary: Get dashboard overview
+      description: |
+        Retrieve all dashboard data for the authenticated user in a single request.
+
+        **Includes**:
+        - Token balance (current + total earned/spent)
+        - Reputation score (0-100)
+        - Profile completeness (score + suggestions)
+        - Active missions (from Sprint 7, empty array in Sprint 6)
+        - Recent activity feed (last 10 events)
+        - Orientation status (completed or pending)
+
+        **Performance**: Uses Redis caching for token balance and reputation (30-second TTL).
+
+        **Real-time updates**: For live updates (tokens earned, mission completed), use WebSocket connection to `wss://api.betterworld.ai/v1/ws/activity`.
+      tags:
+        - Dashboard
+      responses:
+        '200':
+          description: Dashboard data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DashboardData'
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User or profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "PROFILE_NOT_FOUND"
+                  message: "Profile not found. Complete your profile to access dashboard."
+                requestId: "req-abc123"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token from authentication endpoints"
+
+  schemas:
+    DashboardData:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: "123e4567-e89b-12d3-a456-426614174000"
+            email:
+              type: string
+              format: email
+              example: "maya@example.com"
+            displayName:
+              type: string
+              example: "Maya Chen"
+            role:
+              type: string
+              enum: ["human", "admin", "moderator"]
+              example: "human"
+            avatarUrl:
+              type: string
+              format: uri
+              nullable: true
+              example: "https://avatars.githubusercontent.com/u/12345"
+        tokens:
+          type: object
+          properties:
+            balance:
+              type: integer
+              example: 45
+              description: "Current token balance"
+            totalEarned:
+              type: integer
+              example: 50
+              description: "Total tokens earned (lifetime)"
+            totalSpent:
+              type: integer
+              example: 5
+              description: "Total tokens spent (lifetime)"
+        reputation:
+          type: object
+          properties:
+            score:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+              example: 75.5
+              description: "Reputation score (0-100)"
+            rank:
+              type: string
+              example: "Contributor"
+              description: "Reputation tier (New, Contributor, Dedicated, Leader, Legend)"
+            percentile:
+              type: integer
+              minimum: 0
+              maximum: 100
+              example: 80
+              description: "Percentile ranking among all users (0-100)"
+        profileCompleteness:
+          type: object
+          properties:
+            score:
+              type: integer
+              minimum: 0
+              maximum: 100
+              example: 75
+              description: "Profile completeness score (0-100%)"
+            suggestions:
+              type: array
+              items:
+                type: string
+              example:
+                - "Add your location for better mission matching"
+                - "Set your availability hours"
+              description: "Top 3 suggestions for improving completeness"
+        orientation:
+          type: object
+          properties:
+            completed:
+              type: boolean
+              example: true
+              description: "Whether user completed orientation tutorial"
+            completedAt:
+              type: string
+              format: date-time
+              nullable: true
+              example: "2026-02-10T10:30:00Z"
+            currentStep:
+              type: integer
+              minimum: 1
+              maximum: 5
+              nullable: true
+              example: null
+              description: "Current step if orientation is in progress (null if completed or not started)"
+        missions:
+          type: object
+          properties:
+            active:
+              type: array
+              items:
+                $ref: '#/components/schemas/MissionSummary'
+              description: "Active missions (claimed, in_progress, submitted). Empty in Sprint 6."
+            totalCompleted:
+              type: integer
+              example: 0
+              description: "Total missions completed (lifetime)"
+            streakDays:
+              type: integer
+              example: 0
+              description: "Consecutive days with mission activity"
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityEvent'
+          description: "Recent activity feed (last 10 events)"
+
+    MissionSummary:
+      type: object
+      description: "Sprint 7 feature - empty in Sprint 6"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "mission-uuid-123"
+        title:
+          type: string
+          example: "Survey community water quality"
+        status:
+          type: string
+          enum: ["claimed", "in_progress", "submitted", "completed"]
+          example: "in_progress"
+        reward:
+          type: integer
+          example: 20
+          description: "Token reward for completion"
+        deadline:
+          type: string
+          format: date-time
+          example: "2026-02-15T23:59:59Z"
+
+    ActivityEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "event-uuid-123"
+        type:
+          type: string
+          enum:
+            - token_earned
+            - token_spent
+            - mission_completed
+            - problem_voted
+            - solution_voted
+            - circle_joined
+            - reputation_increased
+          example: "token_earned"
+        description:
+          type: string
+          example: "Earned 10 IT for completing orientation"
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            amount: 10
+            type: "earn_orientation"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-10T12:34:56Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_INPUT"
+            message:
+              type: string
+              example: "Validation error"
+            details:
+              type: object
+              additionalProperties: true
+        requestId:
+          type: string
+          example: "req-abc123"
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error:
+              code: "UNAUTHORIZED"
+              message: "Missing or invalid access token"
+            requestId: "req-abc123"

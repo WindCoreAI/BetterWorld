@@ -17,3 +17,9 @@ export { solutions } from "./schema/solutions";
 export { debates } from "./schema/debates";
 export * from "./schema/guardrails";
 export * from "./schema/enums";
+// Sprint 6: Human onboarding tables
+export { humanProfiles } from "./schema/humanProfiles";
+export { tokenTransactions } from "./schema/tokenTransactions";
+export { accounts } from "./schema/accounts";
+export { verificationTokens } from "./schema/verificationTokens";
+export { sessions } from "./schema/sessions";

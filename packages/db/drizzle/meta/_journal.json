@@ -29,6 +29,20 @@
       "when": 1770550598031,
       "tag": "0003_large_glorian",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770718311890,
+      "tag": "0004_fast_masked_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1770804000000,
+      "tag": "0005_fix_skills_gin_index",
+      "breakpoints": true
     }
   ]
 }

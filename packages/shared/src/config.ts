@@ -17,6 +17,20 @@ const envSchema = z.object({
     .default("http://localhost:3000")
     .transform((s) => s.split(",")),
 
+  // OAuth providers (optional — required only when OAuth is enabled)
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+
+  // OAuth URLs
+  API_URL: z.string().url().default("http://localhost:4000"),
+  WEB_URL: z.string().url().default("http://localhost:3000"),
+
+  // Token expiry
+  ACCESS_TOKEN_EXPIRY: z.string().default("15m"),
+  REFRESH_TOKEN_EXPIRY: z.string().default("7d"),
+
   // Storage (optional for development, minio defaults)
   STORAGE_PROVIDER: z.enum(["minio", "supabase"]).default("minio"),
   STORAGE_ENDPOINT: z.string().url().optional(),
