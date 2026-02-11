@@ -1,0 +1,470 @@
+openapi: 3.1.0
+info:
+  title: BetterWorld ImpactToken API
+  version: 1.0.0
+  description: |
+    ImpactToken economy endpoints for human users (Sprint 6).
+
+    Features:
+    - Double-entry accounting with `balance_before` and `balance_after`
+    - Race-condition prevention via `SELECT FOR UPDATE` pessimistic locking
+    - Idempotency support for all token operations
+    - Daily audit job for balance integrity verification
+    - Transaction history with cursor pagination
+
+servers:
+  - url: https://api.betterworld.ai/v1
+    description: Production
+  - url: http://localhost:4000/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Balance
+    description: Token balance queries
+  - name: Earn
+    description: Token earning operations
+  - name: Spend
+    description: Token spending operations
+  - name: Transactions
+    description: Transaction history
+
+paths:
+  /tokens/balance:
+    get:
+      summary: Get current token balance
+      description: |
+        Retrieve the authenticated user's current ImpactToken balance.
+      tags:
+        - Balance
+      responses:
+        '200':
+          description: Balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      balance:
+                        type: integer
+                        example: 45
+                        description: "Current token balance"
+                      totalEarned:
+                        type: integer
+                        example: 50
+                        description: "Total tokens earned (lifetime)"
+                      totalSpent:
+                        type: integer
+                        example: 5
+                        description: "Total tokens spent (lifetime)"
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tokens/orientation-reward:
+    post:
+      summary: Claim orientation completion reward
+      description: |
+        Claim 10 ImpactTokens for completing the 5-step orientation tutorial.
+
+        **Idempotency**: This endpoint can only be called once per user. Duplicate calls return cached response.
+
+        **Prerequisites**: User must have completed all 5 orientation steps.
+      tags:
+        - Earn
+      responses:
+        '201':
+          description: Orientation reward claimed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/TokenTransaction'
+                      newBalance:
+                        type: integer
+                        example: 10
+                        description: "Updated token balance"
+                  requestId:
+                    type: string
+        '400':
+          description: Orientation not completed or already claimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notCompleted:
+                  value:
+                    ok: false
+                    error:
+                      code: "ORIENTATION_NOT_COMPLETED"
+                      message: "Complete all 5 orientation steps before claiming reward"
+                    requestId: "req-abc123"
+                alreadyClaimed:
+                  value:
+                    ok: false
+                    error:
+                      code: "REWARD_ALREADY_CLAIMED"
+                      message: "Orientation reward has already been claimed"
+                    requestId: "req-abc123"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tokens/spend:
+    post:
+      summary: Spend ImpactTokens
+      description: |
+        Spend ImpactTokens on platform activities (voting, circles, analytics).
+
+        **Supported spending types**:
+        - `spend_vote`: Vote on problems or solutions (1-10 IT per vote)
+        - `spend_circle`: Join collaboration circle (50 IT)
+        - `spend_analytics`: Unlock premium analytics (20 IT, placeholder for Phase 3)
+
+        **Idempotency**: Requires `Idempotency-Key` header to prevent duplicate spending.
+        Duplicate requests within 1 hour return cached response (200 OK, not 409).
+
+        **Race conditions**: Prevented via pessimistic locking (`SELECT FOR UPDATE`).
+      tags:
+        - Spend
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "a7b8c9d0-1234-5678-90ab-cdef12345678"
+          description: "Client-generated UUID for idempotency"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpendTokensRequest'
+      responses:
+        '201':
+          description: Tokens spent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/TokenTransaction'
+                      newBalance:
+                        type: integer
+                        example: 5
+                        description: "Updated token balance"
+                  requestId:
+                    type: string
+        '200':
+          description: Idempotent request (already processed within 1 hour)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/TokenTransaction'
+                      newBalance:
+                        type: integer
+                        example: 5
+                      cached:
+                        type: boolean
+                        example: true
+                        description: "Indicates this is a cached response from previous request"
+                  requestId:
+                    type: string
+        '400':
+          description: Insufficient balance or invalid spending type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                insufficientBalance:
+                  value:
+                    ok: false
+                    error:
+                      code: "INSUFFICIENT_BALANCE"
+                      message: "Insufficient balance. You have 5 IT, but need 10 IT."
+                      details:
+                        balance: 5
+                        required: 10
+                    requestId: "req-abc123"
+                invalidType:
+                  value:
+                    ok: false
+                    error:
+                      code: "INVALID_SPEND_TYPE"
+                      message: "Invalid spending type. Allowed: spend_vote, spend_circle, spend_analytics"
+                    requestId: "req-abc123"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Missing or invalid Idempotency-Key header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "MISSING_IDEMPOTENCY_KEY"
+                  message: "Idempotency-Key header is required for token spending"
+                requestId: "req-abc123"
+
+  /tokens/transactions:
+    get:
+      summary: Get transaction history
+      description: |
+        Retrieve the authenticated user's token transaction history with cursor pagination.
+
+        **Sorting**: Always sorted by `created_at DESC` (newest first).
+
+        **Pagination**: Cursor-based with 20 items per page.
+      tags:
+        - Transactions
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+          description: "Transaction ID cursor for pagination (exclusive)"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+          description: "Number of transactions per page (1-100)"
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - earn_orientation
+              - earn_mission
+              - earn_reward
+              - earn_bonus
+              - earn_referral
+              - spend_vote
+              - spend_circle
+              - spend_analytics
+              - spend_custom
+          example: "earn_mission"
+          description: "Filter by transaction type"
+      responses:
+        '200':
+          description: Transaction history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TokenTransaction'
+                      pagination:
+                        type: object
+                        properties:
+                          nextCursor:
+                            type: string
+                            format: uuid
+                            nullable: true
+                            example: "223e4567-e89b-12d3-a456-426614174001"
+                            description: "Cursor for next page (null if no more pages)"
+                          hasMore:
+                            type: boolean
+                            example: true
+                            description: "Whether more pages exist"
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token from authentication endpoints"
+
+  schemas:
+    SpendTokensRequest:
+      type: object
+      required:
+        - amount
+        - type
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          example: 5
+          description: "Number of tokens to spend (positive integer)"
+        type:
+          type: string
+          enum:
+            - spend_vote
+            - spend_circle
+            - spend_analytics
+          example: "spend_vote"
+          description: "Spending type (determines allowed amount ranges)"
+        referenceId:
+          type: string
+          format: uuid
+          example: "problem-uuid-123"
+          description: "ID of related entity (problem, solution, circle)"
+        referenceType:
+          type: string
+          enum:
+            - problem
+            - solution
+            - circle
+          example: "problem"
+          description: "Type of related entity"
+        description:
+          type: string
+          maxLength: 200
+          example: "Voted on Problem: Plastic Pollution in Jakarta Bay"
+          description: "Optional user-facing description"
+
+    TokenTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        humanId:
+          type: string
+          format: uuid
+          example: "human-uuid-123"
+        amount:
+          type: integer
+          example: 10
+          description: "Positive for earn, negative for spend"
+        balanceBefore:
+          type: integer
+          example: 0
+          description: "Balance before this transaction"
+        balanceAfter:
+          type: integer
+          example: 10
+          description: "Balance after this transaction"
+        transactionType:
+          type: string
+          enum:
+            - earn_orientation
+            - earn_mission
+            - earn_reward
+            - earn_bonus
+            - earn_referral
+            - spend_vote
+            - spend_circle
+            - spend_analytics
+            - spend_custom
+          example: "earn_orientation"
+        referenceId:
+          type: string
+          format: uuid
+          nullable: true
+          example: "mission-uuid-123"
+          description: "ID of related entity (mission, problem, solution, circle)"
+        referenceType:
+          type: string
+          nullable: true
+          enum:
+            - mission
+            - problem
+            - solution
+            - circle
+          example: "mission"
+        description:
+          type: string
+          example: "Welcome bonus for completing orientation"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-10T12:34:56Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_INPUT"
+            message:
+              type: string
+              example: "Validation error"
+            details:
+              type: object
+              additionalProperties: true
+        requestId:
+          type: string
+          example: "req-abc123"
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error:
+              code: "UNAUTHORIZED"
+              message: "Missing or invalid access token"
+            requestId: "req-abc123"

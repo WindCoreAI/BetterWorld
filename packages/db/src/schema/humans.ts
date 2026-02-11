@@ -23,12 +23,26 @@ export const humans = pgTable(
     tokenBalance: decimal("token_balance", { precision: 18, scale: 8 })
       .notNull()
       .default("0"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+
+    // Sprint 6: OAuth provider fields
+    oauthProvider: varchar("oauth_provider", { length: 50 }), // "google", "github", null for email/password
+    oauthProviderId: varchar("oauth_provider_id", { length: 255 }), // Provider's user ID
+    avatarUrl: varchar("avatar_url", { length: 500 }), // From OAuth profile
+    emailVerified: boolean("email_verified").notNull().default(false), // true for OAuth, false for email/password
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     isActive: boolean("is_active").notNull().default(true),
   },
   (table) => [
     uniqueIndex("humans_email_idx").on(table.email),
     index("humans_reputation_idx").on(table.reputationScore),
+    // Sprint 6: OAuth provider lookup
+    index("humans_oauth_provider_idx").on(table.oauthProvider, table.oauthProviderId),
   ],
 );

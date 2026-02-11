@@ -5,3 +5,10 @@ export * from "./problems";
 export * from "./solutions";
 export * from "./debates";
 export * from "./guardrails";
+
+// Sprint 6: Human onboarding schemas
+export * from "./humanProfiles";
+export * from "./tokenTransactions";
+export * from "./sessions";
+export * from "./accounts";
+export * from "./verificationTokens";

@@ -1,0 +1,574 @@
+openapi: 3.1.0
+info:
+  title: BetterWorld Human Profile API
+  version: 1.0.0
+  description: |
+    Profile management endpoints for human users (Sprint 6).
+
+    Features:
+    - Rich profile creation with skills, location, languages, availability
+    - PostGIS geocoding (Nominatim) with 1km grid snapping for privacy
+    - Profile completeness scoring (0-100%) with weighted categories
+    - Ownership-based access control (users can only edit own profiles)
+
+servers:
+  - url: https://api.betterworld.ai/v1
+    description: Production
+  - url: http://localhost:4000/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Profile
+    description: Profile CRUD operations
+  - name: Completeness
+    description: Profile completeness scoring
+
+paths:
+  /profile:
+    get:
+      summary: Get current user's profile
+      description: |
+        Retrieve the authenticated user's profile, including completeness score and suggestions.
+      tags:
+        - Profile
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProfileWithCompleteness'
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Profile not found (user registered but hasn't created profile yet)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "PROFILE_NOT_FOUND"
+                  message: "Profile not found. Complete your profile to access missions."
+                requestId: "req-abc123"
+
+    post:
+      summary: Create user profile
+      description: |
+        Create profile for newly registered user. This is typically called immediately after email verification.
+
+        **Required fields**: skills (≥1), city, country, languages (≥1), availability
+        **Optional fields**: bio, wallet_address, certifications
+
+        **Geocoding**: City+country are geocoded to latitude/longitude using Nominatim (OpenStreetMap).
+        Coordinates are snapped to 1km grid for privacy.
+      tags:
+        - Profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileCreateRequest'
+      responses:
+        '201':
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProfileWithCompleteness'
+                  requestId:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Profile already exists for this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "PROFILE_EXISTS"
+                  message: "Profile already exists. Use PATCH /profile to update."
+                requestId: "req-abc123"
+
+    patch:
+      summary: Update user profile
+      description: |
+        Update the authenticated user's profile. All fields are optional (partial update).
+
+        **Geocoding**: If `city` or `country` are updated, automatic re-geocoding is triggered.
+
+        **Profile completeness**: Recalculated automatically after each update.
+      tags:
+        - Profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProfileWithCompleteness'
+                  requestId:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /profile/completeness:
+    get:
+      summary: Get profile completeness breakdown
+      description: |
+        Retrieve detailed profile completeness score with per-category breakdown and improvement suggestions.
+
+        **Scoring formula**:
+        - Core Matching (50%): skills (20%), location (20%), languages (10%)
+        - Availability (20%): availability hours
+        - Identity (15%): bio (10%), avatar (5%)
+        - Optional (15%): wallet (10%), certifications (5%)
+
+        **Score interpretation**:
+        - 0-40%: Incomplete (missing core fields, poor mission matching)
+        - 41-70%: Functional (has core fields, missing optional)
+        - 71-90%: Strong (most fields complete)
+        - 91-100%: Complete (all fields filled)
+      tags:
+        - Completeness
+      responses:
+        '200':
+          description: Completeness breakdown retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/CompletenessBreakdown'
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token from authentication endpoints"
+
+  schemas:
+    ProfileCreateRequest:
+      type: object
+      required:
+        - skills
+        - city
+        - country
+        - languages
+        - availability
+      properties:
+        skills:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          example: ["data_analysis", "python", "community_organizing"]
+          description: "Array of skill identifiers (min 1 required)"
+        city:
+          type: string
+          minLength: 2
+          maxLength: 200
+          example: "Jakarta"
+          description: "City name for geocoding"
+        country:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Indonesia"
+          description: "Country name for geocoding"
+        serviceRadius:
+          type: integer
+          minimum: 5
+          maximum: 50
+          default: 10
+          example: 10
+          description: "Mission matching radius in kilometers (5-50km)"
+        languages:
+          type: array
+          items:
+            type: string
+            pattern: '^[a-z]{2}$'
+          minItems: 1
+          example: ["en", "id"]
+          description: "ISO 639-1 language codes (min 1 required)"
+        availability:
+          type: object
+          required:
+            - weekdays
+            - weekends
+            - timezone
+          properties:
+            weekdays:
+              type: array
+              items:
+                type: string
+                pattern: '^[0-2][0-9]:[0-5][0-9]-[0-2][0-9]:[0-5][0-9]$'
+              example: ["18:00-22:00"]
+              description: "Array of time ranges for weekdays (Monday-Friday)"
+            weekends:
+              type: array
+              items:
+                type: string
+                pattern: '^[0-2][0-9]:[0-5][0-9]-[0-2][0-9]:[0-5][0-9]$'
+              example: ["09:00-17:00"]
+              description: "Array of time ranges for weekends (Saturday-Sunday)"
+            timezone:
+              type: string
+              example: "Asia/Jakarta"
+              description: "IANA timezone identifier"
+          description: "Structured availability schedule"
+        bio:
+          type: string
+          maxLength: 500
+          example: "University student passionate about environmental protection and data science."
+          description: "Short bio (max 500 chars)"
+        walletAddress:
+          type: string
+          maxLength: 100
+          example: "0x1234567890abcdef1234567890abcdef12345678"
+          description: "Cryptocurrency wallet address (future on-chain features)"
+        certifications:
+          type: array
+          items:
+            type: string
+          example: ["cpr_certified", "first_aid"]
+          description: "Array of certification identifiers"
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        skills:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          example: ["data_analysis", "python"]
+        city:
+          type: string
+          minLength: 2
+          maxLength: 200
+          example: "Surabaya"
+        country:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "Indonesia"
+        serviceRadius:
+          type: integer
+          minimum: 5
+          maximum: 50
+          example: 15
+        languages:
+          type: array
+          items:
+            type: string
+            pattern: '^[a-z]{2}$'
+          minItems: 1
+          example: ["en", "id", "zh"]
+        availability:
+          type: object
+          properties:
+            weekdays:
+              type: array
+              items:
+                type: string
+            weekends:
+              type: array
+              items:
+                type: string
+            timezone:
+              type: string
+        bio:
+          type: string
+          maxLength: 500
+          example: "Data scientist passionate about using AI for social good."
+        walletAddress:
+          type: string
+          maxLength: 100
+          example: "0xabcdef1234567890abcdef1234567890abcdef12"
+        certifications:
+          type: array
+          items:
+            type: string
+          example: ["cpr_certified", "data_science_cert"]
+      description: "All fields optional for partial updates"
+
+    ProfileWithCompleteness:
+      type: object
+      properties:
+        humanId:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        skills:
+          type: array
+          items:
+            type: string
+          example: ["data_analysis", "python", "community_organizing"]
+        city:
+          type: string
+          example: "Jakarta"
+        country:
+          type: string
+          example: "Indonesia"
+        location:
+          type: object
+          properties:
+            latitude:
+              type: number
+              format: double
+              example: -6.21
+              description: "Snapped to 1km grid for privacy"
+            longitude:
+              type: number
+              format: double
+              example: 106.85
+              description: "Snapped to 1km grid for privacy"
+          nullable: true
+          description: "Geocoded coordinates (null if geocoding failed)"
+        serviceRadius:
+          type: integer
+          example: 10
+          description: "Mission matching radius (km)"
+        languages:
+          type: array
+          items:
+            type: string
+          example: ["en", "id"]
+        availability:
+          type: object
+          properties:
+            weekdays:
+              type: array
+              items:
+                type: string
+              example: ["18:00-22:00"]
+            weekends:
+              type: array
+              items:
+                type: string
+              example: ["09:00-17:00"]
+            timezone:
+              type: string
+              example: "Asia/Jakarta"
+        bio:
+          type: string
+          nullable: true
+          example: "University student passionate about social good."
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://avatars.githubusercontent.com/u/12345"
+          description: "Populated from OAuth profile or uploaded manually"
+        walletAddress:
+          type: string
+          nullable: true
+          example: "0x1234567890abcdef1234567890abcdef12345678"
+        certifications:
+          type: array
+          items:
+            type: string
+          example: ["cpr_certified"]
+        profileCompletenessScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 75
+          description: "Cached completeness score (0-100%)"
+        orientationCompleted:
+          type: boolean
+          example: true
+          description: "Whether user completed orientation tutorial"
+        totalMissionsCompleted:
+          type: integer
+          example: 0
+          description: "Populated by Sprint 7"
+        totalTokensEarned:
+          type: integer
+          example: 10
+          description: "Total tokens earned (including orientation reward)"
+        streakDays:
+          type: integer
+          example: 0
+          description: "Consecutive days active"
+        lastActiveAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-02-10T12:34:56Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-10T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-02-10T12:00:00Z"
+        completeness:
+          $ref: '#/components/schemas/CompletenessBreakdown'
+
+    CompletenessBreakdown:
+      type: object
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 75
+          description: "Overall completeness score (rounded down)"
+        breakdown:
+          type: object
+          properties:
+            skills:
+              $ref: '#/components/schemas/CompletenessField'
+            location:
+              $ref: '#/components/schemas/CompletenessField'
+            languages:
+              $ref: '#/components/schemas/CompletenessField'
+            availability:
+              $ref: '#/components/schemas/CompletenessField'
+            bio:
+              $ref: '#/components/schemas/CompletenessField'
+            avatar:
+              $ref: '#/components/schemas/CompletenessField'
+            wallet:
+              $ref: '#/components/schemas/CompletenessField'
+            certifications:
+              $ref: '#/components/schemas/CompletenessField'
+        suggestions:
+          type: array
+          items:
+            type: string
+          example:
+            - "Add your location for better mission matching"
+            - "Set your availability hours"
+            - "Write a short bio to introduce yourself"
+          description: "Prioritized suggestions for improving completeness"
+
+    CompletenessField:
+      type: object
+      properties:
+        complete:
+          type: boolean
+          example: true
+        weight:
+          type: integer
+          example: 20
+          description: "Weight of this field in overall score (%)"
+        points:
+          type: integer
+          example: 20
+          description: "Points earned from this field (0 or weight)"
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_INPUT"
+            message:
+              type: string
+              example: "Validation error"
+            details:
+              type: object
+              additionalProperties: true
+        requestId:
+          type: string
+          example: "req-abc123"
+
+  responses:
+    BadRequest:
+      description: Invalid request (validation error)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error:
+              code: "INVALID_INPUT"
+              message: "Validation error"
+              details:
+                skills: "Must include at least 1 skill"
+                languages: "Must include at least 1 language"
+            requestId: "req-abc123"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error:
+              code: "UNAUTHORIZED"
+              message: "Missing or invalid access token"
+            requestId: "req-abc123"

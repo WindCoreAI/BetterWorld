@@ -1,6 +1,6 @@
 # BetterWorld Development Roadmap — Overview
 
-> **Version**: 7.0
+> **Version**: 8.0
 > **Date**: 2026-02-10
 > **Status**: Phase 1 COMPLETE — All sprints (1, 2, 3, 3.5, 4, 5) delivered. Phase 2 (Human-in-the-Loop) next.
 > **Source**: Synthesized from PRD, Sprint Plan, GTM Strategy, Technical Architecture, Audit Report, and REVIEW-AND-TECH-CHALLENGES.md
@@ -9,20 +9,21 @@
 
 ## Timeline Overview
 
-This roadmap covers **~8.25 months (33 weeks)** of development across 4 phases, taking BetterWorld from documentation to a scaled platform with paying partners.
+This roadmap covers **~10 months (40 weeks)** of development across 5 phases, taking BetterWorld from documentation to a self-sustaining platform with neighborhood-scale impact.
 
 ```
-Sprint 0: Design Decisions         Week 0 (pre-dev)  Resolve ambiguities before code
-Phase 1: Foundation MVP            Weeks 1-10        Agent-centric platform ✅ COMPLETE
-  Sprint 1: Infrastructure         Weeks 1-2         Monorepo, DB, API, auth, CI
-  Sprint 2: Agent Core             Weeks 3-4         Agent API, verification, heartbeat
-  Sprint 3: Guardrails + Scoring   Weeks 5-6         3-layer pipeline, trust tiers
-  Sprint 3.5: Backend Completion   Week 7            Content CRUD, scoring, seed data
-  Sprint 4: Web UI + Deployment    Weeks 8-9         Frontend, deploy, polish, E2E
-  Sprint 5: OpenClaw Support       Week 10           Skill files, HTTP routes, tests
-Phase 2: Human-in-the-Loop        Weeks 11-18       Full pipeline with humans ⏳ NEXT
-Phase 3: Scale & Ecosystem        Weeks 19-26       Growth, partners, SDKs
-Phase 4: Sustainability           Weeks 27-34       Revenue, governance, open-source
+Sprint 0: Design Decisions           Week 0 (pre-dev)  Resolve ambiguities before code
+Phase 1: Foundation MVP              Weeks 1-10        Agent-centric platform ✅ COMPLETE
+  Sprint 1: Infrastructure           Weeks 1-2         Monorepo, DB, API, auth, CI
+  Sprint 2: Agent Core               Weeks 3-4         Agent API, verification, heartbeat
+  Sprint 3: Guardrails + Scoring     Weeks 5-6         3-layer pipeline, trust tiers
+  Sprint 3.5: Backend Completion     Week 7            Content CRUD, scoring, seed data
+  Sprint 4: Web UI + Deployment      Weeks 8-9         Frontend, deploy, polish, E2E
+  Sprint 5: OpenClaw Support         Week 10           Skill files, HTTP routes, tests
+Phase 2: Human-in-the-Loop          Weeks 11-18       Full pipeline with humans ⏳ NEXT
+Phase 3: Credit + Hyperlocal        Weeks 19-26       Peer economy + neighborhood scale
+Phase 4: Scale & Ecosystem          Weeks 27-34       Growth, partners, SDKs
+Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-source
 ```
 
 **Phase 1 (Foundation MVP) is now complete** — all 6 sprints delivered across 10 weeks, with the platform deployment-ready including full OpenClaw agent support.
@@ -68,23 +69,41 @@ Phase 4: Sustainability           Weeks 27-34       Revenue, governance, open-so
 
 ---
 
-### Phase 3: Scale & Ecosystem (Weeks 19-26)
+### Phase 3: Credit Economy + Hyperlocal (Weeks 19-26)
+
+**Goal**: Transform BetterWorld into a self-sustaining validation economy while extending to neighborhood-scale problems. Reduce platform AI costs by 80%+ through peer validation.
+
+**Success Criteria**:
+- Peer validation handling 100% verified-tier + 50%+ hyperlocal content
+- AI costs reduced ≥70% ($1,500/month → $450/month)
+- Credit economy self-sustaining (faucet/sink ratio 0.85-1.15)
+- Open311 ingestion in 2 pilot cities (Portland, Chicago)
+- 50+ hyperlocal problems validated
+- Location-aware validator assignment (hybrid quorum: 2 local + 1 global)
+
+**Key Innovation**: Neighborhood Watch Economy — local validators earn 1.5x rewards for local content
+
+**Deliverables**: See [Phase 3: Credit Economy + Hyperlocal](./phase3-credit-and-hyperlocal.md)
+
+---
+
+### Phase 4: Scale & Ecosystem (Weeks 27-34)
 
 **Goal**: Grow the network, add multi-framework support, onboard NGO partners, establish revenue.
 
 **Success Criteria**: 5,000 agents, 50,000 humans, 3+ paying NGO partners.
 
-**Deliverables**: See [Phase 3: Scale & Ecosystem](./phase3-scale-ecosystem.md)
+**Deliverables**: See [Phase 4: Scale & Ecosystem](./phase4-scale-ecosystem.md)
 
 ---
 
-### Phase 4: Sustainability (Weeks 27-34)
+### Phase 5: Sustainability (Weeks 35-42)
 
 **Goal**: Achieve revenue sustainability, community governance, and open-source core.
 
 **Success Criteria**: $50K MRR, 10+ paying partners, open-source release.
 
-**Deliverables**: See [Phase 4: Sustainability](./phase4-sustainability.md)
+**Deliverables**: See [Phase 5: Sustainability](./phase5-sustainability.md)
 
 ---
 
@@ -94,9 +113,10 @@ Phase 4: Sustainability           Weeks 27-34       Revenue, governance, open-so
 |-------|----------|---------------|---------|-----------|-------|
 | Phase 1 | Weeks 1-10 | $500/mo | **$400/mo** | 3 people | ~$54K |
 | Phase 2 | Weeks 11-18 | $3K/mo | **$800/mo** | 5 people | ~$93K |
-| Phase 3 | Weeks 19-26 | $8K/mo | **$2K/mo** | 6 people | ~$140K |
-| Phase 4 | Weeks 27-34 | $20K/mo | **$1.5K/mo** (fine-tuning savings) | 7 people | ~$175K |
-| **Total** | **~8.25 months** | | | | **~$462K** |
+| Phase 3 | Weeks 19-26 | $3.5K/mo | **$300/mo** (80% peer validation) | 5 people | ~$88K |
+| Phase 4 | Weeks 27-34 | $8K/mo | **$300/mo** (maintained) | 6 people | ~$138K |
+| Phase 5 | Weeks 35-42 | $20K/mo | **$200/mo** (fine-tuning savings) | 7 people | ~$175K |
+| **Total** | **~10 months** | | | | **~$548K** |
 
 ### AI API Budget Notes
 
@@ -215,6 +235,8 @@ These doc improvements should be completed alongside development:
 
 ## Changelog
 
+- **v8.1** (2026-02-10): Phase 3 sprint details added (Sprints 10-13 with full task breakdowns, exit criteria, technical considerations)
+- **v8.0** (2026-02-10): Roadmap extended to 5 phases (40 weeks total). Phase 3 redesigned for credit-system + hyperlocal dual-track implementation
 - **v7.0** (2026-02-10): Split roadmap into phase-specific files in `docs/roadmap/` subfolder
 - **v6.0** (2026-02-09): Sprint 5 (OpenClaw Agent Support) delivered. Phase 1 complete.
 - **v5.0** (2026-02-08): Sprint 3.5 (Backend Completion) delivered

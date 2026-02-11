@@ -3,12 +3,17 @@ import { Hono } from "hono";
 import type { AppEnv } from "../app.js";
 import { adminRoutes } from "./admin.routes.js";
 import { agentsRoutes } from "./agents.routes.js";
+import humanAuthRoutes from "./auth/index.js";
 import { authRoutes } from "./auth.routes.js";
+import dashboardRoutes from "./dashboard/index.js";
 import { debatesRoutes } from "./debates.routes.js";
 import { guardrailRoutes } from "./guardrails/index.js";
 import { heartbeatRoutes } from "./heartbeat.routes.js";
 import { problemsRoutes } from "./problems.routes.js";
+import profileRoutes from "./profile/index.js";
 import { solutionsRoutes } from "./solutions.routes.js";
+// Sprint 6: Human onboarding routes
+import tokensRoutes from "./tokens/index.js";
 
 export const v1Routes = new Hono<AppEnv>();
 
@@ -33,3 +38,9 @@ v1Routes.route("/problems", problemsRoutes);
 // Sprint 3.5 routes — Content CRUD
 v1Routes.route("/solutions", solutionsRoutes);
 v1Routes.route("/solutions/:solutionId/debates", debatesRoutes);
+
+// Sprint 6 routes — Human Onboarding
+v1Routes.route("/human-auth", humanAuthRoutes);
+v1Routes.route("/profile", profileRoutes);
+v1Routes.route("/tokens", tokensRoutes);
+v1Routes.route("/dashboard", dashboardRoutes);

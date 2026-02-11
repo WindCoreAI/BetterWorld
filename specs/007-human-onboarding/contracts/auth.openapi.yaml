@@ -1,0 +1,626 @@
+openapi: 3.1.0
+info:
+  title: BetterWorld Human Authentication API
+  version: 1.0.0
+  description: |
+    Authentication endpoints for human onboarding (Sprint 6).
+
+    Supports:
+    - OAuth 2.0 + PKCE (Google, GitHub)
+    - Email/password registration with verification
+    - JWT access tokens (15min) + refresh token rotation (7-day)
+    - Session management with Redis caching
+
+servers:
+  - url: https://api.betterworld.ai/v1
+    description: Production
+  - url: http://localhost:4000/v1
+    description: Local development
+
+tags:
+  - name: Registration
+    description: User registration flows
+  - name: OAuth
+    description: OAuth 2.0 + PKCE flows
+  - name: Verification
+    description: Email verification
+  - name: Sessions
+    description: Session and token management
+
+paths:
+  /auth/register:
+    post:
+      summary: Register via email/password
+      description: |
+        Register a new human user with email and password. Sends 6-digit verification code to email.
+
+        **Flow**:
+        1. POST /auth/register (this endpoint)
+        2. Receive 6-digit code via email
+        3. POST /auth/verify-email with code
+        4. Access token + refresh token returned
+      tags:
+        - Registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - displayName
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "maya@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+                  example: "SecureP@ssw0rd!"
+                  description: "Min 8 chars, must include uppercase, lowercase, number, special char"
+                displayName:
+                  type: string
+                  minLength: 2
+                  maxLength: 200
+                  example: "Maya Chen"
+      responses:
+        '201':
+          description: User created, verification code sent to email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        format: uuid
+                        example: "123e4567-e89b-12d3-a456-426614174000"
+                      email:
+                        type: string
+                        format: email
+                        example: "maya@example.com"
+                      message:
+                        type: string
+                        example: "Verification code sent to maya@example.com. Expires in 15 minutes."
+                  requestId:
+                    type: string
+                    example: "req-abc123"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "EMAIL_EXISTS"
+                  message: "Email already registered. Try logging in or use password reset."
+                requestId: "req-abc123"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/verify-email:
+    post:
+      summary: Verify email with 6-digit code
+      description: |
+        Verify email address using 6-digit code sent during registration.
+        Returns access token + refresh token on success.
+      tags:
+        - Verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - code
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "maya@example.com"
+                code:
+                  type: string
+                  pattern: '^[0-9]{6}$'
+                  example: "123456"
+                  description: "6-digit verification code"
+      responses:
+        '200':
+          description: Email verified, tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid or expired code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "INVALID_CODE"
+                  message: "Verification code is invalid or expired. Request a new code."
+                requestId: "req-abc123"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/resend-code:
+    post:
+      summary: Resend verification code
+      description: |
+        Resend 6-digit verification code to email. Throttled to 3 requests per hour.
+      tags:
+        - Verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "maya@example.com"
+      responses:
+        '200':
+          description: New verification code sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "New verification code sent to maya@example.com"
+                  requestId:
+                    type: string
+        '429':
+          description: Rate limit exceeded (max 3 per hour)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "RATE_LIMIT_EXCEEDED"
+                  message: "Too many verification code requests. Try again in 45 minutes."
+                requestId: "req-abc123"
+
+  /auth/oauth/google:
+    get:
+      summary: Initiate Google OAuth flow
+      description: |
+        Redirect user to Google OAuth consent screen with PKCE challenge.
+
+        **Flow**:
+        1. Frontend generates code_verifier (random 128-char string)
+        2. Frontend calculates code_challenge = SHA256(code_verifier) base64url-encoded
+        3. Frontend redirects to GET /auth/oauth/google?code_challenge={challenge}
+        4. Google consent screen → user authorizes
+        5. Redirect to /auth/oauth/google/callback with authorization code
+        6. Backend exchanges code + code_verifier for tokens
+      tags:
+        - OAuth
+      parameters:
+        - name: code_challenge
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 43
+            maxLength: 128
+          example: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+          description: "SHA256(code_verifier) base64url-encoded (PKCE)"
+        - name: redirect_uri
+          in: query
+          schema:
+            type: string
+            format: uri
+            default: "https://betterworld.ai/auth/callback"
+          example: "https://betterworld.ai/auth/callback"
+      responses:
+        '302':
+          description: Redirect to Google OAuth consent screen
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "https://accounts.google.com/o/oauth2/v2/auth?client_id=...&redirect_uri=...&code_challenge=..."
+
+  /auth/oauth/google/callback:
+    get:
+      summary: Google OAuth callback
+      description: |
+        Receives authorization code from Google, exchanges for tokens.
+        Uses PKCE code_verifier to prevent authorization code interception.
+      tags:
+        - OAuth
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "4/0AX4XfWh..."
+          description: "Authorization code from Google"
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "abc123xyz"
+          description: "CSRF protection state parameter"
+        - name: code_verifier
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 43
+            maxLength: 128
+          example: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+          description: "Original code_verifier from PKCE flow"
+      responses:
+        '302':
+          description: Redirect to frontend with tokens
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "https://betterworld.ai/auth/success?token=eyJhbGci..."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: OAuth authorization failed or PKCE verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "OAUTH_FAILED"
+                  message: "Google OAuth authorization failed or PKCE code_verifier mismatch"
+                requestId: "req-abc123"
+
+  /auth/oauth/github:
+    get:
+      summary: Initiate GitHub OAuth flow
+      description: |
+        Redirect user to GitHub OAuth consent screen with PKCE challenge.
+        Same flow as Google OAuth.
+      tags:
+        - OAuth
+      parameters:
+        - name: code_challenge
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "SHA256(code_verifier) base64url-encoded (PKCE)"
+        - name: redirect_uri
+          in: query
+          schema:
+            type: string
+            format: uri
+            default: "https://betterworld.ai/auth/callback"
+      responses:
+        '302':
+          description: Redirect to GitHub OAuth consent screen
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "https://github.com/login/oauth/authorize?client_id=...&redirect_uri=...&code_challenge=..."
+
+  /auth/oauth/github/callback:
+    get:
+      summary: GitHub OAuth callback
+      description: |
+        Receives authorization code from GitHub, exchanges for tokens.
+      tags:
+        - OAuth
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Authorization code from GitHub"
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "CSRF protection state parameter"
+        - name: code_verifier
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Original code_verifier from PKCE flow"
+      responses:
+        '302':
+          description: Redirect to frontend with tokens
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "https://betterworld.ai/auth/success?token=eyJhbGci..."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: OAuth authorization failed or PKCE verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      summary: Login via email/password
+      description: |
+        Login with email and password. Returns access token + refresh token.
+      tags:
+        - Sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "maya@example.com"
+                password:
+                  type: string
+                  example: "SecureP@ssw0rd!"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid credentials or email not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "INVALID_CREDENTIALS"
+                  message: "Email or password is incorrect"
+                requestId: "req-abc123"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      description: |
+        Exchange refresh token for new access token + refresh token.
+        Old refresh token is invalidated (rotation).
+      tags:
+        - Sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: New tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                ok: false
+                error:
+                  code: "INVALID_REFRESH_TOKEN"
+                  message: "Refresh token is invalid or expired. Please log in again."
+                requestId: "req-abc123"
+
+  /auth/logout:
+    post:
+      summary: Logout and invalidate session
+      description: |
+        Logout current session, invalidate access token and refresh token.
+      tags:
+        - Sessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Logged out successfully"
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token (15-minute expiry)"
+
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              description: "JWT access token (expires in 15 minutes)"
+            refreshToken:
+              type: string
+              example: "rt_abc123xyz..."
+              description: "Refresh token (expires in 7 days, rotates on use)"
+            expiresIn:
+              type: integer
+              example: 900
+              description: "Access token expiry in seconds (15 minutes)"
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  example: "123e4567-e89b-12d3-a456-426614174000"
+                email:
+                  type: string
+                  format: email
+                  example: "maya@example.com"
+                displayName:
+                  type: string
+                  example: "Maya Chen"
+                role:
+                  type: string
+                  enum: ["human", "admin", "moderator"]
+                  example: "human"
+                emailVerified:
+                  type: boolean
+                  example: true
+        requestId:
+          type: string
+          example: "req-abc123"
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_INPUT"
+            message:
+              type: string
+              example: "Validation error: email must be a valid email address"
+            details:
+              type: object
+              additionalProperties: true
+        requestId:
+          type: string
+          example: "req-abc123"
+
+  responses:
+    BadRequest:
+      description: Invalid request (validation error)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error:
+              code: "INVALID_INPUT"
+              message: "Validation error"
+              details:
+                email: "Must be a valid email address"
+                password: "Must be at least 8 characters"
+            requestId: "req-abc123"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error:
+              code: "UNAUTHORIZED"
+              message: "Missing or invalid access token"
+            requestId: "req-abc123"
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            error:
+              code: "RATE_LIMIT_EXCEEDED"
+              message: "Too many requests. Try again in 60 seconds."
+            requestId: "req-abc123"
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            example: 60
+          description: "Seconds until rate limit resets"

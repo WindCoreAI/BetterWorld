@@ -14,6 +14,12 @@ import { v1Routes } from "./routes/v1.routes.js";
 export type AppEnv = {
   Variables: {
     requestId: string;
+    human: {
+      id: string;
+      email: string;
+      displayName: string;
+      role: string;
+    };
   };
 };
 

@@ -84,3 +84,18 @@ export const patternSeverityEnum = pgEnum("pattern_severity", [
   "high",
   "critical",
 ]);
+
+// Sprint 6: Token transaction types
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  // Earn (positive amounts)
+  "earn_orientation",
+  "earn_mission",
+  "earn_reward",
+  "earn_bonus",
+  "earn_referral",
+  // Spend (negative amounts)
+  "spend_vote",
+  "spend_circle",
+  "spend_analytics",
+  "spend_custom",
+]);
