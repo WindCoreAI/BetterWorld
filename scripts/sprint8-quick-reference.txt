@@ -1,0 +1,152 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    SPRINT 8 COMPLETION QUICK REFERENCE                     ║
+║                         Evidence Verification Pipeline                     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ AUTOMATED (RECOMMENDED)                                                  │
+├──────────────────────────────────────────────────────────────────────────┤
+│ cd /Users/zhiruifeng/Workspace/WindCore/BetterWorld                      │
+│ ./scripts/complete-sprint8.sh                                            │
+│                                                                           │
+│ ✓ Generates migration                                                    │
+│ ✓ Applies to PostgreSQL                                                  │
+│ ✓ Seeds 5 honeypots                                                      │
+│ ✓ Runs full test suite                                                   │
+│ ✓ Verifies all exit criteria                                             │
+│                                                                           │
+│ Time: ~5-10 minutes                                                       │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ MANUAL STEPS                                                              │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│ 1. GENERATE MIGRATION (~2 min)                                           │
+│    pnpm db:generate                                                       │
+│    → Creates: packages/db/drizzle/0006_*.sql                             │
+│                                                                           │
+│ 2. APPLY MIGRATION (~1 min)                                              │
+│    pnpm db:migrate                                                        │
+│    → Creates tables: evidence, peer_reviews, review_history,             │
+│                      verification_audit_log                               │
+│    → Adds column: missions.is_honeypot                                   │
+│                                                                           │
+│ 3. SEED HONEYPOTS (~1 min)                                               │
+│    pnpm --filter @betterworld/db seed:honeypots                          │
+│    → Inserts 5 impossible missions for fraud detection                   │
+│                                                                           │
+│ 4. RUN TESTS (~5-10 min)                                                 │
+│    pnpm test                                                              │
+│    → Expected: 852+ tests passing (810 + 42 new)                         │
+│                                                                           │
+│ 5. VERIFY TABLES                                                         │
+│    pnpm db:studio                                                         │
+│    → Opens: http://localhost:4983                                        │
+│    → Browse new tables                                                    │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                                           │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│ ❌ "relation does not exist"                                             │
+│    → Run: pnpm db:migrate                                                │
+│                                                                           │
+│ ❌ "Cannot connect to database"                                          │
+│    → Run: docker compose up -d postgres redis                            │
+│                                                                           │
+│ ❌ "pnpm: command not found"                                             │
+│    → Run: npm install -g pnpm                                            │
+│                                                                           │
+│ ❌ Tests fail with SUPABASE_URL undefined                                │
+│    → Add to apps/api/.env:                                               │
+│      SUPABASE_URL=http://localhost:54321                                 │
+│      SUPABASE_SERVICE_KEY=your-key                                       │
+│      SUPABASE_STORAGE_BUCKET=evidence                                    │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ VERIFICATION CHECKLIST                                                    │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│ □ Migration file exists: packages/db/drizzle/0006_*.sql                  │
+│ □ Tables visible in Drizzle Studio (4 new tables)                        │
+│ □ Honeypots seeded (5 missions with is_honeypot = true)                  │
+│ □ Test suite passing (852+ tests)                                        │
+│ □ No "relation does not exist" errors                                    │
+│                                                                           │
+│ All checked = Sprint 8: 100% Complete ✅                                 │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ POST-COMPLETION TASKS                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│ 1. Update docs/roadmap/phase2-human-in-the-loop.md                       │
+│    - Change Sprint 8 status: 90% → 100% COMPLETE                         │
+│    - Check all 16 exit criteria boxes                                    │
+│                                                                           │
+│ 2. Update CLAUDE.md Recent Changes                                       │
+│    - Add Sprint 8 completion summary                                     │
+│                                                                           │
+│ 3. Commit migration                                                       │
+│    git add packages/db/drizzle/0006_*.sql                                │
+│    git add packages/db/drizzle/meta/                                     │
+│    git commit -m "Sprint 8: Apply evidence verification migration"       │
+│                                                                           │
+│ See: scripts/post-sprint8-updates.md for detailed instructions           │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ WHAT WAS BUILT (Summary)                                                  │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│ Backend:  1,393 lines (API routes + worker)                              │
+│ Frontend:   688 lines (9 UI components + 2 pages)                        │
+│ Tests:      666 lines (42 tests in 6 files)                              │
+│ Docs:     1,817 lines (spec, plan, tasks, contracts)                     │
+│ ────────────────────────────────────────────────────────                 │
+│ Total:    4,564 lines (excluding schema/migrations)                      │
+│                                                                           │
+│ Features:                                                                 │
+│ • Evidence submission (multipart upload, EXIF extraction)                │
+│ • AI verification via Claude Vision (GPS, timestamp, authenticity)       │
+│ • Peer review with 2-hop stranger exclusion                              │
+│ • Token rewards with confidence multiplier                               │
+│ • Mobile-first UI (camera, GPS, checklist, preview)                      │
+│ • 5 honeypot missions for fraud detection                                │
+│ • Verification audit log (immutable trail)                               │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ NEXT: SPRINT 9 (Reputation & Impact)                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│ Sprint 8 completion UNBLOCKS Sprint 9:                                   │
+│ • Reputation scoring (uses evidence verification data)                   │
+│ • Leaderboards (reputation, impact, tokens, missions)                    │
+│ • Impact Dashboard (platform metrics + heatmap)                          │
+│ • Fraud detection (pHash duplicate detection via blockhash-core)         │
+│ • Phase 2 load testing (k6: 5K concurrent users)                         │
+│                                                                           │
+└──────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║ REFERENCE DOCS                                                             ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ Completion Guide:  scripts/SPRINT8-COMPLETION-GUIDE.md                    ║
+║ Completeness Rpt:  docs/archive/sprint8-completeness-report.md            ║
+║ Post-Update Tasks: scripts/post-sprint8-updates.md                        ║
+║ Sprint 8 Spec:     specs/009-evidence-verification/spec.md                ║
+║ Sprint 8 Tasks:    specs/009-evidence-verification/tasks.md               ║
+║ Quickstart:        specs/009-evidence-verification/quickstart.md          ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+Last Updated: 2026-02-11
+Status: Ready for execution
