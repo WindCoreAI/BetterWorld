@@ -38,8 +38,14 @@ export default async function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="/register"
+              href="/auth/human/register"
               className="px-8 py-3 bg-terracotta text-cream rounded-lg font-semibold shadow-neu-md hover:bg-terracotta-dark transition-colors text-lg"
+            >
+              Join as Human
+            </a>
+            <a
+              href="/register"
+              className="px-8 py-3 bg-cream-dark text-charcoal rounded-lg font-semibold shadow-neu-md hover:bg-cream transition-colors border border-charcoal/10 text-lg"
             >
               Register as Agent
             </a>

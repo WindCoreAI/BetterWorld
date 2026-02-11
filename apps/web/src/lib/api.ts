@@ -86,3 +86,43 @@ export async function validateAdminToken(token: string): Promise<boolean> {
     return false;
   }
 }
+
+// ── Human Auth Token Helpers ──
+
+const HUMAN_ACCESS_KEY = "bw_human_access_token";
+const HUMAN_REFRESH_KEY = "bw_human_refresh_token";
+
+export function getHumanToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(HUMAN_ACCESS_KEY);
+}
+
+export function getHumanRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(HUMAN_REFRESH_KEY);
+}
+
+export function setHumanTokens(accessToken: string, refreshToken: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(HUMAN_ACCESS_KEY, accessToken);
+    localStorage.setItem(HUMAN_REFRESH_KEY, refreshToken);
+    window.dispatchEvent(new Event("bw-human-auth-change"));
+  }
+}
+
+export function clearHumanTokens(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(HUMAN_ACCESS_KEY);
+    localStorage.removeItem(HUMAN_REFRESH_KEY);
+    window.dispatchEvent(new Event("bw-human-auth-change"));
+  }
+}
+
+export function getHumanAuthHeaders(): Record<string, string> {
+  const token = getHumanToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}

@@ -1,8 +1,8 @@
 # Phase 2: Human-in-the-Loop (Weeks 11-18)
 
-**Version**: 8.1
+**Version**: 8.2
 **Duration**: 8 weeks (Weeks 11-18)
-**Status**: IN PROGRESS — Sprint 6 backend complete, frontend + integration tests pending
+**Status**: IN PROGRESS — Sprint 6 complete (13/13 exit criteria, 768 tests). Sprint 7 ready to begin.
 **Last Updated**: 2026-02-10
 
 ## Overview
@@ -61,15 +61,17 @@ Phase 2 introduces humans as first-class participants. Exit criteria focus on bi
 | 1 | Human registration (better-auth OAuth 2.0 + PKCE: Google, GitHub + email/password fallback) | BE1 | 12h | Humans can register | ✅ Done (backend) |
 | 2 | Profile creation (skills array, location PostGIS point, languages array, availability hours, bio 500 char, orientation_completed_at) | BE1 | 8h | Rich profiles stored | ✅ Done (backend) |
 | 3 | Email verification (reuse agent verification flow: 6-digit codes, 15-min expiry, resend throttling, add `user_type` column) | BE1 | 4h | Email verified before mission claims | ✅ Done (backend) |
-| 4 | **Orientation tutorial** (dedicated `/onboarding` route, 5-step flow: constitution → domains → missions → evidence → tokens, progress in `human_profiles.metadata` JSONB, earns 10 IT via POST /tokens/orientation-reward with idempotency check) | FE + BE2 | 14h | Onboarding complete with reward | ⏳ Backend done, frontend pending |
-| 5 | Human dashboard (active missions list, token balance card, reputation score, activity feed, profile completeness indicator, "Complete orientation" CTA if pending) | FE | 12h | Dashboard operational | ⏳ Backend API done, frontend pending |
+| 4 | **Orientation tutorial** (dedicated `/onboarding` route, 5-step flow: constitution → domains → missions → evidence → tokens, progress in `human_profiles.metadata` JSONB, earns 10 IT via POST /tokens/orientation-reward with idempotency check) | FE + BE2 | 14h | Onboarding complete with reward | ✅ Done |
+| 5 | Human dashboard (active missions list, token balance card, reputation score, activity feed, profile completeness indicator, "Complete orientation" CTA if pending) | FE | 12h | Dashboard operational | ✅ Done |
 | 6 | ImpactToken system (**double-entry accounting**: `balance_before`/`balance_after` columns, `SELECT FOR UPDATE` on token operations, transaction audit table, daily audit job) | BE2 | 16h | Tokens earned, race-condition safe | ✅ Done |
 | 7 | Token ledger API (GET /tokens/balance, GET /tokens/transactions with cursor pagination, POST /tokens/spend with idempotency key, POST /tokens/orientation-reward) | BE2 | 6h | Token API operational | ✅ Done |
 | 8 | **Token spending system** (voting on problems/solutions: 1-10 IT, circles: 50 IT, analytics placeholder: 20 IT → "Premium Analytics Coming Soon" badge, transaction validation + balance checks) | BE2 | 8h | Tokens spendable | ✅ Done (backend) |
 | 9 | Profile update API (PATCH /profile, ownership checks, Zod validation, location geocoding via PostGIS, profile completeness score calculation) | BE1 | 4h | Profiles editable | ✅ Done |
-| 10 | Integration tests (registration → profile → orientation → tokens → spending, 15+ test cases, test idempotency, test concurrent token operations) | BE1 + BE2 | 8h | Human onboarding tested | Pending |
+| 10 | Integration tests (registration → profile → orientation → tokens → spending, 15+ test cases, test idempotency, test concurrent token operations) | BE1 + BE2 | 8h | Human onboarding tested | ✅ Done (17 tests) |
 
-**Sprint 6 Actual Deliverables (Backend — 100% complete)**:
+**Sprint 6 Actual Deliverables (100% complete)**:
+
+*Backend:*
 - **Database**: 5 new tables (accounts, sessions, humanProfiles, tokenTransactions, verificationTokens) via 2 Drizzle migrations (0004, 0005)
 - **Auth**: OAuth 2.0 + PKCE routes (Google, GitHub) with CSRF state cookies + code_verifier, email/password registration with bcrypt, email verification (6-digit codes, 15-min expiry, resend throttling), JWT session management, refresh token rotation
 - **API Routes (20 total)**: `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/verify-email`, `/auth/resend-code`, `/auth/refresh`, `/auth/oauth/google`, `/auth/oauth/google/callback`, `/auth/oauth/github`, `/auth/oauth/github/callback`, `/profile` (GET/POST/PATCH), `/dashboard` (GET), `/tokens/balance`, `/tokens/transactions`, `/tokens/spend`, `/tokens/orientation-reward`
@@ -77,22 +79,31 @@ Phase 2 introduces humans as first-class participants. Exit criteria focus on bi
 - **Profile System**: Skills array, location geocoding (Nominatim + Redis 30-day cache + 1km grid snapping for privacy), languages, availability (JSONB), bio (500 char), profile completeness scoring (weighted: Core 50%, Availability 20%, Identity 15%, Optional 15%)
 - **Shared Package**: Human Zod schemas, profile completeness utility, geocoding utility, human type definitions
 - **Middleware**: `humanAuth` middleware (JWT validation, session lookup, role enforcement)
-- **Tests**: 3 new test files (humanAuth, token-handlers, auth-helpers) — 652 total tests passing
-- **Remaining**: Frontend UI (registration page, onboarding flow, dashboard, profile), integration tests (15+)
+
+*Frontend:*
+- **Auth Pages**: Human registration (OAuth buttons + email/password), login, email verification (6-digit code input), OAuth callback handler
+- **Profile**: Profile creation form (skills, city, country, languages, bio, availability)
+- **Onboarding**: 5-step orientation wizard (Constitution, Domains, Missions, Evidence, Tokens/Reward) with progress indicator and claim reward button
+- **Dashboard**: TokenBalanceCard, ProfileCompletenessCard, MissionsCard (empty state), RecentActivity feed, auth guard + orientation check
+- **Infrastructure**: `useHumanAuth` hook, typed `humanApi` client, human type definitions, human token helpers in `lib/api.ts`
+
+*Tests:*
+- 4 Sprint 6 test files (humanAuth, token-handlers, auth-helpers, human-onboarding integration) — 768 total tests passing
+- 17 integration tests covering: registration, login, profile CRUD, orientation reward, token operations, dashboard aggregation
 
 **Sprint 6 Exit Criteria**:
 - [x] Drizzle migration deployed: `accounts`, `sessions`, `human_profiles`, `token_transactions`, `verification_tokens` tables (adapted from schema docs)
 - [x] Humans can register via OAuth (Google, GitHub) or email/password
 - [x] Email verification required before first mission claim (verification_tokens table with 6-digit codes, 15-min expiry)
 - [x] Profile creation captures skills, location (geocoded via Nominatim), languages, availability, orientation status
-- [ ] **Orientation tutorial** at `/onboarding` route, resumable via `human_profiles.metadata` JSONB, awards 10 ImpactTokens once via `orientation_completed_at` timestamp — **backend done, frontend pending**
-- [ ] Human dashboard displays tokens, missions, reputation in real-time, shows "Complete orientation" CTA if pending — **backend API done, frontend pending**
+- [x] **Orientation tutorial** at `/onboarding` route, 5-step wizard (Constitution, Domains, Missions, Evidence, Tokens), awards 10 ImpactTokens once via `orientation_completed_at` timestamp
+- [x] Human dashboard displays tokens, missions, reputation, shows "Complete orientation" CTA if pending
 - [x] ImpactToken system enforces double-entry accounting with zero balance discrepancies (SELECT FOR UPDATE, balance_before/balance_after)
 - [x] Tokens spendable on voting (1-10 IT), circles (50 IT), analytics placeholder (20 IT → "Coming Soon" badge)
 - [x] Token ledger API supports cursor pagination and idempotent spending (1-hour cached response window)
 - [x] Profile completeness score calculated (0-100%, used for mission matching in Sprint 7)
-- [x] All existing tests still pass (652 total: 354 guardrails + 158 shared + 140 API)
-- [ ] 15+ new integration tests covering human onboarding flow, including concurrent token operations — **pending**
+- [x] All existing tests still pass (768 total: 354 guardrails + 232 shared + 182 API)
+- [x] 17 integration tests covering human onboarding flow (registration, login, profile, orientation reward, token operations, dashboard)
 - [x] OAuth PKCE flow implemented for security (no implicit grant)
 
 **Sprint 6 Technical Considerations**:

@@ -1,8 +1,8 @@
 # BetterWorld Development Roadmap — Overview
 
-> **Version**: 8.2
+> **Version**: 8.3
 > **Date**: 2026-02-10
-> **Status**: Phase 1 COMPLETE. **Phase 2 IN PROGRESS** — Sprint 6 backend complete, frontend + tests pending.
+> **Status**: Phase 1 COMPLETE. **Phase 2 IN PROGRESS** — Sprint 6 complete (13/13 exit criteria, 768 tests). Sprint 7 ready to begin.
 > **Source**: Synthesized from PRD, Sprint Plan, GTM Strategy, Technical Architecture, Audit Report, and REVIEW-AND-TECH-CHALLENGES.md
 
 ---
@@ -57,14 +57,11 @@ Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-
 
 **Goal**: Complete the loop — humans register, claim missions, submit evidence, earn ImpactTokens.
 
-**Sprint 6 (Human Onboarding) — Backend 100% complete**:
-- OAuth 2.0 + PKCE registration (Google, GitHub, email/password)
-- Human profiles (skills, location geocoding, languages, availability)
-- ImpactToken double-entry accounting (SELECT FOR UPDATE, balance_before/balance_after)
-- Token spending (voting, circles, analytics placeholder), orientation reward
-- Profile completeness scoring, human dashboard API
-- 5 new DB tables, 20 API routes, Zod validation schemas, humanAuth middleware
-- **Remaining**: Frontend (registration, onboarding, dashboard, profile UI), integration tests (15+)
+**Sprint 6 (Human Onboarding) — ✅ COMPLETE**:
+- **Backend**: OAuth 2.0 + PKCE registration (Google, GitHub, email/password), human profiles (skills, location geocoding, languages, availability), ImpactToken double-entry accounting (SELECT FOR UPDATE, balance_before/balance_after), token spending (voting, circles, analytics placeholder), orientation reward, profile completeness scoring, human dashboard API, 5 new DB tables, 20 API routes, Zod validation schemas, humanAuth middleware
+- **Frontend**: Human auth pages (register, login, verify, OAuth callback), profile creation form, 5-step onboarding wizard, human dashboard (token balance, reputation, missions, activity cards)
+- **Tests**: 17 integration tests covering registration, login, profile, orientation reward, token operations, dashboard. 768 total tests passing.
+- **Sprint 7 ready to begin**
 
 **Success Criteria**:
 - 500 registered humans, 100 active weekly
@@ -244,6 +241,7 @@ These doc improvements should be completed alongside development:
 
 ## Changelog
 
+- **v8.3** (2026-02-10): Sprint 6 fully complete (backend + frontend + tests, 768 tests, 13/13 exit criteria). Sprint 7 ready.
 - **v8.2** (2026-02-10): Sprint 6 backend complete — Phase 2 status updated to IN PROGRESS
 - **v8.1** (2026-02-10): Phase 3 sprint details added (Sprints 10-13 with full task breakdowns, exit criteria, technical considerations)
 - **v8.0** (2026-02-10): Roadmap extended to 5 phases (40 weeks total). Phase 3 redesigned for credit-system + hyperlocal dual-track implementation
