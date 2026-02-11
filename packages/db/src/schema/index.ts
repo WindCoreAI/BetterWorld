@@ -17,3 +17,9 @@ export * from "./verificationTokens";
 export * from "./missions";
 export * from "./missionClaims";
 export * from "./messages";
+
+// Sprint 8: Evidence verification schemas
+export * from "./evidence";
+export * from "./peerReviews";
+export * from "./reviewHistory";
+export * from "./verificationAuditLog";

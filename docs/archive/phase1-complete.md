@@ -215,9 +215,9 @@ curl http://localhost:3000
 **Key Documents**:
 - [Roadmap](docs/roadmap/README.md) — Phase 1 complete, Phase 2 planning (organized by phase)
 - [Phase 1 Evaluation](docs/roadmap/phase1-evaluation.md) — Comprehensive evaluation
-- [LOCAL-TEST-RESULTS.md](LOCAL-TEST-RESULTS.md) — Detailed test results
-- [DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md) — Production deployment (when ready)
-- [PHASE1-LAUNCH-CHECKLIST.md](PHASE1-LAUNCH-CHECKLIST.md) — Launch checklist
+- [Local Test Results](local-test-results.md) — Detailed test results
+- [Deployment Guide](../ops/deployment-guide.md) — Production deployment (when ready)
+- [Phase 1 Launch Checklist](phase1-launch-checklist.md) — Launch checklist
 
 **Test Documentation** (44 files, 1.3MB):
 - `docs/tests/` — 7 comprehensive testing guides

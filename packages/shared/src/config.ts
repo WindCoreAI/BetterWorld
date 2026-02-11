@@ -40,6 +40,13 @@ const envSchema = z.object({
   STORAGE_ACCESS_KEY: z.string().optional(),
   STORAGE_SECRET_KEY: z.string().optional(),
   STORAGE_BUCKET: z.string().default("betterworld-evidence"),
+
+  // Sprint 8: Evidence Verification
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_KEY: z.string().optional(),
+  SUPABASE_STORAGE_BUCKET: z.string().default("evidence"),
+  VISION_DAILY_BUDGET_CENTS: z.coerce.number().int().nonnegative().default(3700), // $37/day
+  PEER_REVIEW_REWARD: z.coerce.number().int().positive().default(2), // IT per review
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

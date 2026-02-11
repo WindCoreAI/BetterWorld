@@ -59,34 +59,73 @@ Phase 7: Completeness       → Evaluate feature vs spec, fix gaps, update docs
 Phase 8: Summary            → Generate final implementation summary
 ```
 
+## Progress Visibility (MANDATORY)
+
+The user MUST be able to see real-time progress throughout the entire pipeline. This is non-negotiable.
+
+### TodoWrite Usage
+
+1. **At pipeline start**: Parse tasks.md and create a `TodoWrite` list containing:
+   - One item per task from tasks.md (use the task title/description as content)
+   - One item per pipeline phase (Phase 2: Validate, Phase 3: Review, etc.)
+   - All items start as `pending`
+
+2. **During execution**: Update the `TodoWrite` list in real-time:
+   - Mark the current task/phase as `in_progress` BEFORE starting work on it
+   - Mark it as `completed` IMMEDIATELY after finishing (not batched)
+   - Only ONE item should be `in_progress` at any time
+
+3. **Between phases**: Output a brief text message summarizing what just completed and what's next. Example:
+   ```
+   ✓ Phase 1 complete: 12/12 tasks implemented. Moving to Phase 2 (Validate + Fix)...
+   ```
+
+### tasks.md Updates
+
+**CRITICAL**: Update tasks.md IMMEDIATELY after completing each individual task — mark it `[X]` right away. Do NOT wait until all tasks are done to batch-update. If the session is interrupted mid-way, tasks.md must accurately reflect which tasks were completed.
+
+---
+
 ## Execution
 
 ### Phase 1: Implementation
 
 Execute the full implementation workflow:
 
-1. **Read the implementation skill**: Read `.claude/commands/speckit.implement.md` and follow its complete process:
+1. **Initialize progress tracking**:
+   - Parse tasks.md and create the `TodoWrite` list (see Progress Visibility above)
+   - Output: `Starting Phase 1: Implementation (N tasks across M phases)`
+
+2. **Read the implementation skill**: Read `.claude/commands/speckit.implement.md` and follow its complete process:
    - Check checklists status (if checklists/ exists)
    - Load implementation context (tasks.md, plan.md, data-model.md, contracts/, research.md, quickstart.md)
    - Verify project setup (ignore files for detected tech stack)
    - Parse task phases and dependencies
    - Execute tasks phase-by-phase (setup → tests → core → integration → polish)
    - Respect TDD approach: test tasks before implementation tasks
-   - Mark completed tasks as `[X]` in tasks.md
    - Track progress and handle errors per task
 
-2. **Subagent parallelism**: When tasks.md contains independent tasks marked `[P]` (parallel), consider using the Task tool to dispatch independent implementation tasks to subagents. This is especially valuable when 3+ tasks have no shared file dependencies. Each subagent should receive the full context (plan.md, relevant contracts, target file paths). Review each subagent's output before marking the task complete.
+3. **Per-task cycle** (repeat for every task):
+   - Update `TodoWrite`: mark current task `in_progress`
+   - Execute the task
+   - Update `tasks.md`: mark the task `[X]` immediately
+   - Update `TodoWrite`: mark current task `completed`
+   - Output brief status: `✓ Task X.Y done: [description]. (N/M tasks complete)`
 
-3. After all tasks are executed, verify:
+4. **Subagent parallelism**: When tasks.md contains independent tasks marked `[P]` (parallel), consider using the Task tool to dispatch independent implementation tasks to subagents. This is especially valuable when 3+ tasks have no shared file dependencies. Each subagent should receive the full context (plan.md, relevant contracts, target file paths). Review each subagent's output before marking the task complete in both tasks.md and TodoWrite.
+
+5. After all tasks are executed, verify:
    - All tasks in tasks.md are marked `[X]`
    - No tasks were skipped or left incomplete
    - If any tasks failed, report them and ask the user whether to continue or stop
 
-**Checkpoint**: Report task completion status before proceeding.
+**Checkpoint**: Output task completion summary and update TodoWrite before proceeding.
 
 ---
 
 ### Phase 2: Validate + Fix (Post-Implementation)
+
+Update `TodoWrite`: mark "Phase 2: Validate + Fix" as `in_progress`. Output: `Starting Phase 2: Validate + Fix...`
 
 Run the full validation pipeline and fix all failures:
 
@@ -107,13 +146,15 @@ Run the full validation pipeline and fix all failures:
 
 4. **Track modified files**: Record all files modified during validation fixes. This set is used by Phase 4/6 to determine if re-validation is needed.
 
-**Checkpoint**: All validation steps must pass before proceeding.
+**Checkpoint**: Output validation results. Update `TodoWrite`: mark Phase 2 `completed`. All validation steps must pass before proceeding.
 
 ---
 
 ### Phase 3: Code Review + Fix
 
 **Skip condition**: Skip this phase entirely if `--skip-review` flag is set.
+
+Update `TodoWrite`: mark "Phase 3: Code Review" as `in_progress`. Output: `Starting Phase 3: Code Review + Fix...`
 
 Perform a thorough code review and resolve all identified issues:
 
@@ -132,7 +173,7 @@ Perform a thorough code review and resolve all identified issues:
 
 4. **Track modified files**: Record all files modified during review fixes.
 
-**Checkpoint**: Report final review verdict (should be "Approved" or "Approved with Comments" — no P0/P1 remaining).
+**Checkpoint**: Output review verdict. Update `TodoWrite`: mark Phase 3 `completed`. Should be "Approved" or "Approved with Comments" — no P0/P1 remaining.
 
 ---
 
@@ -149,13 +190,15 @@ Run the full validation pipeline again after review fixes:
 2. This catches any regressions introduced by review fixes
 3. Fix any failures using the same approach (read → fix → verify, max 3 attempts per step)
 
-**Checkpoint**: All validation steps must pass before proceeding.
+**Checkpoint**: Output validation results. Update `TodoWrite`: mark Phase 4 `completed`. All validation steps must pass before proceeding.
 
 ---
 
 ### Phase 5: Code Quality Audit + Fix
 
 **Skip condition**: Skip this phase entirely if `--skip-quality` flag is set.
+
+Update `TodoWrite`: mark "Phase 5: Quality Audit" as `in_progress`. Output: `Starting Phase 5: Code Quality Audit + Fix...`
 
 Perform a comprehensive quality audit and resolve all identified issues:
 
@@ -175,7 +218,7 @@ Perform a comprehensive quality audit and resolve all identified issues:
 
 4. **Track modified files**: Record all files modified during quality fixes.
 
-**Checkpoint**: Report final quality grade. Must be B or above to proceed. If D or F, iterate fixes (max 2 additional rounds).
+**Checkpoint**: Output quality grade. Update `TodoWrite`: mark Phase 5 `completed`. Must be B or above to proceed. If D or F, iterate fixes (max 2 additional rounds).
 
 ---
 
@@ -192,7 +235,7 @@ Run the full validation pipeline again after quality fixes:
 2. This catches any regressions introduced by quality fixes
 3. Fix any failures using the same approach
 
-**Checkpoint**: All validation steps must pass before proceeding.
+**Checkpoint**: Output validation results. Update `TodoWrite`: mark Phase 6 `completed`. All validation steps must pass before proceeding.
 
 ---
 
@@ -210,6 +253,8 @@ Run one final validation pass to catch any regressions from all accumulated fixe
 ---
 
 ### Phase 7: Feature Completeness Evaluation
+
+Update `TodoWrite`: mark "Phase 7: Completeness" as `in_progress`. Output: `Starting Phase 7: Feature Completeness Evaluation...`
 
 Evaluate whether the implemented feature fully satisfies the original specification:
 
@@ -243,7 +288,7 @@ Evaluate whether the implemented feature fully satisfies the original specificat
 6. **Update documentation** (required — documentation is part of the deliverable):
 
    **Always update:**
-   - `tasks.md` — ensure all tasks are marked `[X]`
+   - `tasks.md` — **verify and fix**: re-read the file, ensure EVERY completed task is marked `[X]`. If any were missed during Phase 1 (e.g., due to subagent parallelism or error recovery), mark them now. This is a hard requirement — tasks.md must be an accurate record of what was done.
    - `CLAUDE.md` — update the sprint status section (sprint name, deliverables, test count, date)
 
    **Update only if affected by the implementation:**
@@ -254,11 +299,13 @@ Evaluate whether the implemented feature fully satisfies the original specificat
 
    **Do NOT update** docs speculatively or for cosmetic reasons.
 
-**Checkpoint**: All requirements must be ✅ Complete.
+**Checkpoint**: Output completeness report. Update `TodoWrite`: mark Phase 7 `completed`. All requirements must be ✅ Complete.
 
 ---
 
 ### Phase 8: Final Summary
+
+Update `TodoWrite`: mark "Phase 8: Summary" as `in_progress`. Output: `Starting Phase 8: Generating final summary...`
 
 Generate a comprehensive implementation summary:
 
@@ -324,6 +371,8 @@ If a category has 0 files, omit it from the table.
 
 ## Operating Principles
 
+- **Progress is visible**: The user must always be able to see what's happening. Use `TodoWrite` for real-time task tracking, and output text messages at every phase transition and task completion. Silent long-running work is unacceptable — if you're working, the user should see evidence of it.
+- **tasks.md is the source of truth**: Update tasks.md immediately after each task completes (mark `[X]`). Never batch these updates. If the session crashes or is interrupted, tasks.md must accurately reflect what was actually done. Verify in Phase 7 that no updates were missed.
 - **Phase gates**: Each checkpoint must pass before proceeding to the next phase. Do not skip phases unless a skip condition is met.
 - **Fix, don't paper over**: When issues are found, fix the root cause — not the symptom. No `@ts-ignore`, no `eslint-disable`, no empty catch blocks to silence errors.
 - **Minimal fixes**: Only change what's needed to resolve the specific issue. Do not refactor, add features, or "improve" surrounding code.

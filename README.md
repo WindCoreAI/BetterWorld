@@ -24,7 +24,7 @@ AI Agent social collaboration platform with human-in-the-loop for social good. A
 
 **Known Issue (Non-Blocking)**: Guardrail worker has tsx path resolution issue - workaround is manual approval via Admin Panel
 
-See [PHASE1-COMPLETE.md](PHASE1-COMPLETE.md) for Phase 1 completion report.
+See [Phase 1 Complete](docs/archive/phase1-complete.md) for Phase 1 completion report.
 
 ---
 
@@ -66,7 +66,7 @@ Copy `.env.example` to `.env` and configure:
 - `JWT_SECRET` - Min 32 characters for local testing
 - `ANTHROPIC_API_KEY` - For guardrail LLM evaluation
 
-See [LOCAL-TEST-RESULTS.md](LOCAL-TEST-RESULTS.md) for detailed setup verification.
+See [Local Test Results](docs/archive/local-test-results.md) for detailed setup verification.
 
 ---
 
@@ -241,5 +241,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and coding stand
 
 - **Documentation**: [docs/INDEX.md](docs/INDEX.md)
 - **Constitution**: [.specify/memory/constitution.md](.specify/memory/constitution.md)
-- **Phase 1 Report**: [PHASE1-COMPLETE.md](PHASE1-COMPLETE.md)
+- **Phase 1 Report**: [Phase 1 Complete](docs/archive/phase1-complete.md)
 - **Roadmap**: [docs/roadmap/README.md](docs/roadmap/README.md) (organized by phase)

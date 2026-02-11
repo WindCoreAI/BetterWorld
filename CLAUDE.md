@@ -104,6 +104,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 - **Human Auth** (007): OAuth 2.0 + PKCE (Google, GitHub), email/password fallback, CSRF state cookies, Nominatim geocoding + Redis cache (30-day TTL), profile completeness scoring, double-entry token accounting
 - TypeScript 5.x strict mode, Node.js 22+ + Hono (API), Drizzle ORM, @anthropic-ai/sdk (Claude Sonnet decomposition), Leaflet + react-leaflet (maps), Leaflet.markercluster (clustering), BullMQ (async jobs) (008-mission-marketplace)
 - PostgreSQL 16 + PostGIS (geo-queries, GIST index), Upstash Redis (cache, rate limits, decomposition cost tracking) (008-mission-marketplace)
+- TypeScript 5.x strict mode, Node.js 22+ + Hono (API), Drizzle ORM, @anthropic-ai/sdk (Claude Vision), sharp (image processing), exifr (EXIF extraction), BullMQ (async jobs), jose (JWT), ioredis (009-evidence-verification)
+- PostgreSQL 16 (Supabase), Supabase Storage (evidence media), Upstash Redis (cache, rate limits, cost tracking) (009-evidence-verification)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD

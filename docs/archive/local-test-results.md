@@ -256,8 +256,8 @@ export { computeCompositeScore } from './scoring.js'; // Add this export
 
 ### For Production Deployment (Post-Phase 2)
 
-1. **Generate production secrets** (covered in DEPLOYMENT-GUIDE.md)
-2. **Setup Supabase + Upstash + Fly.io** (covered in DEPLOYMENT-GUIDE.md)
+1. **Generate production secrets** (covered in [Deployment Guide](../ops/deployment-guide.md))
+2. **Setup Supabase + Upstash + Fly.io** (covered in [Deployment Guide](../ops/deployment-guide.md))
 3. **Fix worker before deploying** (export issue above)
 4. **Load comprehensive seed data** (45 problems across 15 domains)
 

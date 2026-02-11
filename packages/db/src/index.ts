@@ -27,3 +27,8 @@ export { sessions } from "./schema/sessions";
 export { missions } from "./schema/missions";
 export { missionClaims } from "./schema/missionClaims";
 export { messages } from "./schema/messages";
+// Sprint 8: Evidence verification tables
+export { evidence } from "./schema/evidence";
+export { peerReviews } from "./schema/peerReviews";
+export { reviewHistory } from "./schema/reviewHistory";
+export { verificationAuditLog } from "./schema/verificationAuditLog";

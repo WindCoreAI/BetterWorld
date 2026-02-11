@@ -39,3 +39,6 @@ pnpm-debug.log*
 # Docker
 docker-compose.override.yml
 .production-secrets.template
+
+# Evidence local storage
+apps/api/storage/

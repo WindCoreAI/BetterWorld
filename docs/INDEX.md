@@ -14,8 +14,8 @@
 | 2 | [Review & Technical Challenges](REVIEW-AND-TECH-CHALLENGES.md) | Cross-doc review (v2.0): resolved issues, 7 core technical challenges with deep research, BYOK cost model |
 | 3 | [Decisions Needed](DECISIONS-NEEDED.md) | 23 decisions (20 resolved, 2 pending, 1 superseded) — prioritized by sprint dependency |
 | 4 | [**Phase 1 Evaluation**](roadmap/phase1-evaluation.md) | Comprehensive Phase 1 evaluation — sprint assessments, quality metrics, exit criteria (10/11 met), deployment readiness |
-| 5 | [**Phase 1 Complete**](../PHASE1-COMPLETE.md) | **NEW**: Phase 1 completion summary — 91% exit criteria met, ready for Phase 2, known issues, quality metrics |
-| 6 | [**Local Test Results**](../LOCAL-TEST-RESULTS.md) | **NEW**: Local testing verification — all services operational, test results by component, environment config, commands reference |
+| 5 | [**Phase 1 Complete**](archive/phase1-complete.md) | Phase 1 completion summary — 91% exit criteria met, ready for Phase 2, known issues, quality metrics |
+| 6 | [**Local Test Results**](archive/local-test-results.md) | Local testing verification — all services operational, test results by component, environment config, commands reference |
 
 > **Note**: Line counts are approximate. Large docs have been split into focused files (300-1000 lines each) at natural section boundaries.
 

@@ -106,6 +106,15 @@ export interface DashboardData {
     amount: number | null;
     timestamp: string;
   }>;
+  evidenceStatus?: {
+    pending: number;
+    verified: number;
+    rejected: number;
+  };
+  peerReviews?: {
+    completed: number;
+    pendingCount: number;
+  };
 }
 
 export interface ApiResponse<T> {
