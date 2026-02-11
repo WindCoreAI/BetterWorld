@@ -69,6 +69,29 @@ export { FORBIDDEN_PATTERNS } from "./constants/forbidden-patterns.js";
 export { APPROVED_DOMAINS } from "./constants/approved-domains.js";
 export { QUEUE_NAMES } from "./constants/queue.js";
 export type { QueueName } from "./constants/queue.js";
+export {
+  FRAUD_THRESHOLDS,
+  PHASH_THRESHOLDS,
+  VELOCITY_WINDOWS,
+  FRAUD_SCORE_DELTAS,
+  STATISTICAL_THRESHOLDS,
+} from "./constants/fraud-thresholds.js";
+export {
+  REPUTATION_TIERS,
+  TIER_THRESHOLDS,
+  TIER_ORDER,
+  REPUTATION_WEIGHTS,
+  REPUTATION_DECAY,
+  ENDORSEMENT_LIMITS,
+} from "./constants/reputation-tiers.js";
+export type { ReputationTierName } from "./constants/reputation-tiers.js";
+export {
+  STREAK_MILESTONES,
+  getStreakMultiplier,
+  getNextStreakMilestone,
+  STREAK_FREEZE,
+} from "./constants/streak-milestones.js";
+export type { StreakMilestone } from "./constants/streak-milestones.js";
 
 // Schemas
 export {
@@ -89,6 +112,31 @@ export {
   updateClaimSchema,
   sendMessageSchema,
   messageListQuerySchema,
+  // Sprint 10: Reputation & Impact schemas
+  reputationTierSchema,
+  reputationBreakdownSchema,
+  reputationScoreSchema,
+  reputationHistoryEntrySchema,
+  endorsementCreateSchema,
+  tierDefinitionSchema,
+  gracePeriodSchema,
+  reputationHistoryQuerySchema,
+  leaderboardTypeSchema,
+  leaderboardPeriodSchema,
+  leaderboardQuerySchema,
+  leaderboardEntrySchema,
+  myRankSchema,
+  fraudStatusSchema,
+  fraudActionTypeSchema,
+  fraudScoreSchema,
+  fraudEventSchema,
+  fraudAdminActionSchema,
+  fraudQueueQuerySchema,
+  dashboardMetricsSchema,
+  heatmapPointSchema,
+  heatmapQuerySchema,
+  portfolioVisibilitySchema,
+  portfolioSchema,
 } from "./schemas/index.js";
 
 // Guardrail Schemas

@@ -1,0 +1,173 @@
+# Fraud Detection API Contracts
+# Base path: /api/v1/admin/fraud
+
+# All fraud admin endpoints require admin auth
+
+# GET /api/v1/admin/fraud/queue
+# Auth: admin (required)
+# Description: Get fraud review queue (flagged + suspended accounts)
+get_fraud_queue:
+  method: GET
+  path: /api/v1/admin/fraud/queue
+  auth: admin
+  query:
+    status: enum (flagged, suspended, all) - default: flagged
+    cursor: string (UUID) - optional
+    limit: number (1-50, default 20)
+    sort: enum (score_desc, flagged_at_desc) - default: score_desc
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        - humanId: string
+          displayName: string
+          email: string
+          fraudScore:
+            total: number
+            phash: number
+            velocity: number
+            statistical: number
+          status: string (flagged, suspended)
+          flaggedAt: string (ISO 8601) | null
+          suspendedAt: string (ISO 8601) | null
+          recentEvents:
+            - type: string
+              scoreDelta: number
+              createdAt: string
+          evidenceCount: number (total submissions)
+          accountAge: number (days)
+      meta:
+        cursor: string | null
+        hasMore: boolean
+        total: number
+      requestId: string
+
+# GET /api/v1/admin/fraud/:humanId
+# Auth: admin (required)
+# Description: Get detailed fraud profile for a human
+get_fraud_detail:
+  method: GET
+  path: /api/v1/admin/fraud/:humanId
+  auth: admin
+  params:
+    humanId: string (UUID)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        humanId: string
+        displayName: string
+        email: string
+        fraudScore:
+          total: number
+          phash: number
+          velocity: number
+          statistical: number
+        status: string
+        events:
+          # Full fraud event history
+          - id: string
+            detectionType: string
+            scoreDelta: number
+            details: object
+            evidenceId: string | null
+            createdAt: string
+        evidence:
+          # Evidence submissions with thumbnails
+          - evidenceId: string
+            missionTitle: string
+            thumbnailUrl: string | null
+            verificationStage: string
+            aiScore: number | null
+            phashDuplicate: boolean
+            submittedAt: string
+        adminActions:
+          # Previous admin actions on this account
+          - id: string
+            action: string
+            reason: string
+            adminId: string
+            scoreBefore: number
+            scoreAfter: number
+            createdAt: string
+        profile:
+          joinedAt: string
+          missionsCompleted: number
+          reputationScore: number
+          tier: string
+      requestId: string
+  errors:
+    404: "Human not found"
+
+# POST /api/v1/admin/fraud/:humanId/action
+# Auth: admin (required)
+# Description: Take action on a flagged/suspended account
+take_fraud_action:
+  method: POST
+  path: /api/v1/admin/fraud/:humanId/action
+  auth: admin
+  params:
+    humanId: string (UUID)
+  body:
+    action: enum (clear_flag, reset_score, manual_suspend, unsuspend)
+    reason: string (10+ chars, required)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        actionId: string
+        humanId: string
+        action: string
+        fraudScoreBefore: number
+        fraudScoreAfter: number
+        newStatus: string (clean, flagged, suspended)
+        reason: string
+        createdAt: string
+      requestId: string
+  errors:
+    400: "Invalid action for current status"
+    404: "Human not found"
+
+# GET /api/v1/admin/fraud/stats
+# Auth: admin (required)
+# Description: Get aggregate fraud metrics
+get_fraud_stats:
+  method: GET
+  path: /api/v1/admin/fraud/stats
+  auth: admin
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        totalFlagged: number
+        totalSuspended: number
+        totalCleared: number
+        falsePositiveRate: number (percentage)
+        detectionBreakdown:
+          phash: number
+          velocity: number
+          statistical: number
+        last30Days:
+          newFlags: number
+          resolved: number
+          suspensions: number
+      requestId: string
+
+# Internal (not exposed as API — runs in BullMQ worker):
+# Fraud Scoring Pipeline (triggered after evidence submission)
+#
+# Input: { evidenceId: UUID }
+#
+# Pipeline:
+# 1. Calculate pHash → compare against human's recent hashes
+# 2. Run velocity check (10min, 1hr, 24hr windows)
+# 3. Run statistical profiler (GPS variance, approval rate, timing)
+# 4. Sum fraud score deltas
+# 5. Update fraud_scores table
+# 6. If total >= 50 && status == 'clean': flag account
+# 7. If total >= 150 && status != 'suspended': suspend account
+# 8. Log all events to fraud_events table

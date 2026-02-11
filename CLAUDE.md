@@ -106,6 +106,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 - PostgreSQL 16 + PostGIS (geo-queries, GIST index), Upstash Redis (cache, rate limits, decomposition cost tracking) (008-mission-marketplace)
 - TypeScript 5.x strict mode, Node.js 22+ + Hono (API), Drizzle ORM, @anthropic-ai/sdk (Claude Vision), sharp (image processing), exifr (EXIF extraction), BullMQ (async jobs), jose (JWT), ioredis (009-evidence-verification)
 - PostgreSQL 16 (Supabase), Supabase Storage (evidence media), Upstash Redis (cache, rate limits, cost tracking) (009-evidence-verification)
+- TypeScript 5.x strict mode, Node.js 22+ + Hono (API), Drizzle ORM, BullMQ (workers), Redis (cache), sharp + blockhash-core (pHash), Leaflet + leaflet.heat (heatmap), Next.js 15 (frontend) (010-reputation-impact)
+- PostgreSQL 16 (Supabase) + Upstash Redis (010-reputation-impact)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD

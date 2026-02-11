@@ -151,3 +151,31 @@ export const peerReviewVerdictEnum = pgEnum("peer_review_verdict", [
   "approve",
   "reject",
 ]);
+
+// Sprint 9: Reputation & Impact enums
+export const reputationTierEnum = pgEnum("reputation_tier", [
+  "newcomer",
+  "contributor",
+  "advocate",
+  "leader",
+  "champion",
+]);
+
+export const fraudActionEnum = pgEnum("fraud_action", [
+  "flag_for_review",
+  "auto_suspend",
+  "clear_flag",
+  "reset_score",
+  "manual_suspend",
+  "unsuspend",
+]);
+
+export const endorsementStatusEnum = pgEnum("endorsement_status", [
+  "active",
+  "revoked",
+]);
+
+export const portfolioVisibilityEnum = pgEnum("portfolio_visibility", [
+  "public",
+  "private",
+]);

@@ -17,3 +17,37 @@ export {
   missionListQuerySchema,
   updateClaimSchema,
 } from "./missions.js";
+
+// Sprint 9: Reputation & Impact schemas
+export {
+  reputationTierSchema,
+  reputationBreakdownSchema,
+  reputationScoreSchema,
+  reputationHistoryEntrySchema,
+  endorsementCreateSchema,
+  tierDefinitionSchema,
+  gracePeriodSchema,
+  reputationHistoryQuerySchema,
+} from "./reputation.js";
+export {
+  leaderboardTypeSchema,
+  leaderboardPeriodSchema,
+  leaderboardQuerySchema,
+  leaderboardEntrySchema,
+  myRankSchema,
+} from "./leaderboards.js";
+export {
+  fraudStatusSchema,
+  fraudActionTypeSchema,
+  fraudScoreSchema,
+  fraudEventSchema,
+  fraudAdminActionSchema,
+  fraudQueueQuerySchema,
+} from "./fraud.js";
+export {
+  dashboardMetricsSchema,
+  heatmapPointSchema,
+  heatmapQuerySchema,
+  portfolioVisibilitySchema,
+  portfolioSchema,
+} from "./impact.js";

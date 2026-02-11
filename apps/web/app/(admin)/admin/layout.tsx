@@ -41,6 +41,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-6">
           <Link href="/admin" className="font-bold text-lg">Admin</Link>
           <Link href="/admin/flagged" className="text-sm text-cream/80 hover:text-cream">Flagged Content</Link>
+          <Link href="/admin/fraud" className="text-sm text-cream/80 hover:text-cream">Fraud Review</Link>
         </div>
         <Link href="/" className="text-sm text-cream/60 hover:text-cream">Back to Site</Link>
       </nav>
