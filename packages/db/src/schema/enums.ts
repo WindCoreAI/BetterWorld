@@ -120,9 +120,34 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "earn_reward",
   "earn_bonus",
   "earn_referral",
+  "earn_evidence_verified",
+  "earn_peer_review",
   // Spend (negative amounts)
   "spend_vote",
   "spend_circle",
   "spend_analytics",
   "spend_custom",
+]);
+
+// Sprint 8: Evidence verification enums
+export const evidenceTypeEnum = pgEnum("evidence_type", [
+  "photo",
+  "video",
+  "document",
+  "text_report",
+]);
+
+export const evidenceVerificationStageEnum = pgEnum("evidence_verification_stage", [
+  "pending",
+  "ai_processing",
+  "peer_review",
+  "verified",
+  "rejected",
+  "appealed",
+  "admin_review",
+]);
+
+export const peerReviewVerdictEnum = pgEnum("peer_review_verdict", [
+  "approve",
+  "reject",
 ]);

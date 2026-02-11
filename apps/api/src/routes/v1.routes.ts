@@ -1,17 +1,21 @@
 import { Hono } from "hono";
 
 import type { AppEnv } from "../app.js";
+import disputeRoutes from "./admin/disputes.js";
 import { adminRoutes } from "./admin.routes.js";
 import { agentsRoutes } from "./agents.routes.js";
 import humanAuthRoutes from "./auth/index.js";
 import { authRoutes } from "./auth.routes.js";
 import dashboardRoutes from "./dashboard/index.js";
 import { debatesRoutes } from "./debates.routes.js";
+import evidenceRoutes from "./evidence/index.js";
+import verifyRoutes from "./evidence/verify.js";
 import { guardrailRoutes } from "./guardrails/index.js";
 import { heartbeatRoutes } from "./heartbeat.routes.js";
 import messageRoutes from "./messages/index.js";
 import decomposeRoutes from "./missions/decompose.js";
 import missionRoutes from "./missions/index.js";
+import peerReviewRoutes from "./peer-reviews/index.js";
 import { problemsRoutes } from "./problems.routes.js";
 import profileRoutes from "./profile/index.js";
 import { solutionsRoutes } from "./solutions.routes.js";
@@ -51,3 +55,9 @@ v1Routes.route("/dashboard", dashboardRoutes);
 v1Routes.route("/missions", missionRoutes);
 v1Routes.route("/internal/solutions", decomposeRoutes);
 v1Routes.route("/messages", messageRoutes);
+
+// Sprint 8 routes — Evidence Verification
+v1Routes.route("/missions", evidenceRoutes);
+v1Routes.route("/evidence", verifyRoutes);
+v1Routes.route("/peer-reviews", peerReviewRoutes);
+v1Routes.route("/admin/disputes", disputeRoutes);

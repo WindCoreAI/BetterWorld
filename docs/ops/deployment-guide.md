@@ -789,7 +789,7 @@ flyctl status -a betterworld-api
 
 2. **Monitoring Setup**:
    - Configure Grafana dashboards (Sprint 4 dashboards available)
-   - Set up Prometheus alert rules (see PHASE1-LAUNCH-CHECKLIST.md #6)
+   - Set up Prometheus alert rules (see [Phase 1 Launch Checklist](../archive/phase1-launch-checklist.md) #6)
 
 3. **Documentation Updates**:
    - Update SKILL.md with production API URL (if using custom domain)
@@ -806,6 +806,6 @@ flyctl status -a betterworld-api
 
 ---
 
-**Deployment completed?** Mark the critical blockers as resolved in [PHASE1-LAUNCH-CHECKLIST.md](PHASE1-LAUNCH-CHECKLIST.md) and celebrate! 🎉
+**Deployment completed?** Mark the critical blockers as resolved in [Phase 1 Launch Checklist](../archive/phase1-launch-checklist.md) and celebrate!
 
 **Questions?** Check [ops/guardrails-troubleshooting.md](ops/guardrails-troubleshooting.md) or logs.

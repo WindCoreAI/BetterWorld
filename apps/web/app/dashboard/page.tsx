@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import {
+  EvidenceStatusCard,
   MissionsCard,
+  PeerReviewsCard,
   ProfileCompletenessCard,
   RecentActivityCard,
   TokenBalanceCard,
@@ -128,6 +130,12 @@ export default function DashboardPage() {
             orientationCompleted={dashboard.profile.orientationCompleted}
           />
           <RecentActivityCard activities={dashboard.recentActivity} />
+          {dashboard.evidenceStatus && (
+            <EvidenceStatusCard evidenceStatus={dashboard.evidenceStatus} />
+          )}
+          {dashboard.peerReviews && (
+            <PeerReviewsCard peerReviews={dashboard.peerReviews} />
+          )}
         </div>
       </div>
     </main>

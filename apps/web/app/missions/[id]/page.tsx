@@ -2,6 +2,7 @@
 
 import type { MissionDetail as MissionDetailBase } from "@betterworld/shared";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -21,6 +22,9 @@ const Map = dynamic(() => import("@/components/ui/Map"), { ssr: false, loading: 
 
 function ClaimSection({ mission }: { mission: MissionDetailJSON }) {
   if (mission.myClaim) {
+    const isActive = mission.myClaim.status === "active";
+    const isPastDeadline = new Date(mission.myClaim.deadlineAt) < new Date();
+
     return (
       <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
         <h2 className="mb-2 text-lg font-semibold text-blue-900">Your Claim</h2>
@@ -29,6 +33,14 @@ function ClaimSection({ mission }: { mission: MissionDetailJSON }) {
           <div><p className="text-xs text-blue-600">Progress</p><p className="font-medium">{mission.myClaim.progressPercent}%</p></div>
           <div><p className="text-xs text-blue-600">Deadline</p><p className="font-medium">{new Date(mission.myClaim.deadlineAt).toLocaleDateString()}</p></div>
         </div>
+        {isActive && !isPastDeadline && (
+          <Link
+            href={`/missions/${mission.id}/submit`}
+            className="mt-4 block w-full rounded-md bg-green-600 px-4 py-2 text-center text-white font-medium hover:bg-green-700 transition-colors"
+          >
+            Submit Evidence
+          </Link>
+        )}
       </div>
     );
   }

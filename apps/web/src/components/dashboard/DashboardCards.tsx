@@ -214,3 +214,103 @@ export function RecentActivityCard({
     </Card>
   );
 }
+
+// -- Evidence Status Card (Sprint 8) --
+
+interface EvidenceStatusData {
+  pending: number;
+  verified: number;
+  rejected: number;
+}
+
+export function EvidenceStatusCard({ evidenceStatus }: { evidenceStatus: EvidenceStatusData }) {
+  const total = evidenceStatus.pending + evidenceStatus.verified + evidenceStatus.rejected;
+
+  return (
+    <Card>
+      <CardBody>
+        <h3 className="text-sm font-medium text-charcoal-light mb-3">
+          Evidence Submissions
+        </h3>
+
+        {total === 0 ? (
+          <p className="text-sm text-charcoal-light text-center py-4">
+            No evidence submitted yet. Claim a mission to get started!
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-yellow-600">
+                {evidenceStatus.pending}
+              </p>
+              <p className="text-xs text-charcoal-light">Pending</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-600">
+                {evidenceStatus.verified}
+              </p>
+              <p className="text-xs text-charcoal-light">Verified</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-red-600">
+                {evidenceStatus.rejected}
+              </p>
+              <p className="text-xs text-charcoal-light">Rejected</p>
+            </div>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+// -- Peer Reviews Card (Sprint 8) --
+
+interface PeerReviewsData {
+  completed: number;
+  pendingCount: number;
+}
+
+export function PeerReviewsCard({ peerReviews }: { peerReviews: PeerReviewsData }) {
+  return (
+    <Card>
+      <CardBody>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-charcoal-light">
+            Peer Reviews
+          </h3>
+          {peerReviews.pendingCount > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-terracotta text-cream">
+              {peerReviews.pendingCount} pending
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div>
+            <p className="text-2xl font-bold text-charcoal">
+              {peerReviews.completed}
+            </p>
+            <p className="text-xs text-charcoal-light">Reviews Done</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-charcoal">
+              {peerReviews.completed * 2}
+            </p>
+            <p className="text-xs text-charcoal-light">IT Earned</p>
+          </div>
+        </div>
+
+        {peerReviews.pendingCount > 0 && (
+          <Link
+            href="/reviews"
+            className="block mt-3 text-center text-xs text-terracotta hover:underline"
+          >
+            Review pending evidence
+          </Link>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+

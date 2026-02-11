@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   decimal,
   index,
@@ -68,6 +69,7 @@ export const missions = pgTable(
     ),
     status: missionStatusEnum("status").notNull().default("open"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    isHoneypot: boolean("is_honeypot").notNull().default(false),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
