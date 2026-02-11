@@ -23,3 +23,10 @@ export * from "./evidence";
 export * from "./peerReviews";
 export * from "./reviewHistory";
 export * from "./verificationAuditLog";
+
+// Sprint 9: Reputation & Impact schemas
+export * from "./reputation";
+export * from "./streaks";
+export * from "./endorsements";
+export * from "./fraudScores";
+export * from "./evidence-phashes";

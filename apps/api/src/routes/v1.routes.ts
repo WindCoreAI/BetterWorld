@@ -10,15 +10,21 @@ import dashboardRoutes from "./dashboard/index.js";
 import { debatesRoutes } from "./debates.routes.js";
 import evidenceRoutes from "./evidence/index.js";
 import verifyRoutes from "./evidence/verify.js";
+import fraudRoutes from "./fraud/index.js";
 import { guardrailRoutes } from "./guardrails/index.js";
 import { heartbeatRoutes } from "./heartbeat.routes.js";
+import impactRoutes from "./impact/index.js";
+import leaderboardRoutes from "./leaderboards/index.js";
 import messageRoutes from "./messages/index.js";
 import decomposeRoutes from "./missions/decompose.js";
 import missionRoutes from "./missions/index.js";
 import peerReviewRoutes from "./peer-reviews/index.js";
+import portfolioRoutes from "./portfolios/index.js";
 import { problemsRoutes } from "./problems.routes.js";
 import profileRoutes from "./profile/index.js";
+import reputationRoutes from "./reputation/index.js";
 import { solutionsRoutes } from "./solutions.routes.js";
+import streakRoutes from "./streaks/index.js";
 import tokensRoutes from "./tokens/index.js";
 
 export const v1Routes = new Hono<AppEnv>();
@@ -61,3 +67,11 @@ v1Routes.route("/missions", evidenceRoutes);
 v1Routes.route("/evidence", verifyRoutes);
 v1Routes.route("/peer-reviews", peerReviewRoutes);
 v1Routes.route("/admin/disputes", disputeRoutes);
+
+// Sprint 9 routes — Reputation & Impact
+v1Routes.route("/reputation", reputationRoutes);
+v1Routes.route("/leaderboards", leaderboardRoutes);
+v1Routes.route("/impact", impactRoutes);
+v1Routes.route("/portfolios", portfolioRoutes);
+v1Routes.route("/streaks", streakRoutes);
+v1Routes.route("/admin/fraud", fraudRoutes);

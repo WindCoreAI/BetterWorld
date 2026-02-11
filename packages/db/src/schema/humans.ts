@@ -9,6 +9,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { portfolioVisibilityEnum } from "./enums";
+
 export const humans = pgTable(
   "humans",
   {
@@ -30,6 +32,11 @@ export const humans = pgTable(
     avatarUrl: varchar("avatar_url", { length: 500 }), // From OAuth profile
     emailVerified: boolean("email_verified").notNull().default(false), // true for OAuth, false for email/password
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+
+    // Sprint 9: Portfolio visibility
+    portfolioVisibility: portfolioVisibilityEnum("portfolio_visibility")
+      .notNull()
+      .default("public"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

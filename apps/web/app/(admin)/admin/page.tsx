@@ -107,16 +107,22 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Quick Action */}
-          <div className="bg-cream rounded-xl shadow-neu-sm p-6 flex flex-col justify-between">
+          {/* Quick Actions */}
+          <div className="bg-cream rounded-xl shadow-neu-sm p-6 flex flex-col justify-between gap-3">
             <h2 className="text-sm font-medium text-charcoal-light uppercase tracking-wide mb-2">
-              Quick Action
+              Quick Actions
             </h2>
             <Link
               href="/admin/flagged"
-              className="inline-block mt-2 px-5 py-2.5 bg-terracotta text-cream font-medium rounded-lg hover:bg-terracotta/90 transition-colors text-center"
+              className="inline-block px-5 py-2.5 bg-terracotta text-cream font-medium rounded-lg hover:bg-terracotta/90 transition-colors text-center"
             >
               Review Flagged Content
+            </Link>
+            <Link
+              href="/admin/fraud"
+              className="inline-block px-5 py-2.5 bg-charcoal text-cream font-medium rounded-lg hover:bg-charcoal/90 transition-colors text-center"
+            >
+              Fraud Review Queue
             </Link>
           </div>
         </div>

@@ -32,3 +32,13 @@ export { evidence } from "./schema/evidence";
 export { peerReviews } from "./schema/peerReviews";
 export { reviewHistory } from "./schema/reviewHistory";
 export { verificationAuditLog } from "./schema/verificationAuditLog";
+// Sprint 9: Reputation & Impact tables
+export { reputationScores, reputationHistory } from "./schema/reputation";
+export { endorsements } from "./schema/endorsements";
+export { streaks } from "./schema/streaks";
+export {
+  fraudScores,
+  fraudEvents,
+  fraudAdminActions,
+} from "./schema/fraudScores";
+export { evidencePhashes } from "./schema/evidence-phashes";
