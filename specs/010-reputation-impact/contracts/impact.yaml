@@ -1,0 +1,125 @@
+# Impact Dashboard & Metrics API Contracts
+# Base path: /api/v1/impact
+
+# GET /api/v1/impact/dashboard
+# Auth: none (public)
+# Description: Get public Impact Dashboard metrics
+# Cache: Redis, 1hr TTL (from hourly aggregation job)
+get_impact_dashboard:
+  method: GET
+  path: /api/v1/impact/dashboard
+  auth: none
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        totals:
+          missionsCompleted: number
+          impactTokensDistributed: number
+          activeHumans: number (last 30 days)
+          problemsReported: number
+          solutionsProposed: number
+        domainBreakdown:
+          # Per-domain mission counts (all 15 domains)
+          - domain: string
+            displayName: string
+            missionCount: number
+            tokenTotal: number
+            humanCount: number
+        recentActivity:
+          missionsThisWeek: number
+          missionsThisMonth: number
+          newHumansThisMonth: number
+        heatmapData:
+          # Pre-aggregated location data points
+          - lat: number
+            lng: number
+            intensity: number (0-1, weighted by mission density)
+        lastUpdatedAt: string (ISO 8601)
+      requestId: string
+
+# GET /api/v1/impact/heatmap
+# Auth: none (public)
+# Description: Get heatmap data points for mission density visualization
+# Cache: Redis, 1hr TTL
+get_heatmap_data:
+  method: GET
+  path: /api/v1/impact/heatmap
+  auth: none
+  query:
+    domain: enum (15 domains) - optional (filter by domain)
+    period: enum (alltime, month, week) - default: alltime
+    bounds: string - optional
+      # Geo bounds: "sw_lat,sw_lng,ne_lat,ne_lng" for viewport filtering
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        points:
+          - lat: number
+            lng: number
+            intensity: number
+            count: number (missions at this grid cell)
+        totalPoints: number
+        gridResolution: number (degrees, e.g., 0.1 = ~11km)
+      requestId: string
+
+# Internal (BullMQ worker — not API endpoint):
+# Hourly Metrics Aggregation Job
+#
+# Queue: metrics-aggregation
+# Schedule: repeatable, every 60 minutes
+# Concurrency: 1
+#
+# Steps:
+# 1. Count missions by domain, location, status
+# 2. Sum ImpactTokens distributed by domain
+# 3. Count active humans (last 7 days, 30 days)
+# 4. Calculate average reputation by tier
+# 5. Aggregate heatmap data (snap missions to grid cells, count per cell)
+# 6. Store all results in Redis HASHes with 1hr TTL
+# 7. Pre-populate leaderboard sorted sets for top traffic combinations
+#
+# Redis Keys Written:
+#   metrics:aggregate:dashboard           # HASH: totals for Impact Dashboard
+#   metrics:aggregate:domains             # HASH: per-domain breakdown
+#   metrics:aggregate:heatmap:{period}    # STRING (JSON): heatmap points
+#   metrics:aggregate:last_updated        # STRING: ISO timestamp
+#
+# Performance Target: Complete within 5 minutes for 100K+ mission records
+
+# Grafana Dashboard Queries (SQL — read-only):
+# These are not API endpoints but Grafana panel queries.
+#
+# Panel 1: Reputation Distribution Histogram
+#   SELECT width_bucket(total_score, 0, 10000, 50) AS bucket,
+#          COUNT(*) FROM reputation_scores GROUP BY bucket ORDER BY bucket;
+#
+# Panel 2: Tier Population
+#   SELECT current_tier, COUNT(*) FROM reputation_scores GROUP BY current_tier;
+#
+# Panel 3: Mission Completion Rate (7 days)
+#   SELECT date_trunc('hour', completed_at) AS hour, COUNT(*)
+#   FROM mission_claims WHERE status = 'verified'
+#   AND completed_at > NOW() - INTERVAL '7 days'
+#   GROUP BY hour ORDER BY hour;
+#
+# Panel 4: Fraud Flags Over Time
+#   SELECT date_trunc('day', created_at) AS day, COUNT(*)
+#   FROM fraud_events GROUP BY day ORDER BY day DESC LIMIT 30;
+#
+# Panel 5: Verification Latency (p50/p95)
+#   SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY
+#     EXTRACT(EPOCH FROM (updated_at - created_at))) AS p50,
+#   percentile_cont(0.95) WITHIN GROUP (ORDER BY
+#     EXTRACT(EPOCH FROM (updated_at - created_at))) AS p95
+#   FROM evidence WHERE verification_stage IN ('verified', 'rejected');
+#
+# Panel 6: Token Distribution Velocity
+#   SELECT date_trunc('hour', created_at) AS hour,
+#          SUM(amount) AS tokens
+#   FROM token_transactions WHERE amount > 0
+#   AND created_at > NOW() - INTERVAL '7 days'
+#   GROUP BY hour ORDER BY hour;

@@ -1,0 +1,80 @@
+# Portfolio API Contracts
+# Base path: /api/v1/portfolios
+
+# GET /api/v1/portfolios/:humanId
+# Auth: none (public)
+# Description: Get a human's public Impact Portfolio
+get_portfolio:
+  method: GET
+  path: /api/v1/portfolios/:humanId
+  auth: none
+  params:
+    humanId: string (UUID)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        humanId: string
+        displayName: string
+        avatarUrl: string | null
+        reputation:
+          totalScore: number
+          tier: string
+          tierMultiplier: number
+        stats:
+          missionsCompleted: number
+          totalTokensEarned: number
+          totalImpactGenerated: number
+          domainsContributed: string[] (domain keys)
+          currentStreak: number
+          longestStreak: number
+          endorsementsReceived: number
+        missions:
+          # Recent completed missions (last 20)
+          - missionId: string
+            title: string
+            domain: string
+            completedAt: string (ISO 8601)
+            verificationScore: number
+            thumbnailUrl: string | null
+        timeline:
+          # Activity timeline (last 50 events)
+          - type: string (mission_completed, tier_up, endorsement_received, streak_milestone)
+            description: string
+            createdAt: string (ISO 8601)
+        visibility: enum (public, private)
+        joinedAt: string (ISO 8601)
+      requestId: string
+  errors:
+    404: "Human not found"
+    403: "Portfolio is private"
+
+# PATCH /api/v1/portfolios/me/visibility
+# Auth: humanAuth (required)
+# Description: Toggle portfolio visibility
+update_visibility:
+  method: PATCH
+  path: /api/v1/portfolios/me/visibility
+  auth: humanAuth
+  body:
+    visibility: enum (public, private)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        visibility: string
+        updatedAt: string
+      requestId: string
+
+# Frontend Route (not API):
+# GET /portfolio/:humanId — Next.js page with generateMetadata()
+# GET /portfolio/:humanId/opengraph-image — Dynamic OG image (ImageResponse)
+#
+# OG Tags:
+#   og:title: "{displayName} - BetterWorld Portfolio"
+#   og:description: "{totalScore} reputation • {missionsCompleted} missions"
+#   og:image: /portfolio/{humanId}/opengraph-image (1200x630 PNG)
+#   og:type: profile
+#   twitter:card: summary_large_image

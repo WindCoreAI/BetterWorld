@@ -1,0 +1,187 @@
+# Reputation API Contracts
+# Base path: /api/v1/reputation
+
+# GET /api/v1/reputation/me
+# Auth: humanAuth (required)
+# Description: Get current user's reputation score and breakdown
+get_my_reputation:
+  method: GET
+  path: /api/v1/reputation/me
+  auth: humanAuth
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        humanId: string (UUID)
+        totalScore: number (decimal, 2 places)
+        tier: enum (newcomer, contributor, advocate, leader, champion)
+        tierMultiplier: number (decimal, 2 places)
+        breakdown:
+          missionQuality: number
+          peerAccuracy: number
+          streak: number
+          endorsements: number
+        nextTier:
+          name: string
+          threshold: number
+          progress: number (0-100 percentage)
+        gracePeriod:
+          active: boolean
+          expiresAt: string (ISO 8601) | null
+          previousTier: string | null
+        lastActivityAt: string (ISO 8601) | null
+      requestId: string
+
+# GET /api/v1/reputation/:humanId
+# Auth: optional (public for public portfolios)
+# Description: Get a specific human's reputation (public data only)
+get_human_reputation:
+  method: GET
+  path: /api/v1/reputation/:humanId
+  auth: optional
+  params:
+    humanId: string (UUID)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        humanId: string
+        displayName: string
+        totalScore: number
+        tier: enum
+        tierMultiplier: number
+        breakdown:
+          missionQuality: number
+          peerAccuracy: number
+          streak: number
+          endorsements: number
+      requestId: string
+  errors:
+    404: "Human not found"
+    403: "Profile is private"
+
+# GET /api/v1/reputation/me/history
+# Auth: humanAuth (required)
+# Description: Get reputation change history
+get_reputation_history:
+  method: GET
+  path: /api/v1/reputation/me/history
+  auth: humanAuth
+  query:
+    cursor: string (optional, UUID)
+    limit: number (1-100, default 20)
+    event_type: string (optional, filter by event type)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        - id: string
+          scoreBefore: number
+          scoreAfter: number
+          delta: number
+          eventType: string
+          eventSourceType: string | null
+          tierBefore: string | null
+          tierAfter: string | null
+          metadata: object | null
+          createdAt: string (ISO 8601)
+      meta:
+        cursor: string | null
+        hasMore: boolean
+      requestId: string
+
+# POST /api/v1/reputation/endorsements
+# Auth: humanAuth (required)
+# Description: Endorse another human
+# Rate limit: 5 endorsements per day
+create_endorsement:
+  method: POST
+  path: /api/v1/reputation/endorsements
+  auth: humanAuth
+  rate_limit: 5/day
+  body:
+    toHumanId: string (UUID, required)
+    reason: string (10-500 chars, required)
+  response:
+    status: 201
+    body:
+      ok: true
+      data:
+        id: string
+        fromHumanId: string
+        toHumanId: string
+        reason: string
+        createdAt: string
+      requestId: string
+  errors:
+    400: "Cannot endorse yourself"
+    409: "Already endorsed this human"
+    404: "Human not found"
+
+# GET /api/v1/reputation/tiers
+# Auth: none (public)
+# Description: Get all tier definitions and thresholds
+get_tiers:
+  method: GET
+  path: /api/v1/reputation/tiers
+  auth: none
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        - name: string
+          displayName: string
+          minScore: number
+          multiplier: number
+          privileges:
+            - string
+          humanCount: number (cached)
+      requestId: string
+
+# GET /api/v1/streaks/me
+# Auth: humanAuth (required)
+# Description: Get current user's streak information
+get_my_streak:
+  method: GET
+  path: /api/v1/streaks/me
+  auth: humanAuth
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        currentStreak: number
+        longestStreak: number
+        lastActiveDate: string (date, YYYY-MM-DD) | null
+        streakMultiplier: number
+        nextMilestone:
+          days: number
+          multiplier: number
+        freezeAvailable: boolean
+        freezeLastUsedAt: string (ISO 8601) | null
+        freezeCooldownEndsAt: string (ISO 8601) | null
+      requestId: string
+
+# POST /api/v1/streaks/me/freeze
+# Auth: humanAuth (required)
+# Description: Activate streak freeze for today
+activate_streak_freeze:
+  method: POST
+  path: /api/v1/streaks/me/freeze
+  auth: humanAuth
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        freezeActivated: true
+        freezeAvailable: false
+        cooldownEndsAt: string (ISO 8601)
+      requestId: string
+  errors:
+    400: "Freeze not available (on cooldown)"
+    400: "No active streak to freeze"

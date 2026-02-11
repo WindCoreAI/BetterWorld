@@ -1,0 +1,69 @@
+# Leaderboard API Contracts
+# Base path: /api/v1/leaderboards
+
+# GET /api/v1/leaderboards/:type
+# Auth: optional (public)
+# Description: Get leaderboard rankings with filters
+# Cache: Redis sorted sets, 1hr TTL
+get_leaderboard:
+  method: GET
+  path: /api/v1/leaderboards/:type
+  auth: optional
+  params:
+    type: enum (reputation, impact, tokens, missions)
+  query:
+    period: enum (alltime, month, week) - default: alltime
+    domain: enum (15 problem domains) - optional
+    location_scope: string - optional
+      # "global" (default)
+      # "country:{ISO-3166}" e.g. "country:US"
+      # "city:{name}" e.g. "city:San Francisco"
+    cursor: string (base64-encoded offset) - optional
+    limit: number (1-100, default 50)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        - rank: number (0-indexed)
+          humanId: string
+          displayName: string
+          avatarUrl: string | null
+          score: number
+          tier: string (reputation leaderboard only)
+      meta:
+        cursor: string | null
+        hasMore: boolean
+        total: number
+        cacheAge: number (seconds since last refresh)
+      requestId: string
+
+# GET /api/v1/leaderboards/:type/me
+# Auth: humanAuth (required)
+# Description: Get current user's rank on a leaderboard
+get_my_rank:
+  method: GET
+  path: /api/v1/leaderboards/:type/me
+  auth: humanAuth
+  params:
+    type: enum (reputation, impact, tokens, missions)
+  query:
+    period: enum (alltime, month, week) - default: alltime
+    domain: enum - optional
+    location_scope: string - optional
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        rank: number | null (null if not on leaderboard)
+        score: number | null
+        total: number (total humans in this leaderboard)
+        percentile: number | null (0-100, top X%)
+        context:
+          # 5 entries above and below the user
+          - rank: number
+            humanId: string
+            displayName: string
+            score: number
+      requestId: string
