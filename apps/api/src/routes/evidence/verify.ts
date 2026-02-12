@@ -215,4 +215,93 @@ verifyRoutes.get("/:evidenceId", humanAuth(), async (c) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/v1/evidence/pairs/:pairId - Get before/after evidence pair (T056)
+// ---------------------------------------------------------------------------
+verifyRoutes.get("/pairs/:pairId", humanAuth(), async (c) => {
+  const db = getDb();
+  if (!db) throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
+
+  const pairId = parseUuidParam(c.req.param("pairId"), "pairId");
+  const human = c.get("human");
+
+  const rows = await db
+    .select({
+      id: evidence.id,
+      missionId: evidence.missionId,
+      photoSequenceType: evidence.photoSequenceType,
+      contentUrl: evidence.contentUrl,
+      thumbnailUrl: evidence.thumbnailUrl,
+      latitude: evidence.latitude,
+      longitude: evidence.longitude,
+      capturedAt: evidence.capturedAt,
+      verificationStage: evidence.verificationStage,
+      aiVerificationScore: evidence.aiVerificationScore,
+      aiVerificationReasoning: evidence.aiVerificationReasoning,
+      finalVerdict: evidence.finalVerdict,
+      finalConfidence: evidence.finalConfidence,
+      submittedByHumanId: evidence.submittedByHumanId,
+      createdAt: evidence.createdAt,
+    })
+    .from(evidence)
+    .where(eq(evidence.pairId, pairId));
+
+  if (rows.length === 0) {
+    throw new AppError("NOT_FOUND", "Evidence pair not found");
+  }
+
+  // IDOR protection
+  if (rows.some((r) => r.submittedByHumanId !== human.id) && human.role !== "admin") {
+    throw new AppError("FORBIDDEN", "Access denied");
+  }
+
+  const beforePhoto = rows.find((r) => r.photoSequenceType === "before");
+  const afterPhoto = rows.find((r) => r.photoSequenceType === "after");
+
+  // GPS distance between before and after (meters)
+  let gpsDistanceMeters: number | null = null;
+  if (
+    beforePhoto?.latitude && beforePhoto?.longitude &&
+    afterPhoto?.latitude && afterPhoto?.longitude
+  ) {
+    const lat1 = Number(beforePhoto.latitude);
+    const lng1 = Number(beforePhoto.longitude);
+    const lat2 = Number(afterPhoto.latitude);
+    const lng2 = Number(afterPhoto.longitude);
+    // Haversine in meters
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    gpsDistanceMeters = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  }
+
+  // Sign URLs
+  const signRow = async (row: typeof rows[0]) => ({
+    ...row,
+    contentUrl: row.contentUrl ? await getSignedUrl(row.contentUrl) : null,
+    thumbnailUrl: row.thumbnailUrl ? await getSignedUrl(row.thumbnailUrl) : null,
+    latitude: row.latitude ? Number(row.latitude) : null,
+    longitude: row.longitude ? Number(row.longitude) : null,
+    aiVerificationScore: row.aiVerificationScore ? Number(row.aiVerificationScore) : null,
+    finalConfidence: row.finalConfidence ? Number(row.finalConfidence) : null,
+  });
+
+  return c.json({
+    ok: true,
+    data: {
+      pairId,
+      before: beforePhoto ? await signRow(beforePhoto) : null,
+      after: afterPhoto ? await signRow(afterPhoto) : null,
+      gpsDistanceMeters,
+      pairComplete: !!(beforePhoto && afterPhoto),
+    },
+    requestId: c.get("requestId"),
+  });
+});
+
 export default verifyRoutes;

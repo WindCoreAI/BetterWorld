@@ -54,3 +54,8 @@ export { disputes } from "./schema/disputes";
 export { geographyPoint } from "./schema/types";
 // Sprint 11: Shadow Mode tables
 export { validatorTierChanges } from "./schema/validatorTierChanges";
+// Sprint 12: Production Shift tables
+export { economicHealthSnapshots } from "./schema/economicHealthSnapshots";
+export { spotChecks } from "./schema/spotChecks";
+export { attestations } from "./schema/attestations";
+export { missionTemplates } from "./schema/missionTemplates";

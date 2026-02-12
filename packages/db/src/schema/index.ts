@@ -44,3 +44,9 @@ export * from "./disputes";
 
 // Sprint 11: Shadow Mode schemas
 export * from "./validatorTierChanges";
+
+// Sprint 12: Production Shift schemas
+export * from "./spotChecks";
+export * from "./attestations";
+export * from "./missionTemplates";
+export * from "./economicHealthSnapshots";

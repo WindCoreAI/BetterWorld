@@ -104,6 +104,10 @@ export const agentCreditTransactionInputSchema = z.object({
     "earn_validation_domain",
     "earn_starter_grant",
     "spend_conversion",
+    // Sprint 12: submission costs
+    "spend_submission_problem",
+    "spend_submission_solution",
+    "spend_submission_debate",
   ]),
   referenceId: z.string().uuid().optional(),
   referenceType: z.string().max(50).optional(),
@@ -126,6 +130,9 @@ export const featureFlagSchema = z.object({
   CREDIT_CONVERSION_ENABLED: z.boolean().default(false),
   DYNAMIC_RATE_ADJUSTMENT_ENABLED: z.boolean().default(false),
   DISPUTES_ENABLED: z.boolean().default(false),
+  // Sprint 12: Production Shift
+  SUBMISSION_COST_MULTIPLIER: z.number().min(0).max(1).default(1.0),
+  PRIVACY_BLUR_ENABLED: z.boolean().default(false),
 });
 
 export type FeatureFlags = z.infer<typeof featureFlagSchema>;
@@ -140,6 +147,8 @@ export const FEATURE_FLAG_NAMES: FeatureFlagName[] = [
   "CREDIT_CONVERSION_ENABLED",
   "DYNAMIC_RATE_ADJUSTMENT_ENABLED",
   "DISPUTES_ENABLED",
+  "SUBMISSION_COST_MULTIPLIER",
+  "PRIVACY_BLUR_ENABLED",
 ];
 
 export const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
@@ -151,4 +160,6 @@ export const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
   CREDIT_CONVERSION_ENABLED: false,
   DYNAMIC_RATE_ADJUSTMENT_ENABLED: false,
   DISPUTES_ENABLED: false,
+  SUBMISSION_COST_MULTIPLIER: 1.0,
+  PRIVACY_BLUR_ENABLED: false,
 };

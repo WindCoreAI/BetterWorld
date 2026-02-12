@@ -43,6 +43,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Link href="/admin/flagged" className="text-sm text-cream/80 hover:text-cream">Flagged Content</Link>
           <Link href="/admin/fraud" className="text-sm text-cream/80 hover:text-cream">Fraud Review</Link>
           <Link href="/admin/shadow" className="text-sm text-cream/80 hover:text-cream">Shadow Mode</Link>
+          <Link href="/admin/production" className="text-sm text-cream/80 hover:text-cream">Production Shift</Link>
           <Link href="/city" className="text-sm text-cream/80 hover:text-cream">City Dashboards</Link>
         </div>
         <Link href="/" className="text-sm text-cream/60 hover:text-cream">Back to Site</Link>

@@ -5,7 +5,17 @@
  * Computes weighted consensus from validator evaluations.
  * Uses pg_advisory_xact_lock for idempotency.
  */
-import { consensusResults, peerEvaluations, validatorPool } from "@betterworld/db";
+import {
+  consensusResults,
+  flaggedContent,
+  guardrailEvaluations,
+  peerEvaluations,
+  problems,
+  solutions,
+  debates,
+  missions,
+  validatorPool,
+} from "@betterworld/db";
 import { and, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import pino from "pino";
@@ -232,6 +242,58 @@ export async function computeConsensus(
       }
     }
 
+    // Sprint 12: Production routing — apply consensus decision to guardrail evaluation
+    // When routing_decision is 'peer_consensus', the consensus result IS the production decision
+    try {
+      await applyProductionConsensus(tx, submissionId, submissionType, decision, layerBDecision || null);
+    } catch (err) {
+      logger.warn(
+        { submissionId, error: (err as Error).message },
+        "Failed to apply production consensus (non-blocking — may be shadow mode)",
+      );
+    }
+
+    // Sprint 12: Distribute validation rewards to participating validators
+    try {
+      const { distributeRewards } = await import("./validation-reward.service.js");
+      const { getRedis } = await import("../lib/container.js");
+      const redis = getRedis();
+      await distributeRewards(tx as PostgresJsDatabase, redis, result.consensusLatencyMs?.toString() ?? submissionId, submissionId, submissionType);
+    } catch (err) {
+      logger.warn(
+        { submissionId, error: (err as Error).message },
+        "Failed to distribute validation rewards (non-blocking)",
+      );
+    }
+
+    // Sprint 12: Spot check — enqueue Layer B verification for 5% of peer-validated submissions
+    try {
+      const { shouldSpotCheck } = await import("./spot-check.service.js");
+      if (shouldSpotCheck(submissionId)) {
+        const { Queue } = await import("bullmq");
+        const { QUEUE_NAMES: QN } = await import("@betterworld/shared");
+        const { getRedis: getR } = await import("../lib/container.js");
+        const r = getR();
+        if (r) {
+          const spotCheckQueue = new Queue(QN.SPOT_CHECK, { connection: r });
+          await spotCheckQueue.add("spot-check", {
+            submissionId,
+            submissionType,
+            content: "",
+            domain: "",
+            peerDecision: decision,
+            peerConfidence: result.confidence,
+          });
+          logger.info({ submissionId }, "Spot check enqueued");
+        }
+      }
+    } catch (err) {
+      logger.warn(
+        { submissionId, error: (err as Error).message },
+        "Failed to enqueue spot check (non-blocking)",
+      );
+    }
+
     logger.info(
       {
         submissionId,
@@ -248,6 +310,103 @@ export async function computeConsensus(
 
     return result;
   });
+}
+
+/**
+ * Sprint 12: Apply peer consensus decision to guardrail evaluation and content status.
+ *
+ * Only applies when the guardrail evaluation's routing_decision is 'peer_consensus'.
+ * On consensus failure (escalated/expired), falls back to the stored Layer B result.
+ */
+async function applyProductionConsensus(
+  tx: PostgresJsDatabase,
+  submissionId: string,
+  submissionType: string,
+  consensusDecision: "approved" | "rejected" | "escalated" | "expired",
+  layerBDecision: string | null,
+): Promise<void> {
+  // Find the guardrail evaluation for this submission that was routed to peer consensus
+  const [evaluation] = await tx
+    .select({
+      id: guardrailEvaluations.id,
+      routingDecision: guardrailEvaluations.routingDecision,
+      agentId: guardrailEvaluations.agentId,
+      contentType: guardrailEvaluations.contentType,
+    })
+    .from(guardrailEvaluations)
+    .where(
+      and(
+        eq(guardrailEvaluations.contentId, submissionId),
+        eq(guardrailEvaluations.routingDecision, "peer_consensus"),
+      ),
+    )
+    .limit(1);
+
+  if (!evaluation) {
+    // Not a production-routed submission (shadow mode) — nothing to do
+    return;
+  }
+
+  // Determine final decision: use consensus result, or fall back to Layer B on failure
+  let finalDecision: "approved" | "rejected" | "flagged";
+
+  if (consensusDecision === "approved" || consensusDecision === "rejected") {
+    finalDecision = consensusDecision;
+  } else {
+    // Consensus failure (escalated/expired) — fall back to Layer B
+    if (layerBDecision === "approved" || layerBDecision === "rejected" || layerBDecision === "flagged") {
+      finalDecision = layerBDecision;
+    } else {
+      finalDecision = "flagged"; // Ultimate fallback
+    }
+
+    logger.info(
+      { submissionId, consensusDecision, layerBFallback: finalDecision },
+      "Consensus failure — falling back to Layer B decision",
+    );
+  }
+
+  // Update guardrail evaluation with final decision
+  await tx
+    .update(guardrailEvaluations)
+    .set({
+      finalDecision,
+      completedAt: new Date(),
+    })
+    .where(eq(guardrailEvaluations.id, evaluation.id));
+
+  // Update content status
+  const contentType = evaluation.contentType;
+  switch (contentType) {
+    case "problem":
+      await tx.update(problems).set({ guardrailStatus: finalDecision }).where(eq(problems.id, submissionId));
+      break;
+    case "solution":
+      await tx.update(solutions).set({ guardrailStatus: finalDecision }).where(eq(solutions.id, submissionId));
+      break;
+    case "debate":
+      await tx.update(debates).set({ guardrailStatus: finalDecision }).where(eq(debates.id, submissionId));
+      break;
+    case "mission":
+      await tx.update(missions).set({ guardrailStatus: finalDecision }).where(eq(missions.id, submissionId));
+      break;
+  }
+
+  // If flagged, create flagged_content entry for admin review
+  if (finalDecision === "flagged") {
+    await tx.insert(flaggedContent).values({
+      evaluationId: evaluation.id,
+      contentId: submissionId,
+      contentType,
+      agentId: evaluation.agentId,
+      status: "pending_review",
+    });
+  }
+
+  logger.info(
+    { submissionId, evaluationId: evaluation.id, consensusDecision, finalDecision },
+    "Production consensus applied to guardrail evaluation",
+  );
 }
 
 async function insertConsensusResult(

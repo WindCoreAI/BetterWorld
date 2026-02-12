@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   decimal,
   index,
@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { observationTypeEnum, observationVerificationEnum } from "./enums";
+import { observationTypeEnum, observationVerificationEnum, privacyProcessingStatusEnum } from "./enums";
 import { humans } from "./humans";
 import { problems } from "./problems";
 import { geographyPoint } from "./types";
@@ -39,6 +39,10 @@ export const observations = pgTable(
       .default("pending"),
     verificationNotes: text("verification_notes"),
     perceptualHash: varchar("perceptual_hash", { length: 64 }),
+    // Sprint 12: Privacy processing status
+    privacyProcessingStatus: privacyProcessingStatusEnum("privacy_processing_status")
+      .notNull()
+      .default("pending"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -51,6 +55,10 @@ export const observations = pgTable(
     index("observations_human_id_idx").on(table.submittedByHumanId),
     index("observations_verification_idx").on(table.verificationStatus),
     index("observations_created_at_idx").on(table.createdAt),
+    // Sprint 12: privacy processing partial index
+    index("observations_privacy_idx")
+      .on(table.privacyProcessingStatus)
+      .where(sql`privacy_processing_status != 'completed'`),
   ],
 );
 

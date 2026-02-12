@@ -18,6 +18,7 @@ import {
   flaggedContentStatusEnum,
   adminDecisionEnum,
   patternSeverityEnum,
+  routingDecisionEnum,
 } from "./enums";
 
 // 1. Guardrail Evaluations - Audit trail for all evaluations
@@ -44,6 +45,10 @@ export const guardrailEvaluations = pgTable(
       .defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     evaluationDurationMs: integer("evaluation_duration_ms"),
+    // Sprint 12: Traffic routing decision
+    routingDecision: routingDecisionEnum("routing_decision")
+      .notNull()
+      .default("layer_b"),
   },
   (table) => ({
     contentIdIdx: index("guardrail_evaluations_content_id_idx").on(
@@ -58,6 +63,10 @@ export const guardrailEvaluations = pgTable(
     ),
     finalDecisionIdx: index("guardrail_evaluations_final_decision_idx").on(
       table.finalDecision
+    ),
+    // Sprint 12: routing decision index
+    routingDecisionIdx: index("guardrail_eval_routing_idx").on(
+      table.routingDecision
     ),
   })
 );

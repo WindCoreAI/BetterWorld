@@ -11,6 +11,27 @@ export const STARTER_GRANT_AMOUNT = 50;
 export const SEED_CONVERSION_RATE = 5;
 
 // ============================================================================
+// Submission Cost Constants (Sprint 12)
+// ============================================================================
+
+/** Credit cost per content type at full rate */
+export const SUBMISSION_COSTS = {
+  problem: 2,
+  solution: 5,
+  debate: 1,
+} as const;
+
+/** Validation reward amounts by validator tier */
+export const VALIDATION_REWARDS = {
+  apprentice: 0.5,
+  journeyman: 0.75,
+  expert: 1.0,
+} as const;
+
+/** Balance threshold below which hardship protection activates (zero-cost submissions) */
+export const HARDSHIP_THRESHOLD = 10;
+
+// ============================================================================
 // Scoring Weights
 // ============================================================================
 

@@ -44,3 +44,13 @@ export const TIER_THRESHOLDS_F1 = {
 
 /** Rolling window size for F1 computation */
 export const F1_ROLLING_WINDOW = 100;
+
+// ============================================================================
+// Spot Check Constants (Sprint 12)
+// ============================================================================
+
+/** Percentage of peer-validated submissions to spot check */
+export const SPOT_CHECK_RATE = 5;
+
+/** Hash seed for spot check selection (distinct from traffic routing) */
+export const SPOT_CHECK_HASH_SEED = "spot";

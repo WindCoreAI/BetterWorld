@@ -21,6 +21,8 @@ export interface ScorableProblem {
   // Phase 2 scoring fields (for global problems)
   alignmentScore: string | null;
   severity: string;
+  // Sprint 12: Community attestation count (T069)
+  confirmedAttestations?: number;
 }
 
 /**
@@ -58,11 +60,17 @@ function computeHyperlocalScore(problem: ScorableProblem): ScoringResult {
   const feasibility = feasibilityFromSeverity(problem.severity);
   const demand = communityDemandScore(problem);
 
-  const score =
+  let score =
     urgency * HYPERLOCAL_SCORING_WEIGHTS.urgency +
     actionability * HYPERLOCAL_SCORING_WEIGHTS.actionability +
     feasibility * HYPERLOCAL_SCORING_WEIGHTS.feasibility +
     demand * HYPERLOCAL_SCORING_WEIGHTS.communityDemand;
+
+  // Sprint 12 (T069): 10% urgency boost if 3+ confirmed attestations
+  const attestationBoost = (problem.confirmedAttestations ?? 0) >= 3 ? 0.10 : 0;
+  if (attestationBoost > 0) {
+    score *= 1 + attestationBoost;
+  }
 
   return {
     score: Math.round(score * 100) / 100,
@@ -72,6 +80,7 @@ function computeHyperlocalScore(problem: ScorableProblem): ScoringResult {
       actionability,
       feasibility,
       communityDemand: demand,
+      attestationBoost,
     },
   };
 }

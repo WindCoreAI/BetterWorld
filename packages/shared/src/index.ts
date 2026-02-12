@@ -200,6 +200,9 @@ export {
   FEATURE_FLAG_REDIS_PREFIX,
   FEATURE_FLAG_CACHE_TTL_MS,
   OBSERVATION_RATE_LIMIT,
+  SUBMISSION_COSTS,
+  HARDSHIP_THRESHOLD,
+  VALIDATION_REWARDS,
 } from "./constants/phase3.js";
 
 // Sprint 11: Shadow Mode schemas
@@ -226,6 +229,12 @@ export type {
   CityMetrics,
   PeerConsensusJobData,
 } from "./types/shadow.js";
+
+// Sprint 12: Consensus constants
+export {
+  SPOT_CHECK_RATE,
+  SPOT_CHECK_HASH_SEED,
+} from "./constants/consensus.js";
 
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";

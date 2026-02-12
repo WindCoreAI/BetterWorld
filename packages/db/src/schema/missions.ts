@@ -21,6 +21,7 @@ import {
   problemDomainEnum,
 } from "./enums";
 import { guardrailEvaluations } from "./guardrails";
+import { missionTemplates } from "./missionTemplates";
 import { solutions } from "./solutions";
 
 export const missions = pgTable(
@@ -70,6 +71,10 @@ export const missions = pgTable(
     status: missionStatusEnum("status").notNull().default("open"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     isHoneypot: boolean("is_honeypot").notNull().default(false),
+    // Sprint 12: Mission template FK
+    templateId: uuid("template_id").references(
+      () => missionTemplates.id,
+    ),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

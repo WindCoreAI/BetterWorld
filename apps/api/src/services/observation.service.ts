@@ -157,6 +157,13 @@ export async function createObservationForProblem(
     sql`UPDATE problems SET observation_count = COALESCE(observation_count, 0) + 1 WHERE id = ${problemId}`,
   );
 
+  // Enqueue privacy processing (non-blocking)
+  try {
+    await enqueuePrivacyProcessing(observation.id);
+  } catch {
+    // Non-fatal: privacy worker will pick up from queue
+  }
+
   logger.info(
     { observationId: observation.id, problemId, humanId },
     "Observation created for problem",
@@ -243,6 +250,13 @@ export async function createStandaloneObservation(
       });
 
     const observation = obsResult[0]!;
+
+    // Enqueue privacy processing (non-blocking)
+    try {
+      await enqueuePrivacyProcessing(observation.id);
+    } catch {
+      // Non-fatal
+    }
 
     logger.info(
       { observationId: observation.id, problemId: newProblem.id, humanId },
@@ -415,4 +429,26 @@ function haversineDistance(
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+/**
+ * Enqueue privacy processing for an observation (Sprint 12 — T062).
+ * Non-blocking: failure is logged but doesn't prevent observation creation.
+ */
+async function enqueuePrivacyProcessing(observationId: string): Promise<void> {
+  try {
+    const { QUEUE_NAMES } = await import("@betterworld/shared");
+    const { Queue } = await import("bullmq");
+    const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+    const queue = new Queue(QUEUE_NAMES.PRIVACY_PROCESSING, {
+      connection: { url: redisUrl, lazyConnect: true },
+    });
+    await queue.add("process", { observationId }, {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 2000 },
+    });
+    await queue.close();
+  } catch {
+    // Queue not available in dev/test — non-fatal
+  }
 }

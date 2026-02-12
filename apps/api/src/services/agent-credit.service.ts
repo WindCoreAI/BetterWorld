@@ -187,6 +187,95 @@ export class AgentCreditService {
   }
 
   /**
+   * Spend credits — atomic balance deduction with double-entry record.
+   * Uses SELECT FOR UPDATE to prevent race conditions.
+   * Returns null if insufficient balance (caller should handle).
+   */
+  async spendCredits(
+    agentId: string,
+    amount: number,
+    transactionType: AgentCreditTransactionInput["transactionType"],
+    referenceId?: string,
+    idempotencyKey?: string,
+    description?: string,
+  ): Promise<{ transactionId: string; balanceAfter: number } | null> {
+    if (amount <= 0) {
+      throw new Error("Spend amount must be positive");
+    }
+
+    return this.db.transaction(async (tx) => {
+      // Check idempotency key first (outside lock for efficiency)
+      if (idempotencyKey) {
+        const existing = await tx
+          .select({ id: agentCreditTransactions.id })
+          .from(agentCreditTransactions)
+          .where(eq(agentCreditTransactions.idempotencyKey, idempotencyKey))
+          .limit(1);
+
+        if (existing.length > 0) {
+          const agent = await tx
+            .select({ creditBalance: agents.creditBalance })
+            .from(agents)
+            .where(eq(agents.id, agentId))
+            .limit(1);
+          return {
+            transactionId: existing[0]!.id,
+            balanceAfter: agent[0]?.creditBalance ?? 0,
+          };
+        }
+      }
+
+      // Lock agent row
+      const lockedRows = await tx.execute(
+        sql`SELECT id, credit_balance FROM agents WHERE id = ${agentId} FOR UPDATE`,
+      );
+      const lockedAgent = lockedRows[0] as { id: string; credit_balance: number } | undefined;
+
+      if (!lockedAgent) {
+        throw new Error(`Agent ${agentId} not found`);
+      }
+
+      const balanceBefore = lockedAgent.credit_balance;
+
+      // Insufficient balance — return null (caller handles)
+      if (balanceBefore < amount) {
+        return null;
+      }
+
+      const balanceAfter = balanceBefore - amount;
+
+      // Insert transaction record (double-entry, negative amount for spending)
+      const txRecords = await tx
+        .insert(agentCreditTransactions)
+        .values({
+          agentId,
+          amount: -amount,
+          balanceBefore,
+          balanceAfter,
+          transactionType,
+          referenceId,
+          description: description ?? `${transactionType}: -${amount} credits`,
+          idempotencyKey,
+        })
+        .returning({ id: agentCreditTransactions.id });
+
+      const txRecord = txRecords[0]!;
+
+      // Update balance atomically
+      await tx.execute(
+        sql`UPDATE agents SET credit_balance = ${balanceAfter} WHERE id = ${agentId}`,
+      );
+
+      logger.info(
+        { agentId, amount, balanceBefore, balanceAfter, transactionType },
+        "Credits spent",
+      );
+
+      return { transactionId: txRecord.id, balanceAfter };
+    });
+  }
+
+  /**
    * Issue starter grant (one-time, idempotent via idempotency key).
    */
   async issueStarterGrant(agentId: string): Promise<{ transactionId: string; balanceAfter: number }> {

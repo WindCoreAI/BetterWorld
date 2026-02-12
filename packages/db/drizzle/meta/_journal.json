@@ -71,6 +71,20 @@
       "when": 1770940800000,
       "tag": "0009_phase3_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770940800001,
+      "tag": "0010_shadow_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1770930466801,
+      "tag": "0011_production_shift",
+      "breakpoints": true
     }
   ]
 }

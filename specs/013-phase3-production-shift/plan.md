@@ -15,7 +15,7 @@ Sprint 12 transitions peer validation from shadow mode (read-only) to production
 **Testing**: Vitest (unit + integration), real PostgreSQL + Redis for integration tests
 **Target Platform**: Linux server (Fly.io backend), Vercel (Next.js frontend)
 **Project Type**: Monorepo (Turborepo + pnpm workspaces)
-**Performance Goals**: API p95 < 500ms, consensus p95 < 15s, guardrail p95 < 2s (Phase 3 target), rollback < 1 minute
+**Performance Goals**: API p95 < 500ms, peer consensus pipeline p95 < 15s (evaluation assignment → validator responses → consensus), Layer A+B guardrail pipeline p95 < 2s (Phase 3 target), rollback to 100% Layer B < 1 minute
 **Constraints**: 3-layer guardrails must remain intact, double-entry accounting for all credit operations, zero false negative tolerance for forbidden patterns
 **Scale/Scope**: ~50 validators, ~500+ submissions/week, 2 cities (Portland + Chicago), ~15 new/modified files backend, ~10 new frontend components
 
@@ -38,6 +38,7 @@ Sprint 12 transitions peer validation from shadow mode (read-only) to production
 - Rate limiting on all new write endpoints (attestation, photo submission).
 - Feature flags are admin-only (requireAdmin middleware).
 - No secrets in logs/URLs.
+- **Known pre-existing gap**: Constitution II requires 2FA TOTP (RFC 6238) for all admin accounts. No TOTP implementation exists in the codebase. New admin endpoints (traffic control, production dashboards) inherit existing `requireAdmin` middleware (role-based access only, no TOTP). This is a pre-existing gap not introduced by Sprint 12 — TOTP implementation should be tracked as a separate ticket.
 
 ### III. Test-Driven Quality Gates (NON-NEGOTIABLE) — PASS
 
