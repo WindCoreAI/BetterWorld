@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-11 (v19.0 — Phase 2 complete, all evaluation issues resolved)
-> **Status**: Complete documentation suite for Phase 1 + Phase 2 development. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A), 944 tests passing (357 API). Ready for Phase 3.
+> **Last Review**: 2026-02-11 (v20.0 — Phase 3 design complete)
+> **Status**: Complete documentation suite for Phase 1 + Phase 2 development. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A), 944 tests passing (357 API). **Phase 3 design complete** — Integration design finalized, ready for implementation.
 
 ---
 
@@ -33,7 +33,7 @@ Organized by phase with overview, sprint details, and evaluation reports. See [r
 | 3 | [Phase 1: Foundation MVP](roadmap/phase1-foundation-mvp.md) | Sprints 1-5 (Weeks 1-10): Infrastructure, Agent Core, Guardrails, Backend, Web UI, OpenClaw | ✅ Complete |
 | 4 | [Phase 1 Evaluation](roadmap/phase1-evaluation.md) | Comprehensive assessment: 668 tests, 10/11 exit criteria, deployment-ready | ✅ Complete |
 | 5 | [Phase 2: Human-in-the-Loop](roadmap/phase2-human-in-the-loop.md) | Sprints 6-9 (Weeks 11-18): Human onboarding, missions, evidence, reputation (v9.0 — All sprints complete, 944 tests) | ✅ Complete |
-| 6 | [Phase 3: Credit Economy + Hyperlocal](roadmap/phase3-credit-and-hyperlocal.md) | Weeks 19-26: Peer validation economy, neighborhood-scale problems, Open311 | 📋 Planned |
+| 6 | [Phase 3: Credit Economy + Hyperlocal](roadmap/phase3-credit-and-hyperlocal.md) | Weeks 19-26: Peer validation economy, neighborhood-scale problems, Open311 (v9.0 — Design complete) | 📐 Designed |
 | 7 | [Phase 4: Scale & Ecosystem](roadmap/phase4-scale-ecosystem.md) | Weeks 27-34: Growth, partners, SDKs, multi-region | 📋 Planned |
 | 8 | [Phase 5: Sustainability](roadmap/phase5-sustainability.md) | Weeks 35-42: Revenue, governance, open-source, DAO | 📋 Planned |
 
@@ -139,6 +139,16 @@ Deep research documents for each of the 7 core technical challenges identified i
 | T7 | [Progressive Trust Model](challenges/T7-progressive-trust-model.md) | Trust tiers, Sybil prevention, patient attacker detection, reputation scoring | 5-tier state machine, reputation starts at 0, asymmetric decay, registration deposit |
 
 > **Note**: Additional challenge documents may be added as new technical risks are identified during implementation.
+
+## Implementation Plans (plans/)
+
+Detailed integration designs and implementation plans for upcoming features.
+
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [Phase 3 Integration Design](plans/2026-02-11-phase3-integration-design.md) | Full technical design: dual-ledger credits, Layer B' peer validation, hyperlocal system, schema (8 new tables, 8 enums), migration strategy, sprint sequencing |
+
+---
 
 ## Operations (ops/)
 
