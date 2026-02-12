@@ -51,3 +51,16 @@ export {
   portfolioVisibilitySchema,
   portfolioSchema,
 } from "./impact.js";
+
+// Sprint 11: Shadow Mode schemas
+export {
+  peerEvaluationResponseSchema,
+  evaluationPendingQuerySchema,
+  homeRegionSchema,
+  homeRegionsSchema,
+} from "./evaluation.js";
+export type {
+  PeerEvaluationResponseInput,
+  EvaluationPendingQuery,
+  HomeRegionsInput,
+} from "./evaluation.js";

@@ -52,3 +52,5 @@ export { observations } from "./schema/observations";
 export { problemClusters } from "./schema/problemClusters";
 export { disputes } from "./schema/disputes";
 export { geographyPoint } from "./schema/types";
+// Sprint 11: Shadow Mode tables
+export { validatorTierChanges } from "./schema/validatorTierChanges";

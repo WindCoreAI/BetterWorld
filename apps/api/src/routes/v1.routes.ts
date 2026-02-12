@@ -3,13 +3,16 @@ import { Hono } from "hono";
 import type { AppEnv } from "../app.js";
 import disputeRoutes from "./admin/disputes.js";
 import phase3AdminRoutes from "./admin/phase3.js";
+import shadowAdminRoutes from "./admin/shadow.js";
 import { adminRoutes } from "./admin.routes.js";
 import agentCreditsRoutes from "./agent-credits.routes.js";
 import { agentsRoutes } from "./agents.routes.js";
 import humanAuthRoutes from "./auth/index.js";
 import { authRoutes } from "./auth.routes.js";
+import cityRoutes from "./city.routes.js";
 import dashboardRoutes from "./dashboard/index.js";
 import { debatesRoutes } from "./debates.routes.js";
+import evaluationsRoutes from "./evaluations.routes.js";
 import evidenceRoutes from "./evidence/index.js";
 import verifyRoutes from "./evidence/verify.js";
 import fraudRoutes from "./fraud/index.js";
@@ -29,6 +32,7 @@ import reputationRoutes from "./reputation/index.js";
 import { solutionsRoutes } from "./solutions.routes.js";
 import streakRoutes from "./streaks/index.js";
 import tokensRoutes from "./tokens/index.js";
+import validatorRoutes from "./validator.routes.js";
 
 export const v1Routes = new Hono<AppEnv>();
 
@@ -83,3 +87,9 @@ v1Routes.route("/admin/fraud", fraudRoutes);
 v1Routes.route("/agents/credits", agentCreditsRoutes);
 v1Routes.route("/admin", phase3AdminRoutes);
 v1Routes.route("/", observationRoutes);
+
+// Sprint 11 routes — Shadow Mode
+v1Routes.route("/evaluations", evaluationsRoutes);
+v1Routes.route("/validator", validatorRoutes);
+v1Routes.route("/city", cityRoutes);
+v1Routes.route("/admin", shadowAdminRoutes);

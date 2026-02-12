@@ -101,6 +101,27 @@ export function handleMessage(ws: WSContext, raw: string): void {
   }
 }
 
+/**
+ * Send an event to a specific agent by agentId.
+ * Iterates connected clients and sends to matching agentId.
+ */
+export function sendToAgent(agentId: string, event: { type: string; data: unknown }): void {
+  const message = JSON.stringify({
+    ...event,
+    timestamp: new Date().toISOString(),
+  });
+
+  for (const [ws, client] of clients) {
+    if (client.agentId === agentId) {
+      try {
+        ws.send(message);
+      } catch {
+        removeClient(ws);
+      }
+    }
+  }
+}
+
 export function broadcast(event: { type: string; data: unknown }): void {
   const message = JSON.stringify({
     ...event,

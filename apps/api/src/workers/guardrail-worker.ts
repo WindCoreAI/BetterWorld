@@ -19,7 +19,8 @@ import {
   computeCompositeScore,
 } from "@betterworld/guardrails";
 import { QUEUE_NAMES } from "@betterworld/shared";
-import { Worker, type Job } from "bullmq";
+import type { PeerConsensusJobData } from "@betterworld/shared";
+import { Queue, Worker, type Job } from "bullmq";
 import { eq , sql } from "drizzle-orm";
 import Redis from "ioredis";
 import pino from "pino";
@@ -261,6 +262,49 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
       logger.info({ evaluationId, score }, "Content flagged for human review");
     }
   });
+
+  // T012: Shadow peer validation pipeline integration
+  // After Layer B decision, enqueue peer consensus job if shadow mode is enabled
+  try {
+    const { getFlag } = await import("../services/feature-flags.js");
+    const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
+
+    if (peerValidationEnabled && contentType !== "mission") {
+      const peerQueue = new Queue(QUEUE_NAMES.PEER_CONSENSUS, {
+        connection: new Redis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null }),
+      });
+
+      const peerJobData: PeerConsensusJobData = {
+        submissionId: contentId,
+        submissionType: contentType as "problem" | "solution" | "debate",
+        agentId,
+        content,
+        domain: layerBResult?.alignedDomain || "community_building",
+        layerBDecision: finalDecision,
+        layerBAlignmentScore: score,
+      };
+
+      await peerQueue.add("peer-consensus", peerJobData, {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      });
+
+      await peerQueue.close();
+
+      logger.info(
+        { evaluationId, contentId, contentType, finalDecision },
+        "Peer consensus job enqueued (shadow mode)",
+      );
+    }
+  } catch (peerErr) {
+    // Shadow mode is non-blocking — do NOT affect Layer B routing
+    logger.warn(
+      { evaluationId, error: (peerErr as Error).message },
+      "Failed to enqueue peer consensus job (shadow mode — non-blocking)",
+    );
+  }
 
   const processingTimeMs = Date.now() - startTime;
   logger.info(

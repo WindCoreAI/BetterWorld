@@ -41,3 +41,6 @@ export * from "./creditConversions";
 export * from "./observations";
 export * from "./problemClusters";
 export * from "./disputes";
+
+// Sprint 11: Shadow Mode schemas
+export * from "./validatorTierChanges";

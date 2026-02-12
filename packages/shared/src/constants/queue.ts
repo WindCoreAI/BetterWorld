@@ -10,6 +10,10 @@ export const QUEUE_NAMES = {
   FRAUD_SCORING: "fraud-scoring",
   METRICS_AGGREGATION: "metrics-aggregation",
   CLAIM_RECONCILIATION: "claim-reconciliation",
+  // Sprint 11: Shadow Mode
+  PEER_CONSENSUS: "peer-consensus",
+  EVALUATION_TIMEOUT: "evaluation-timeout",
+  CITY_METRICS: "city-metrics",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
