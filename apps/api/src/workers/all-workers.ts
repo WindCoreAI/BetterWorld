@@ -18,6 +18,9 @@ async function main() {
   const { createMetricsAggregationWorker } = await import("./metrics-aggregation.js");
   const { createMissionExpirationWorker } = await import("./mission-expiration.js");
   const { createMunicipalIngestWorker } = await import("./municipal-ingest.js");
+  const { createPeerConsensusWorker } = await import("./peer-consensus.js");
+  const { createEvaluationTimeoutWorker } = await import("./evaluation-timeout.js");
+  const { createCityMetricsWorker } = await import("./city-metrics.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -27,6 +30,10 @@ async function main() {
     { name: "metrics-aggregation", create: createMetricsAggregationWorker },
     { name: "mission-expiration", create: createMissionExpirationWorker },
     { name: "municipal-ingest", create: createMunicipalIngestWorker },
+    // Sprint 11: Shadow Mode workers
+    { name: "peer-consensus", create: createPeerConsensusWorker },
+    { name: "evaluation-timeout", create: createEvaluationTimeoutWorker },
+    { name: "city-metrics", create: createCityMetricsWorker },
   ];
 
   for (const { name, create } of workers) {

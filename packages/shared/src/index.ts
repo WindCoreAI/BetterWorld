@@ -202,6 +202,31 @@ export {
   OBSERVATION_RATE_LIMIT,
 } from "./constants/phase3.js";
 
+// Sprint 11: Shadow Mode schemas
+export {
+  peerEvaluationResponseSchema,
+  evaluationPendingQuerySchema,
+  homeRegionSchema,
+  homeRegionsSchema,
+} from "./schemas/evaluation.js";
+export type {
+  PeerEvaluationResponseInput,
+  EvaluationPendingQuery,
+  HomeRegionsInput,
+} from "./schemas/evaluation.js";
+
+// Sprint 11: Shadow Mode types
+export type {
+  EvaluationAssignment,
+  PendingEvaluation,
+  ConsensusResult as ShadowConsensusResult,
+  ValidatorStats,
+  HomeRegion,
+  TierChangeEntry,
+  CityMetrics,
+  PeerConsensusJobData,
+} from "./types/shadow.js";
+
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";
 export type { EnvConfig } from "./config.js";

@@ -36,6 +36,7 @@ export const validatorPool = pgTable(
     totalEvaluations: integer("total_evaluations").notNull().default(0),
     correctEvaluations: integer("correct_evaluations").notNull().default(0),
     domainScores: jsonb("domain_scores").default({}),
+    homeRegions: jsonb("home_regions").notNull().default([]),
     homeRegionName: varchar("home_region_name", { length: 200 }),
     homeRegionPoint: geographyPoint("home_region_point"),
     dailyEvaluationCount: integer("daily_evaluation_count").notNull().default(0),

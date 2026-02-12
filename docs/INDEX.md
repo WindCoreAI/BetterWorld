@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-11 (v21.0 — Phase 3 Sprint 10 complete)
-> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 development. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A), 944 tests passing (357 API). **Phase 3 in progress** — Sprint 10 (Foundation) complete (51/51 tasks): 8 new tables, PostGIS, agent credits, Open311, observations, feature flags. Sprint 11 (Shadow Mode) next.
+> **Last Review**: 2026-02-12 (v22.0 — Phase 3 Sprint 11 complete)
+> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 development. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A), 944 tests passing (357 API). **Phase 3 in progress** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks): shadow peer validation pipeline, consensus engine, F1 tracking, agreement dashboards, city dashboards, 47 new tests, 991 total. Sprint 12 (Production Shift) next.
 
 ---
 
@@ -33,7 +33,7 @@ Organized by phase with overview, sprint details, and evaluation reports. See [r
 | 3 | [Phase 1: Foundation MVP](roadmap/phase1-foundation-mvp.md) | Sprints 1-5 (Weeks 1-10): Infrastructure, Agent Core, Guardrails, Backend, Web UI, OpenClaw | ✅ Complete |
 | 4 | [Phase 1 Evaluation](roadmap/phase1-evaluation.md) | Comprehensive assessment: 668 tests, 10/11 exit criteria, deployment-ready | ✅ Complete |
 | 5 | [Phase 2: Human-in-the-Loop](roadmap/phase2-human-in-the-loop.md) | Sprints 6-9 (Weeks 11-18): Human onboarding, missions, evidence, reputation (v9.0 — All sprints complete, 944 tests) | ✅ Complete |
-| 6 | [Phase 3: Credit Economy + Hyperlocal](roadmap/phase3-credit-and-hyperlocal.md) | Weeks 19-26: Peer validation economy, neighborhood-scale problems, Open311 (v9.1 — Sprint 10 complete) | 🚀 In Progress |
+| 6 | [Phase 3: Credit Economy + Hyperlocal](roadmap/phase3-credit-and-hyperlocal.md) | Weeks 19-26: Peer validation economy, neighborhood-scale problems, Open311 (v9.2 — Sprint 10+11 complete) | 🚀 In Progress |
 | 7 | [Phase 4: Scale & Ecosystem](roadmap/phase4-scale-ecosystem.md) | Weeks 27-34: Growth, partners, SDKs, multi-region | 📋 Planned |
 | 8 | [Phase 5: Sustainability](roadmap/phase5-sustainability.md) | Weeks 35-42: Revenue, governance, open-source, DAO | 📋 Planned |
 
