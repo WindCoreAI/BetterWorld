@@ -42,3 +42,13 @@ export {
   fraudAdminActions,
 } from "./schema/fraudScores";
 export { evidencePhashes } from "./schema/evidence-phashes";
+// Sprint 10: Phase 3 Foundation tables
+export { validatorPool } from "./schema/validatorPool";
+export { peerEvaluations } from "./schema/peerEvaluations";
+export { consensusResults } from "./schema/consensusResults";
+export { agentCreditTransactions } from "./schema/agentCreditTransactions";
+export { creditConversions } from "./schema/creditConversions";
+export { observations } from "./schema/observations";
+export { problemClusters } from "./schema/problemClusters";
+export { disputes } from "./schema/disputes";
+export { geographyPoint } from "./schema/types";

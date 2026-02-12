@@ -30,3 +30,14 @@ export * from "./streaks";
 export * from "./endorsements";
 export * from "./fraudScores";
 export * from "./evidence-phashes";
+
+// Sprint 10: Phase 3 Foundation schemas
+export * from "./types";
+export * from "./validatorPool";
+export * from "./peerEvaluations";
+export * from "./consensusResults";
+export * from "./agentCreditTransactions";
+export * from "./creditConversions";
+export * from "./observations";
+export * from "./problemClusters";
+export * from "./disputes";

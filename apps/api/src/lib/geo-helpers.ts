@@ -134,3 +134,114 @@ export function buildDistanceSelect(lat: number, lng: number) {
     ) / 1000.0, 1
   )`;
 }
+
+// ============================================================================
+// Sprint 10: PostGIS Query Builders (generic, column-parameterized)
+// ============================================================================
+
+/**
+ * Allowlist of valid geography column names to prevent SQL injection.
+ */
+const VALID_GEO_COLUMNS = new Set(["location_point", "location"]);
+
+/**
+ * Build a PostGIS ST_DWithin proximity filter for any geography column.
+ *
+ * @param columnName Raw column name (must be in allowlist)
+ * @param lat Center latitude
+ * @param lng Center longitude
+ * @param radiusMeters Search radius in meters
+ * @returns Drizzle SQL fragment for WHERE clause
+ * @throws Error if columnName is not in the allowlist
+ */
+export function buildPostGISProximityFilter(
+  columnName: string,
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+) {
+  if (!VALID_GEO_COLUMNS.has(columnName)) {
+    throw new Error(`Invalid geography column name: ${columnName}`);
+  }
+  return sql.raw(
+    `ST_DWithin(${columnName}, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${radiusMeters})`,
+  );
+}
+
+/**
+ * Build a PostGIS ST_Distance select expression for any geography column.
+ *
+ * @param columnName Raw column name (must be in allowlist)
+ * @param lat Target latitude
+ * @param lng Target longitude
+ * @returns Drizzle SQL fragment returning distance in meters
+ * @throws Error if columnName is not in the allowlist
+ */
+export function buildPostGISDistanceSelect(
+  columnName: string,
+  lat: number,
+  lng: number,
+) {
+  if (!VALID_GEO_COLUMNS.has(columnName)) {
+    throw new Error(`Invalid geography column name: ${columnName}`);
+  }
+  return sql.raw(
+    `ST_Distance(${columnName}, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography)`,
+  );
+}
+
+/**
+ * Build a PostGIS geography point SQL expression for INSERTs/UPDATEs.
+ *
+ * @param lat Latitude
+ * @param lng Longitude
+ * @returns SQL fragment creating a PostGIS geography point
+ */
+export function buildPostGISPoint(lat: number, lng: number) {
+  return sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography`;
+}
+
+/**
+ * Parse a PostGIS geography column hex output back to lat/lng coordinates.
+ * PostGIS returns geography as hex-encoded EWKB. For simple cases we can
+ * extract coordinates from the standard binary format.
+ *
+ * @param hex Hex string from geography column
+ * @returns { lat, lng } or null if parsing fails
+ */
+export function parsePostGISPointFromHex(
+  hex: string | null,
+): { lat: number; lng: number } | null {
+  if (!hex) return null;
+
+  try {
+    // EWKB format for Point: byte order (1) + type (4) + SRID (4) + X (8) + Y (8) = 21 bytes = 42 hex chars min
+    // With SRID flag: type has 0x20000000 set
+    const buf = Buffer.from(hex, "hex");
+
+    if (buf.length < 21) return null;
+
+    // Read byte order (1 = little-endian, 0 = big-endian)
+    const byteOrder = buf.readUInt8(0);
+    const isLE = byteOrder === 1;
+
+    // Read type (with SRID flag)
+    const wkbType = isLE ? buf.readUInt32LE(1) : buf.readUInt32BE(1);
+    const hasZ = (wkbType & 0x80000000) !== 0;
+    const hasSRID = (wkbType & 0x20000000) !== 0;
+
+    let offset = 5; // Past byte order + type
+    if (hasSRID) offset += 4; // Skip SRID
+
+    // Read X (longitude) and Y (latitude)
+    const lng = isLE ? buf.readDoubleLE(offset) : buf.readDoubleBE(offset);
+    const lat = isLE ? buf.readDoubleLE(offset + 8) : buf.readDoubleBE(offset + 8);
+
+    // Ignore Z if present
+    void hasZ;
+
+    return { lat, lng };
+  } catch {
+    return null;
+  }
+}

@@ -1,8 +1,8 @@
 # BetterWorld Development Roadmap — Overview
 
-> **Version**: 8.4
-> **Date**: 2026-02-10
-> **Status**: Phase 1 COMPLETE. **Phase 2 IN PROGRESS** — Sprint 6 complete (13/13 exit criteria). Sprint 7 complete (Mission Marketplace, 810 tests). Sprint 8 ready to begin.
+> **Version**: 9.0
+> **Date**: 2026-02-11
+> **Status**: Phase 1 COMPLETE. **Phase 2 COMPLETE** — All 4 sprints delivered, 944 tests, evaluation Round 2 resolved. **Phase 3 IN PROGRESS** — Sprint 10 (Foundation) complete (51/51 tasks).
 > **Source**: Synthesized from PRD, Sprint Plan, GTM Strategy, Technical Architecture, Audit Report, and REVIEW-AND-TECH-CHALLENGES.md
 
 ---
@@ -53,38 +53,58 @@ Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-
 
 ---
 
-### Phase 2: Human-in-the-Loop 🚀 IN PROGRESS (Weeks 11-18)
+### Phase 2: Human-in-the-Loop ✅ COMPLETE (Weeks 11-18)
 
 **Goal**: Complete the loop — humans register, claim missions, submit evidence, earn ImpactTokens.
 
 **Sprint 6 (Human Onboarding) — ✅ COMPLETE**:
-- **Backend**: OAuth 2.0 + PKCE registration (Google, GitHub, email/password), human profiles (skills, location geocoding, languages, availability), ImpactToken double-entry accounting (SELECT FOR UPDATE, balance_before/balance_after), token spending (voting, circles, analytics placeholder), orientation reward, profile completeness scoring, human dashboard API, 5 new DB tables, 20 API routes, Zod validation schemas, humanAuth middleware
-- **Frontend**: Human auth pages (register, login, verify, OAuth callback), profile creation form, 5-step onboarding wizard, human dashboard (token balance, reputation, missions, activity cards)
-- **Tests**: 17 integration tests covering registration, login, profile, orientation reward, token operations, dashboard. 768 total tests passing.
+- Backend: OAuth 2.0 + PKCE, human profiles, ImpactToken double-entry accounting, 5 new DB tables, 20 API routes
+- Frontend: Human auth pages, profile creation, 5-step onboarding wizard, human dashboard
+- Tests: 17 integration tests. 768 total tests passing.
 
 **Sprint 7 (Mission Marketplace) — ✅ COMPLETE**:
-- **Database**: 3 tables (missions, missionClaims, messages), 3 enums, 8 indexes, 5 CHECK constraints
-- **Backend**: Mission CRUD (9 routes), Claude Sonnet decomposition (tool_use, 10/day rate limit), marketplace browse (8 filters, Haversine geo-search, cursor pagination), atomic claiming (SELECT FOR UPDATE SKIP LOCKED, max 3 active), encrypted messaging (AES-256-GCM, 4 routes), expiration worker (BullMQ daily cron)
-- **Frontend**: 6 components + 2 pages, Leaflet maps (SSR-safe), XSS-safe popups, mission filters
-- **Quality**: Code quality audit resolved (21 findings across P0-P3: credential leak, type safety, refactors, test coverage, fail-closed rate limiting)
-- **Tests**: 41 new tests (14 CRUD + 5 expiration + 13 message + 9 decompose). 810 total tests passing (354 guardrails + 233 shared + 223 API).
-- **Sprint 8 ready to begin**
+- Database: 3 tables (missions, missionClaims, messages), 3 enums, 8 indexes
+- Backend: Mission CRUD, Claude Sonnet decomposition, marketplace browse, atomic claiming, encrypted messaging, expiration worker
+- Frontend: 6 components + 2 pages, Leaflet maps
+- Tests: 41 new tests. 810 total tests passing.
 
-**Success Criteria**:
-- 500 registered humans, 100 active weekly
-- 50+ missions completed with verified evidence
-- Evidence verification rate > 80%
-- Token economy functional (earning + spending)
-- Impact Dashboard public and accurate
-- Full pipeline working: problem → solution → mission → evidence → tokens
+**Sprint 8 (Evidence & Verification) — ✅ COMPLETE**:
+- Evidence submission (EXIF, GPS, media upload), Claude Vision AI verification
+- Peer review (stranger-only 2-hop exclusion), fraud detection (pHash + velocity + statistical profiling)
+- Appeal system, verification audit log, 6 workers integrated
+- Tests: 66 new tests.
+
+**Sprint 9 (Reputation & Impact) — ✅ COMPLETE**:
+- Reputation scoring (4 dimensions), 5-tier system (newcomer→champion), streak tracking
+- Leaderboards, impact dashboard + heatmap, public portfolios, endorsements
+- Fraud admin panel, metrics aggregation worker
+- Tests: 63 new tests.
+
+**Evaluation Round 2**: All 20 issues resolved (19 fixed + 1 N/A). 944 total tests passing (357 API).
 
 **Deliverables**: See [Phase 2: Human-in-the-Loop](./phase2-human-in-the-loop.md)
 
 ---
 
-### Phase 3: Credit Economy + Hyperlocal (Weeks 19-26)
+### Phase 3: Credit Economy + Hyperlocal 🚀 IN PROGRESS (Weeks 19-26)
 
 **Goal**: Transform BetterWorld into a self-sustaining validation economy while extending to neighborhood-scale problems. Reduce platform AI costs by 80%+ through peer validation.
+
+**Sprint 10 (Foundation) — ✅ COMPLETE**:
+- Schema: 8 new tables (validator_pool, peer_evaluations, consensus_results, agent_credit_transactions, credit_conversions, observations, problem_clusters, disputes), 3 table extensions, 8 new enums, PostGIS spatial infrastructure
+- Agent credit economy: double-entry ledger, starter grants (50 credits), balance/history API
+- Open311 municipal ingestion: Chicago + Portland city configs, BullMQ worker, GeoReport v2 client
+- Human observation submission: GPS validation, proximity check, standalone auto-problem creation
+- Hyperlocal scoring engine: scale-adaptive weights (neighborhood/city vs global)
+- Validator pool backfill, feature flags (8 Redis-backed, all disabled by default)
+- Admin dashboards: credit stats, validator metrics, Open311 stats
+- 51/51 tasks complete.
+
+**Sprint 11 (Shadow Mode) — ⏳ NEXT**:
+- Peer validation in shadow mode (parallel to Layer B, data collection)
+- Validator pool backfill with F1 tracking
+- Evaluation assignment/response/consensus APIs
+- Agent affinity system, local dashboards
 
 **Success Criteria**:
 - Peer validation handling 100% verified-tier + 50%+ hyperlocal content

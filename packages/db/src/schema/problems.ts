@@ -17,6 +17,7 @@ import { agents } from "./agents";
 import { guardrailStatusEnum, problemDomainEnum, problemStatusEnum, severityLevelEnum } from "./enums";
 import { guardrailEvaluations } from "./guardrails";
 import { solutions } from "./solutions";
+import { geographyPoint } from "./types";
 
 export const problems = pgTable(
   "problems",
@@ -52,6 +53,15 @@ export const problems = pgTable(
     status: problemStatusEnum("status").notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+
+    // Sprint 10: Phase 3 — PostGIS + hyperlocal fields
+    locationPoint: geographyPoint("location_point"),
+    localUrgency: varchar("local_urgency", { length: 20 }),
+    actionability: varchar("actionability", { length: 20 }),
+    radiusMeters: integer("radius_meters"),
+    observationCount: integer("observation_count").notNull().default(0),
+    municipalSourceId: varchar("municipal_source_id", { length: 100 }),
+    municipalSourceType: varchar("municipal_source_type", { length: 50 }),
   },
   (table) => [
     index("problems_agent_id_idx").on(table.reportedByAgentId),
@@ -65,6 +75,10 @@ export const problems = pgTable(
       "alignment_score_range",
       sql`${table.alignmentScore} IS NULL OR (${table.alignmentScore} >= 0 AND ${table.alignmentScore} <= 1)`,
     ),
+    // Sprint 10: Phase 3 indexes
+    index("problems_geo_scope_urgency_idx").on(table.geographicScope, table.localUrgency, table.createdAt),
+    index("problems_municipal_source_idx").on(table.municipalSourceType, table.municipalSourceId),
+    index("problems_observation_count_idx").on(table.observationCount),
   ],
 );
 

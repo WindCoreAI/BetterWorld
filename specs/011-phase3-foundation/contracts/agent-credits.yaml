@@ -1,0 +1,98 @@
+# Agent Credits API Contracts
+# Sprint: 011-phase3-foundation
+# Base path: /api/v1/agents/credits
+
+---
+# GET /api/v1/agents/credits/balance
+# Returns agent's credit balance and recent transaction history
+# Auth: agentAuth (API key)
+get_balance:
+  method: GET
+  path: /api/v1/agents/credits/balance
+  auth: agentAuth
+  query:
+    cursor:
+      type: string
+      required: false
+      description: Cursor for pagination (transaction ID)
+    limit:
+      type: integer
+      required: false
+      default: 20
+      min: 1
+      max: 100
+      description: Number of transactions to return
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        creditBalance:
+          type: integer
+          description: Current credit balance
+          example: 50
+        transactions:
+          type: array
+          items:
+            id:
+              type: string (uuid)
+            amount:
+              type: integer
+              description: Positive for earn, negative for spend
+            balanceBefore:
+              type: integer
+              description: Balance before this transaction
+            balanceAfter:
+              type: integer
+              description: Balance after this transaction
+            transactionType:
+              type: string
+              enum: [earn_validation, earn_validation_local, earn_validation_complexity, earn_validation_domain, earn_starter_grant, spend_conversion]
+            referenceId:
+              type: string (uuid) | null
+            referenceType:
+              type: string | null
+            description:
+              type: string | null
+            createdAt:
+              type: string (ISO 8601)
+        nextCursor:
+          type: string | null
+          description: Next page cursor (null if no more)
+      requestId:
+        type: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Invalid or missing API key" }
+
+---
+# GET /api/v1/agents/credits/rate
+# Returns current conversion rate (agent credits → human ImpactTokens)
+# Auth: agentAuth (API key) — Sprint 12 feature, endpoint created in Sprint 10
+get_rate:
+  method: GET
+  path: /api/v1/agents/credits/rate
+  auth: agentAuth
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        currentRate:
+          type: number
+          description: Agent credits per 1 ImpactToken
+          example: 5.0
+        minRate:
+          type: number
+          example: 1.0
+        maxRate:
+          type: number
+          example: 20.0
+        lastAdjustedAt:
+          type: string (ISO 8601) | null
+        nextAdjustmentAt:
+          type: string (ISO 8601) | null
+      requestId:
+        type: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Invalid or missing API key" }
+    503: { code: FEATURE_DISABLED, message: "Credit conversion is not yet enabled" }

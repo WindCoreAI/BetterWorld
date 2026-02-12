@@ -122,6 +122,8 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "earn_referral",
   "earn_evidence_verified",
   "earn_peer_review",
+  "earn_review_mission",
+  "earn_conversion_received",
   // Spend (negative amounts)
   "spend_vote",
   "spend_circle",
@@ -178,4 +180,63 @@ export const endorsementStatusEnum = pgEnum("endorsement_status", [
 export const portfolioVisibilityEnum = pgEnum("portfolio_visibility", [
   "public",
   "private",
+]);
+
+// Sprint 10: Phase 3 Foundation enums
+export const validatorTierEnum = pgEnum("validator_tier", [
+  "apprentice",
+  "journeyman",
+  "expert",
+]);
+
+export const consensusDecisionEnum = pgEnum("consensus_decision", [
+  "approved",
+  "rejected",
+  "escalated",
+  "expired",
+]);
+
+export const disputeStatusEnum = pgEnum("dispute_status", [
+  "open",
+  "admin_review",
+  "upheld",
+  "overturned",
+  "dismissed",
+]);
+
+export const geographicScopeEnum = pgEnum("geographic_scope", [
+  "global",
+  "country",
+  "city",
+  "neighborhood",
+]);
+
+export const observationTypeEnum = pgEnum("observation_type", [
+  "photo",
+  "video_still",
+  "text_report",
+  "audio_transcript",
+]);
+
+export const observationVerificationEnum = pgEnum("observation_verification", [
+  "pending",
+  "gps_verified",
+  "vision_verified",
+  "rejected",
+  "fraud_flagged",
+]);
+
+export const reviewTypeEnum = pgEnum("review_type", [
+  "evidence",
+  "observation",
+  "before_after",
+]);
+
+export const agentCreditTypeEnum = pgEnum("agent_credit_type", [
+  "earn_validation",
+  "earn_validation_local",
+  "earn_validation_complexity",
+  "earn_validation_domain",
+  "earn_starter_grant",
+  "spend_conversion",
 ]);

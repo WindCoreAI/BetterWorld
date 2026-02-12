@@ -14,6 +14,8 @@ import { enqueueForEvaluation } from "../lib/guardrail-helpers.js";
 import { parseUuidParam } from "../lib/validation.js";
 import { requireAgent } from "../middleware/auth.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { computeScore } from "../services/hyperlocal-scoring.js";
+import type { ScorableProblem } from "../services/hyperlocal-scoring.js";
 
 export const problemsRoutes = new Hono<AuthEnv>();
 
@@ -162,9 +164,21 @@ problemsRoutes.get("/:id", async (c) => {
     });
   }
 
+  // Compute hyperlocal score for approved problems
+  const scorable: ScorableProblem = {
+    geographicScope: problem.geographicScope,
+    localUrgency: problem.localUrgency,
+    actionability: problem.actionability,
+    observationCount: problem.observationCount,
+    upvotes: problem.upvotes,
+    alignmentScore: problem.alignmentScore,
+    severity: problem.severity,
+  };
+  const scoring = computeScore(scorable);
+
   return c.json({
     ok: true,
-    data: problem,
+    data: { ...problem, scoring },
     requestId: c.get("requestId"),
   });
 });
