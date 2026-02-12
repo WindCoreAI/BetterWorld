@@ -16,6 +16,7 @@ async function main() {
   const { createFraudScoringWorker } = await import("./fraud-scoring.js");
   const { createReputationDecayWorker } = await import("./reputation-decay.js");
   const { createMetricsAggregationWorker } = await import("./metrics-aggregation.js");
+  const { createMissionExpirationWorker } = await import("./mission-expiration.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -23,6 +24,7 @@ async function main() {
     { name: "fraud-scoring", create: createFraudScoringWorker },
     { name: "reputation-decay", create: createReputationDecayWorker },
     { name: "metrics-aggregation", create: createMetricsAggregationWorker },
+    { name: "mission-expiration", create: createMissionExpirationWorker },
   ];
 
   for (const { name, create } of workers) {

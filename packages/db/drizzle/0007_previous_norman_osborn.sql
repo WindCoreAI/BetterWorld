@@ -1,0 +1,1 @@
+ALTER TABLE "humans" ALTER COLUMN "token_balance" SET DATA TYPE numeric(18, 0);

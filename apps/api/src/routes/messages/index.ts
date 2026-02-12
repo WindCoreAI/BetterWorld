@@ -13,7 +13,7 @@ import { and, eq, desc, lt, or, sql, asc } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { getDb, getRedis } from "../../lib/container.js";
-import { encryptMessage, decryptMessage } from "../../lib/encryption-helpers.js";
+import { encryptMessage, decryptMessage, getCurrentKeyVersion } from "../../lib/encryption-helpers.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import { requireAgent } from "../../middleware/auth.js";
 import type { AuthEnv } from "../../middleware/auth.js";
@@ -120,7 +120,7 @@ messageRoutes.post("/", requireAgent(), async (c) => {
       receiverId,
       threadId: threadId ?? null,
       encryptedContent,
-      encryptionKeyVersion: 1,
+      encryptionKeyVersion: getCurrentKeyVersion(),
     })
     .returning();
 

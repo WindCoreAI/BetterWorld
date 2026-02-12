@@ -248,7 +248,15 @@ reputationRoutes.post("/endorsements", humanAuth(), async (c) => {
     return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } }, 503);
 
   const human = c.get("human");
-  const body = endorsementCreateSchema.parse(await c.req.json());
+  const raw = await c.req.json();
+  const parsed = endorsementCreateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      { ok: false, error: { code: "VALIDATION_ERROR", message: "Invalid endorsement data", details: parsed.error.flatten().fieldErrors } },
+      422,
+    );
+  }
+  const body = parsed.data;
 
   // Self-endorsement check
   if (body.toHumanId === human.id) {

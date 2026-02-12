@@ -4,12 +4,15 @@
 
 import crypto from "crypto";
 
+import { humans, sessions, verificationTokens } from "@betterworld/db";
 import { VerifyEmailSchema } from "@betterworld/shared/schemas/human";
 import { zValidator } from "@hono/zod-validator";
+import { and, eq, gt } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
-import { generateTokenPair } from "../../lib/auth-helpers.js";
+import { generateTokenPair, hashToken } from "../../lib/auth-helpers.js";
+import { getDb } from "../../lib/container.js";
 import { logger } from "../../middleware/logger.js";
 
 const app = new Hono<AppEnv>();
@@ -18,12 +21,8 @@ app.post("/", zValidator("json", VerifyEmailSchema), async (c) => {
   const { email, code } = c.req.valid("json");
 
   try {
-    const { getDb } = await import("../../lib/container.js");
     const db = getDb();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-    const { and, eq, gt } = await import("drizzle-orm");
-    const { humans, verificationTokens } = await import("@betterworld/db");
 
     // Hash incoming code before comparison (F14)
     const codeHash = crypto.createHash("sha256").update(code).digest("hex");
@@ -73,13 +72,12 @@ app.post("/", zValidator("json", VerifyEmailSchema), async (c) => {
 
     const { accessToken, refreshToken, expiresIn } = await generateTokenPair(user.id, user.email);
 
-    // Store session for token revocation support
-    const { sessions } = await import("@betterworld/db");
+    // Store session with hashed tokens (prevent leakage on DB breach)
     await db.insert(sessions).values({
       userId: user.id,
-      sessionToken: accessToken,
+      sessionToken: hashToken(accessToken),
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      refreshToken,
+      refreshToken: hashToken(refreshToken),
       refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 

@@ -23,13 +23,9 @@ import { haversineDistance } from "../../lib/evidence-helpers.js";
 import { distributeEvidenceReward } from "../../lib/reward-helpers.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import { humanAuth } from "../../middleware/humanAuth.js";
+import { requireAdmin } from "../../middleware/requireAdmin.js";
 
 const disputeRoutes = new Hono<AppEnv>();
-
-/** Admin-only middleware */
-function requireAdmin() {
-  return humanAuth();
-}
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/admin/disputes - List disputes
@@ -40,14 +36,9 @@ const listQuerySchema = z.object({
   status: z.enum(["pending", "resolved"]).default("pending"),
 });
 
-disputeRoutes.get("/", requireAdmin(), async (c) => {
+disputeRoutes.get("/", humanAuth(), requireAdmin(), async (c) => {
   const db = getDb();
   if (!db) throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
-
-  const human = c.get("human");
-  if (human.role !== "admin") {
-    throw new AppError("FORBIDDEN", "Admin access required");
-  }
 
   const query = c.req.query();
   const parsed = listQuerySchema.safeParse(query);
@@ -188,15 +179,11 @@ const resolveSchema = z.object({
   reasoning: z.string().min(10).max(5000),
 });
 
-disputeRoutes.post("/:evidenceId/resolve", requireAdmin(), async (c) => {
+disputeRoutes.post("/:evidenceId/resolve", humanAuth(), requireAdmin(), async (c) => {
   const db = getDb();
   if (!db) throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
 
   const human = c.get("human");
-  if (human.role !== "admin") {
-    throw new AppError("FORBIDDEN", "Admin access required");
-  }
-
   const evidenceId = parseUuidParam(c.req.param("evidenceId"), "evidenceId");
 
   const body = await c.req.json();

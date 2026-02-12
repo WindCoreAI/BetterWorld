@@ -10,11 +10,36 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
-import { generateTokenPair } from "../../lib/auth-helpers.js";
+import { generateTokenPair, hashToken } from "../../lib/auth-helpers.js";
 import { getDb, getRedis } from "../../lib/container.js";
 import { logger } from "../../middleware/logger.js";
 
 const app = new Hono<AppEnv>();
+
+type RedisLike = { get: (k: string) => Promise<string | null>; incr: (k: string) => Promise<number>; expire: (k: string, s: number) => Promise<unknown>; del: (k: string) => Promise<unknown> };
+
+async function checkLoginRateLimit(redis: RedisLike | null, rateKey: string): Promise<boolean> {
+  if (!redis) return false;
+  try {
+    const attempts = await redis.get(rateKey);
+    return !!(attempts && parseInt(attempts, 10) >= 5);
+  } catch {
+    return false; // Fail open
+  }
+}
+
+async function incrementLoginRateLimit(redis: RedisLike | null, rateKey: string): Promise<void> {
+  if (!redis) return;
+  try {
+    const count = await redis.incr(rateKey);
+    if (count === 1) await redis.expire(rateKey, 900);
+  } catch { /* fail open */ }
+}
+
+async function clearLoginRateLimit(redis: RedisLike | null, rateKey: string): Promise<void> {
+  if (!redis) return;
+  try { await redis.del(rateKey); } catch { /* non-fatal */ }
+}
 
 app.post("/", zValidator("json", LoginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
@@ -23,21 +48,14 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
     const db = getDb();
     const redis = getRedis();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-    const loginRateKey = `rate:login:${email}`;
-    if (redis) {
-      try {
-        const attempts = await redis.get(loginRateKey);
-        if (attempts && parseInt(attempts, 10) >= 5) {
-          return c.json(
-            { ok: false, error: { code: "RATE_LIMITED" as const, message: "Too many login attempts. Try again in 15 minutes." }, requestId: c.get("requestId") },
-            429,
-          );
-        }
-      } catch {
-        // Fail open: if Redis is unavailable, allow the login attempt
-      }
-    }
 
+    const loginRateKey = `rate:login:${email}`;
+    if (await checkLoginRateLimit(redis, loginRateKey)) {
+      return c.json(
+        { ok: false, error: { code: "RATE_LIMITED" as const, message: "Too many login attempts. Try again in 15 minutes." }, requestId: c.get("requestId") },
+        429,
+      );
+    }
 
     const [user] = await db
       .select()
@@ -46,13 +64,7 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
       .limit(1);
 
     if (!user || !user.passwordHash) {
-      // Increment rate limit on failure
-      if (redis) {
-        try {
-          const count = await redis.incr(loginRateKey);
-          if (count === 1) await redis.expire(loginRateKey, 900);
-        } catch { /* fail open */ }
-      }
+      await incrementLoginRateLimit(redis, loginRateKey);
       return c.json(
         { ok: false, error: { code: "INVALID_CREDENTIALS" as const, message: "Invalid email or password" }, requestId: c.get("requestId") },
         401,
@@ -61,23 +73,14 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
 
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
     if (!passwordValid) {
-      // Increment rate limit on failure
-      if (redis) {
-        try {
-          const count = await redis.incr(loginRateKey);
-          if (count === 1) await redis.expire(loginRateKey, 900);
-        } catch { /* fail open */ }
-      }
+      await incrementLoginRateLimit(redis, loginRateKey);
       return c.json(
         { ok: false, error: { code: "INVALID_CREDENTIALS" as const, message: "Invalid email or password" }, requestId: c.get("requestId") },
         401,
       );
     }
 
-    // Successful login: clear rate limit
-    if (redis) {
-      try { await redis.del(loginRateKey); } catch { /* non-fatal */ }
-    }
+    await clearLoginRateLimit(redis, loginRateKey);
 
     if (!user.emailVerified) {
       return c.json(
@@ -95,12 +98,11 @@ app.post("/", zValidator("json", LoginSchema), async (c) => {
 
     const { accessToken, refreshToken, expiresIn } = await generateTokenPair(user.id, user.email);
 
-    // Store session for token revocation support
     await db.insert(sessions).values({
       userId: user.id,
-      sessionToken: accessToken,
+      sessionToken: hashToken(accessToken),
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      refreshToken,
+      refreshToken: hashToken(refreshToken),
       refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 

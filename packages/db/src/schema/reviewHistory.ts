@@ -34,6 +34,11 @@ export const reviewHistory = pgTable(
       table.reviewerHumanId,
       table.submitterHumanId,
     ),
+    // R19: Reverse composite index for 2-hop peer exclusion query performance
+    index("idx_review_history_pair_reverse").on(
+      table.submitterHumanId,
+      table.reviewerHumanId,
+    ),
     check(
       "no_self_review_history",
       sql`${table.reviewerHumanId} != ${table.submitterHumanId}`,

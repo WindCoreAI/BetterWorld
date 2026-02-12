@@ -20,6 +20,14 @@ const logger = pino({ name: "peer-assignment" });
  *
  * Returns reviewer human IDs ordered randomly.
  * If fewer than `minRequired` eligible reviewers, returns empty array (escalate to admin).
+ *
+ * Performance (R19): The 4 UNION subqueries are backed by:
+ *   - idx_review_history_submitter (submitter_human_id)
+ *   - idx_review_history_reviewer (reviewer_human_id)
+ *   - idx_review_history_pair (reviewer_human_id, submitter_human_id)
+ *   - idx_review_history_pair_reverse (submitter_human_id, reviewer_human_id)
+ * At 10K+ review_history rows, run EXPLAIN ANALYZE on the NOT IN subqueries
+ * and consider rewriting as EXISTS subqueries if the planner chooses hash joins.
  */
 export async function selectPeerReviewers(
   db: PostgresJsDatabase,

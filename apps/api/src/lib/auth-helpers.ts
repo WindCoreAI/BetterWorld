@@ -2,6 +2,8 @@
  * Shared auth helpers (Sprint 6)
  */
 
+import crypto from "crypto";
+
 import { loadConfig } from "@betterworld/shared";
 import * as jose from "jose";
 
@@ -29,4 +31,12 @@ export async function generateTokenPair(userId: string, email?: string) {
     .sign(secret);
 
   return { accessToken, refreshToken, expiresIn: 900 };
+}
+
+/**
+ * SHA-256 hash a token for safe storage.
+ * Prevents token leakage on database breach while allowing lookup.
+ */
+export function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }

@@ -49,6 +49,7 @@ vi.mock("../../../src/lib/encryption-helpers.js", () => ({
   decryptMessage: vi.fn((encrypted: string, _version: number) =>
     encrypted.replace("encrypted:", ""),
   ),
+  getCurrentKeyVersion: vi.fn(() => 1),
 }));
 
 // Mock requireAgent middleware to bypass API key + bcrypt verification

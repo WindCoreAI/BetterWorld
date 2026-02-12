@@ -22,7 +22,7 @@ export const humans = pgTable(
     reputationScore: decimal("reputation_score", { precision: 5, scale: 2 })
       .notNull()
       .default("0"),
-    tokenBalance: decimal("token_balance", { precision: 18, scale: 8 })
+    tokenBalance: decimal("token_balance", { precision: 18, scale: 0 })
       .notNull()
       .default("0"),
 

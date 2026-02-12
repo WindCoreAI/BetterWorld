@@ -34,12 +34,14 @@ app.post("/", zValidator("json", RefreshTokenSchema), async (c) => {
 
     const { eq } = await import("drizzle-orm");
     const { sessions } = await import("@betterworld/db");
+    const { hashToken } = await import("../../lib/auth-helpers.js");
 
     // Verify refresh token exists in sessions table (server-side revocation check)
+    // Tokens are stored as SHA-256 hashes
     const [session] = await db
       .select()
       .from(sessions)
-      .where(eq(sessions.refreshToken, refreshToken))
+      .where(eq(sessions.refreshToken, hashToken(refreshToken)))
       .limit(1);
 
     if (!session) {
@@ -48,11 +50,11 @@ app.post("/", zValidator("json", RefreshTokenSchema), async (c) => {
 
     const { accessToken, refreshToken: newRefresh, expiresIn } = await generateTokenPair(payload.userId as string);
 
-    // Rotate refresh token in the session row
+    // Rotate refresh token in the session row (store as hash)
     await db
       .update(sessions)
       .set({
-        refreshToken: newRefresh,
+        refreshToken: hashToken(newRefresh),
         refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         updatedAt: new Date(),
       })

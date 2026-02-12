@@ -10,6 +10,7 @@ import { Hono, type Context } from "hono";
 
 import type { AppEnv } from "../../app.js";
 import { generateTokenPair } from "../../lib/auth-helpers.js";
+import { encryptMessage } from "../../lib/encryption-helpers.js";
 import { logger } from "../../middleware/logger.js";
 
 // OAuth provider response types
@@ -286,16 +287,17 @@ app.post("/exchange", async (c) => {
     const { userId, email } = JSON.parse(data);
     const { accessToken, refreshToken, expiresIn } = await generateTokenPair(userId, email);
 
-    // Store session for token revocation support
+    // Store session with hashed tokens (prevent leakage on DB breach)
     const { getDb } = await import("../../lib/container.js");
     const db = getDb();
     if (db) {
       const { sessions } = await import("@betterworld/db");
+      const { hashToken } = await import("../../lib/auth-helpers.js");
       await db.insert(sessions).values({
         userId,
-        sessionToken: accessToken,
+        sessionToken: hashToken(accessToken),
         expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-        refreshToken,
+        refreshToken: hashToken(refreshToken),
         refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
     }
@@ -316,6 +318,20 @@ app.post("/exchange", async (c) => {
 });
 
 // ─── Shared Helpers ─────────────────────────────────────────
+
+/**
+ * Encrypt an OAuth provider token before storage.
+ * Falls back to plaintext when MESSAGE_ENCRYPTION_KEY is not set (dev mode).
+ */
+function tryEncryptToken(token: string | null | undefined): string | null {
+  if (!token) return null;
+  try {
+    return encryptMessage(token);
+  } catch {
+    // Encryption key not configured — store as-is in dev mode
+    return token;
+  }
+}
 
 interface OAuthUserParams {
   provider: string;
@@ -374,8 +390,8 @@ async function findOrCreateOAuthUser(params: OAuthUserParams) {
         userId: existingByEmail.id,
         provider: params.provider,
         providerAccountId: params.providerId,
-        accessToken: params.providerTokens.access_token as string,
-        refreshToken: (params.providerTokens.refresh_token as string) || null,
+        accessToken: tryEncryptToken(params.providerTokens.access_token as string) || "",
+        refreshToken: tryEncryptToken(params.providerTokens.refresh_token as string),
         tokenType: (params.providerTokens.token_type as string) || null,
         scope: (params.providerTokens.scope as string) || null,
       });
@@ -404,8 +420,8 @@ async function findOrCreateOAuthUser(params: OAuthUserParams) {
       userId: newUser.id,
       provider: params.provider,
       providerAccountId: params.providerId,
-      accessToken: (params.providerTokens.access_token as string) || "",
-      refreshToken: (params.providerTokens.refresh_token as string) || null,
+      accessToken: tryEncryptToken(params.providerTokens.access_token as string) || "",
+      refreshToken: tryEncryptToken(params.providerTokens.refresh_token as string),
       tokenType: (params.providerTokens.token_type as string) || null,
       scope: (params.providerTokens.scope as string) || null,
     });

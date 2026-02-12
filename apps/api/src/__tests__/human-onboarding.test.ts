@@ -104,6 +104,7 @@ vi.mock("../../src/lib/auth-helpers.js", () => ({
     refreshToken: "mock-refresh-token",
     expiresIn: 900,
   }),
+  hashToken: vi.fn((token: string) => `hashed-${token}`),
 }));
 
 // Mock humanAuth middleware to bypass JWT verification

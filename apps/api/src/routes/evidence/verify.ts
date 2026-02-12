@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import type { AppEnv } from "../../app.js";
 import { getDb, getRedis } from "../../lib/container.js";
+import { getSignedUrl } from "../../lib/storage.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import { humanAuth } from "../../middleware/humanAuth.js";
 
@@ -84,14 +85,15 @@ verifyRoutes.post("/:evidenceId/appeal", humanAuth(), async (c) => {
   const evidenceId = parseUuidParam(c.req.param("evidenceId"), "evidenceId");
   const human = c.get("human");
 
-  // Rate limit: 3 appeals per day
+  // Rate limit: 3 appeals per day (fail-closed)
   const redis = getRedis();
-  if (redis) {
-    const appealKey = `rate:evidence:appeal:${human.id}`;
-    const count = await redis.get(appealKey);
-    if (count && parseInt(count, 10) >= 3) {
-      throw new AppError("RATE_LIMITED", "Appeal rate limit exceeded (3/day)");
-    }
+  if (!redis) {
+    throw new AppError("SERVICE_UNAVAILABLE", "Rate limiting unavailable");
+  }
+  const appealKey = `rate:evidence:appeal:${human.id}`;
+  const count = await redis.get(appealKey);
+  if (count && parseInt(count, 10) >= 3) {
+    throw new AppError("RATE_LIMITED", "Appeal rate limit exceeded (3/day)");
   }
 
   const body = await c.req.json();
@@ -150,12 +152,9 @@ verifyRoutes.post("/:evidenceId/appeal", humanAuth(), async (c) => {
   });
 
   // Increment rate limit
-  if (redis) {
-    const appealKey = `rate:evidence:appeal:${human.id}`;
-    const count = await redis.incr(appealKey);
-    if (count === 1) {
-      await redis.expire(appealKey, 86400); // 24 hours
-    }
+  const incrCount = await redis.incr(appealKey);
+  if (incrCount === 1) {
+    await redis.expire(appealKey, 86400); // 24 hours
   }
 
   return c.json(
@@ -169,6 +168,51 @@ verifyRoutes.post("/:evidenceId/appeal", humanAuth(), async (c) => {
     },
     201,
   );
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/evidence/:evidenceId - Get evidence detail
+// ---------------------------------------------------------------------------
+verifyRoutes.get("/:evidenceId", humanAuth(), async (c) => {
+  const db = getDb();
+  if (!db) throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
+
+  const evidenceId = parseUuidParam(c.req.param("evidenceId"), "evidenceId");
+  const human = c.get("human");
+
+  const [row] = await db
+    .select()
+    .from(evidence)
+    .where(eq(evidence.id, evidenceId))
+    .limit(1);
+
+  if (!row) {
+    throw new AppError("NOT_FOUND", "Evidence not found");
+  }
+
+  // Owner or admin access check
+  if (row.submittedByHumanId !== human.id && human.role !== "admin") {
+    throw new AppError("FORBIDDEN", "Access denied");
+  }
+
+  // Generate signed URLs
+  const contentUrl = row.contentUrl ? await getSignedUrl(row.contentUrl) : null;
+  const thumbnailUrl = row.thumbnailUrl ? await getSignedUrl(row.thumbnailUrl) : null;
+
+  return c.json({
+    ok: true,
+    data: {
+      ...row,
+      contentUrl,
+      thumbnailUrl,
+      latitude: row.latitude ? Number(row.latitude) : null,
+      longitude: row.longitude ? Number(row.longitude) : null,
+      aiVerificationScore: row.aiVerificationScore ? Number(row.aiVerificationScore) : null,
+      peerAverageConfidence: row.peerAverageConfidence ? Number(row.peerAverageConfidence) : null,
+      finalConfidence: row.finalConfidence ? Number(row.finalConfidence) : null,
+    },
+    requestId: c.get("requestId"),
+  });
 });
 
 export default verifyRoutes;

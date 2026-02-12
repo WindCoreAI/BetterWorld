@@ -4,12 +4,15 @@
 
 import crypto from "crypto";
 
+import { humans, verificationTokens } from "@betterworld/db";
 import { RegisterSchema } from "@betterworld/shared/schemas/human";
 import { zValidator } from "@hono/zod-validator";
 import bcrypt from "bcrypt";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
+import { getDb } from "../../lib/container.js";
 import { sendVerificationEmail } from "../../lib/email.js";
 import { logger } from "../../middleware/logger.js";
 
@@ -19,12 +22,8 @@ app.post("/", zValidator("json", RegisterSchema), async (c) => {
   const { email, password, displayName } = c.req.valid("json");
 
   try {
-    const { getDb } = await import("../../lib/container.js");
     const db = getDb();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-    const { eq } = await import("drizzle-orm");
-    const { humans, verificationTokens } = await import("@betterworld/db");
 
     // Hash password first to prevent timing-based user enumeration (F23)
     const passwordHash = await bcrypt.hash(password, 12);

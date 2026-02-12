@@ -4,11 +4,14 @@
 
 import crypto from "crypto";
 
+import { verificationTokens } from "@betterworld/db";
 import { ResendCodeSchema } from "@betterworld/shared/schemas/human";
 import { zValidator } from "@hono/zod-validator";
+import { and, eq, gte } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
+import { getDb, getRedis } from "../../lib/container.js";
 import { sendVerificationEmail } from "../../lib/email.js";
 import { logger } from "../../middleware/logger.js";
 
@@ -18,13 +21,9 @@ app.post("/", zValidator("json", ResendCodeSchema), async (c) => {
   const { email } = c.req.valid("json");
 
   try {
-    const { getDb, getRedis } = await import("../../lib/container.js");
     const db = getDb();
     const redis = getRedis();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-    const { and, eq, gte } = await import("drizzle-orm");
-    const { verificationTokens } = await import("@betterworld/db");
 
     // Check throttle limit (3 resends per hour)
     if (redis) {

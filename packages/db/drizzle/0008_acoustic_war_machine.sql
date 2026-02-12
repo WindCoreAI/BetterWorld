@@ -1,0 +1,1 @@
+CREATE INDEX "idx_review_history_pair_reverse" ON "review_history" USING btree ("submitter_human_id","reviewer_human_id");

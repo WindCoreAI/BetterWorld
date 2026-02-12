@@ -20,26 +20,16 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../app.js";
 import { getDb } from "../../lib/container.js";
 import { humanAuth } from "../../middleware/humanAuth.js";
+import { requireAdmin } from "../../middleware/requireAdmin.js";
 
 const fraudRoutes = new Hono<AppEnv>();
 
-/** Admin check middleware */
-function requireAdmin() {
-  return humanAuth();
-  // In production, would also check human.role === "admin"
-}
-
 // ────────────────── GET /admin/fraud/stats ──────────────────
 
-fraudRoutes.get("/stats", requireAdmin(), async (c) => {
+fraudRoutes.get("/stats", humanAuth(), requireAdmin(), async (c) => {
   const db = getDb();
   if (!db)
     return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } }, 503);
-
-  const human = c.get("human");
-  if (human.role !== "admin") {
-    return c.json({ ok: false, error: { code: "FORBIDDEN", message: "Admin access required" } }, 403);
-  }
 
   const [flagged] = await db
     .select({ count: count() })
@@ -96,15 +86,10 @@ fraudRoutes.get("/stats", requireAdmin(), async (c) => {
 
 // ────────────────── GET /admin/fraud/queue ──────────────────
 
-fraudRoutes.get("/queue", requireAdmin(), async (c) => {
+fraudRoutes.get("/queue", humanAuth(), requireAdmin(), async (c) => {
   const db = getDb();
   if (!db)
     return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } }, 503);
-
-  const human = c.get("human");
-  if (human.role !== "admin") {
-    return c.json({ ok: false, error: { code: "FORBIDDEN", message: "Admin access required" } }, 403);
-  }
 
   const query = fraudQueueQuerySchema.parse(c.req.query());
 
@@ -158,15 +143,10 @@ fraudRoutes.get("/queue", requireAdmin(), async (c) => {
 
 // ────────────────── GET /admin/fraud/:humanId ──────────────────
 
-fraudRoutes.get("/:humanId", requireAdmin(), async (c) => {
+fraudRoutes.get("/:humanId", humanAuth(), requireAdmin(), async (c) => {
   const db = getDb();
   if (!db)
     return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } }, 503);
-
-  const human = c.get("human");
-  if (human.role !== "admin") {
-    return c.json({ ok: false, error: { code: "FORBIDDEN", message: "Admin access required" } }, 403);
-  }
 
   const humanId = c.req.param("humanId");
 
@@ -257,16 +237,12 @@ fraudRoutes.get("/:humanId", requireAdmin(), async (c) => {
 
 // ────────────────── POST /admin/fraud/:humanId/action ──────────────────
 
-fraudRoutes.post("/:humanId/action", requireAdmin(), async (c) => {
+fraudRoutes.post("/:humanId/action", humanAuth(), requireAdmin(), async (c) => {
   const db = getDb();
   if (!db)
     return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } }, 503);
 
   const admin = c.get("human");
-  if (admin.role !== "admin") {
-    return c.json({ ok: false, error: { code: "FORBIDDEN", message: "Admin access required" } }, 403);
-  }
-
   const humanId = c.req.param("humanId");
   const body = fraudAdminActionSchema.parse(await c.req.json());
 

@@ -210,11 +210,16 @@ async function enqueueVerification(evidenceId: string): Promise<void> {
 }
 
 // --- Helper: Enqueue fraud scoring after evidence submission ---
-async function enqueueFraudScoring(evidenceId: string, humanId: string): Promise<void> {
+async function enqueueFraudScoring(evidenceId: string, humanId: string, imageBuffer?: Buffer): Promise<void> {
   try {
     const { getFraudScoringQueue } = await import("../../lib/fraud-queue.js");
     const queue = getFraudScoringQueue();
-    await queue.add("score", { evidenceId, humanId }, {
+    await queue.add("score", {
+      evidenceId,
+      humanId,
+      // Pass image as base64 for pHash duplicate detection in fraud-scoring worker
+      imageBuffer: imageBuffer ? imageBuffer.toString("base64") : undefined,
+    }, {
       attempts: 3,
       backoff: { type: "exponential", delay: 2000 },
     });
@@ -336,7 +341,9 @@ evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
   }
 
   // Enqueue fraud scoring for all submissions (honeypot and normal)
-  await enqueueFraudScoring(evidenceRecord!.id, human.id);
+  // Pass image buffer for pHash duplicate detection
+  const imageBasedType = primaryFile.type.startsWith("image/");
+  await enqueueFraudScoring(evidenceRecord!.id, human.id, imageBasedType ? fileBuffer : undefined);
 
   // Rate limit already incremented before processing (see above)
 
@@ -431,51 +438,6 @@ evidenceRoutes.get("/:missionId/evidence", humanAuth(), async (c) => {
     meta: {
       hasMore,
       count: items.length,
-    },
-    requestId: c.get("requestId"),
-  });
-});
-
-// ---------------------------------------------------------------------------
-// GET /api/v1/evidence/:evidenceId - Get evidence detail
-// ---------------------------------------------------------------------------
-evidenceRoutes.get("/:evidenceId", humanAuth(), async (c) => {
-  const db = getDb();
-  if (!db) throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
-
-  const evidenceId = parseUuidParam(c.req.param("evidenceId"), "evidenceId");
-  const human = c.get("human");
-
-  const [row] = await db
-    .select()
-    .from(evidence)
-    .where(eq(evidence.id, evidenceId))
-    .limit(1);
-
-  if (!row) {
-    throw new AppError("NOT_FOUND", "Evidence not found");
-  }
-
-  // Owner or admin access check
-  if (row.submittedByHumanId !== human.id && human.role !== "admin") {
-    throw new AppError("FORBIDDEN", "Access denied");
-  }
-
-  // Generate signed URLs
-  const contentUrl = row.contentUrl ? await getSignedUrl(row.contentUrl) : null;
-  const thumbnailUrl = row.thumbnailUrl ? await getSignedUrl(row.thumbnailUrl) : null;
-
-  return c.json({
-    ok: true,
-    data: {
-      ...row,
-      contentUrl,
-      thumbnailUrl,
-      latitude: row.latitude ? Number(row.latitude) : null,
-      longitude: row.longitude ? Number(row.longitude) : null,
-      aiVerificationScore: row.aiVerificationScore ? Number(row.aiVerificationScore) : null,
-      peerAverageConfidence: row.peerAverageConfidence ? Number(row.peerAverageConfidence) : null,
-      finalConfidence: row.finalConfidence ? Number(row.finalConfidence) : null,
     },
     requestId: c.get("requestId"),
   });

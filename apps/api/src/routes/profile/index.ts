@@ -2,13 +2,16 @@
  * Profile Routes (Sprint 6 - Phase 4: User Story 2)
  */
 
+import { humanProfiles } from "@betterworld/db";
 import { ProfileCreateSchema, ProfileUpdateSchema } from "@betterworld/shared/schemas/human";
 import { geocodeLocation, parsePostGISPoint } from "@betterworld/shared/utils/geocode";
 import { calculateProfileCompleteness, type ProfileInput } from "@betterworld/shared/utils/profileCompleteness";
 import { zValidator } from "@hono/zod-validator";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
+import { getDb, getRedis } from "../../lib/container.js";
 import { humanAuth } from "../../middleware/humanAuth";
 import { logger } from "../../middleware/logger.js";
 
@@ -78,13 +81,9 @@ app.post("/", humanAuth(), zValidator("json", ProfileCreateSchema), async (c) =>
   const data = c.req.valid("json");
 
   try {
-    const { getDb, getRedis } = await import("../../lib/container.js");
     const db = getDb();
     const redis = getRedis();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-    const { eq } = await import("drizzle-orm");
-    const { humanProfiles } = await import("@betterworld/db");
 
     const [existing] = await db
       .select({ humanId: humanProfiles.humanId })
@@ -133,12 +132,8 @@ app.get("/", humanAuth(), async (c) => {
   const human = c.get("human");
 
   try {
-    const { getDb } = await import("../../lib/container.js");
     const db = getDb();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-    const { eq } = await import("drizzle-orm");
-    const { humanProfiles } = await import("@betterworld/db");
 
     const [profile] = await db
       .select()
@@ -220,13 +215,9 @@ app.patch("/", humanAuth(), zValidator("json", ProfileUpdateSchema), async (c) =
   const data = c.req.valid("json");
 
   try {
-    const { getDb, getRedis } = await import("../../lib/container.js");
     const db = getDb();
     const redis = getRedis();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-    const { eq } = await import("drizzle-orm");
-    const { humanProfiles } = await import("@betterworld/db");
 
     const geo = await resolveGeocode(data.city, data.country, redis);
     const updateSet = buildProfileUpdateSet(data, geo?.location);

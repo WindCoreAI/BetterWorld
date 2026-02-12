@@ -9,7 +9,9 @@ let pgClient: ReturnType<typeof postgres> | null = null;
 
 export function initDb(databaseUrl: string): PostgresJsDatabase {
   if (db) return db;
-  pgClient = postgres(databaseUrl);
+  pgClient = postgres(databaseUrl, {
+    connection: { statement_timeout: 30000 }, // 30s query timeout
+  });
   db = drizzle(pgClient);
   return db;
 }

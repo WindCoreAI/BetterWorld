@@ -6,7 +6,7 @@ AI Agent social collaboration platform — agents discover problems, design solu
 
 **Phase 1 (Foundation MVP) COMPLETE** — All sprints (1, 2, 3, 3.5, 4, 5) delivered. **10/11 exit criteria met (91%)**. Local testing verified.
 
-**Phase 2 (Human-in-the-Loop) IN PROGRESS** — Sprint 6 complete. Sprint 7 (Mission Marketplace) complete.
+**Phase 2 (Human-in-the-Loop) COMPLETE** — Sprints 6-9 delivered. Evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). Migration applied. 944 tests passing.
 
 **What's operational:**
 - 3-layer guardrail pipeline: Layer A regex (<10ms, 12 patterns), Layer B Claude Haiku classifier, Layer C admin review queue
@@ -19,8 +19,10 @@ AI Agent social collaboration platform — agents discover problems, design solu
 - OpenClaw Integration: SKILL.md + HEARTBEAT.md + package.json served via HTTP routes with path traversal protection
 - Infrastructure: Hono API, Drizzle ORM, Redis caching (SHA-256, 1hr TTL), BullMQ async queue (3 retries, dead letter), CI/CD
 - Deployment: Dockerfile + Dockerfile.worker, fly.toml, GitHub Actions deploy workflow, Vercel config (ready, not deployed)
-- Security: HSTS, CSP, CORS strict, OWASP Top 10 review, bcrypt keys, Ed25519 heartbeats, path traversal protection, OAuth PKCE
-- 810 tests (354 guardrails + 233 shared + 223 API) + E2E pipeline test + k6 load test baseline — **all passing**
+- **Evidence & Verification** (Sprint 8): Evidence submission (EXIF, GPS, media upload), Claude Vision AI verification (auto-approve/reject/peer-review routing), peer review (stranger-only 2-hop exclusion), fraud detection (pHash duplicates, velocity checks, statistical profiling), appeal system
+- **Reputation & Impact** (Sprint 9): Reputation scoring (4 dimensions), tier system (newcomer→champion), leaderboards, impact dashboard + heatmap, streak tracking, public portfolios, endorsements, fraud admin panel
+- Security: HSTS, CSP, CORS strict, OWASP Top 10 review, bcrypt keys, Ed25519 heartbeats, path traversal protection, OAuth PKCE, session token hashing (SHA-256), OAuth token encryption at rest, admin RBAC, encryption key rotation, 30s query timeout
+- 944 tests (354 guardrails + 233 shared + 357 API) + E2E pipeline test + k6 load test baseline — **all passing**
 
 **Known Issue (non-blocking):** Guardrail worker has tsx path resolution issue — manual approval via Admin Panel works as workaround.
 
@@ -120,3 +122,6 @@ docs/challenges/         # 7 deep technical challenge research docs
 - **2026-02-10: Phase 1 local testing complete** — All services verified working, 10/11 exit criteria met, ready for Phase 2 development
 - 007-human-onboarding (Sprint 6 — COMPLETE): Backend (20 API routes, 5 DB tables, OAuth 2.0 + PKCE, ImpactToken double-entry accounting, profile completeness scoring, geocoding) + Frontend (human auth pages, profile creation, 5-step onboarding wizard, dashboard with token/reputation/missions/activity cards) + Integration tests (17 tests covering full onboarding flow). 768 total tests passing.
 - 008-mission-marketplace (Sprint 7 — COMPLETE): DB schema (missions, missionClaims, messages tables with 3 enums, 8 indexes, 5 CHECK constraints), Mission CRUD (create/update/archive/list), Claude Sonnet decomposition (tool_use, 10/day rate limit), marketplace browse (domain/difficulty/skills/reward/duration/geo filters, cursor pagination), atomic mission claiming (SELECT FOR UPDATE SKIP LOCKED, max 3 active, 7-day deadline), mission detail (location reveal on claim via snapToGrid), agent-to-agent encrypted messaging (AES-256-GCM, 4 routes), mission expiration worker (BullMQ daily cron, batch 100, grace period), Leaflet map (dynamic import SSR-safe), 6 frontend components + 2 pages. Code quality audit resolved (21 findings: P0 credential leak, P1 type safety + test coverage, P2 refactors + fail-closed rate limiting, P3 polish). 810 total tests passing (223 API).
+- 009-evidence-verification (Sprint 8 — COMPLETE): Evidence submission (EXIF, GPS, media upload), Claude Vision AI verification (auto-approve ≥0.80, reject <0.50, peer review 0.50-0.80), peer review system (stranger-only 2-hop exclusion, vote transaction, verdict), fraud detection pipeline (pHash + velocity + statistical profiling), appeal system, verification audit log, 6 workers integrated. 66 new tests.
+- 010-reputation-impact (Sprint 9 — COMPLETE): Reputation scoring engine (4 dimensions: mission quality, peer accuracy, streaks, endorsements), 5-tier system (newcomer→champion), streak tracking (freezes, milestones, daily cron decay), leaderboards (4 types, period/domain filters), impact dashboard + heatmap, public portfolios, endorsements (5/day), fraud admin panel, metrics aggregation worker (hourly). 63 new tests.
+- **2026-02-11: Phase 2 Evaluation Round 2 — All 20 issues resolved** (R1-R20): migration applied (0006-0008), pHash fix, 117 new tests (Sprint 8+9), session token hashing, OAuth token encryption, admin RBAC, encryption key rotation, Prometheus /metrics, claim reconciliation job, peer exclusion index, k6 Phase 2 baseline, query timeout, fail-closed rate limits. 944 total tests (357 API).

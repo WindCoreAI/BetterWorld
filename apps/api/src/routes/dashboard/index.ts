@@ -4,11 +4,14 @@
  * Uses humans.tokenBalance as authoritative balance source.
  */
 
+import { humanProfiles, humans, tokenTransactions } from "@betterworld/db";
 import { parsePostGISPoint } from "@betterworld/shared/utils/geocode";
 import { calculateProfileCompleteness, type ProfileInput } from "@betterworld/shared/utils/profileCompleteness";
+import { desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
+import { getDb } from "../../lib/container.js";
 import { humanAuth } from "../../middleware/humanAuth";
 import { logger } from "../../middleware/logger.js";
 
@@ -19,12 +22,8 @@ app.get("/", humanAuth(), async (c) => {
   const human = c.get("human");
 
   try {
-    const { getDb } = await import("../../lib/container.js");
     const db = getDb();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
-
-    const { eq, desc, sql } = await import("drizzle-orm");
-    const { humans, humanProfiles, tokenTransactions } = await import("@betterworld/db");
 
     const [userResult, profileResult, spentResult] = await Promise.all([
       db.select({

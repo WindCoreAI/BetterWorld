@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   REPUTATION_DECAY: "reputation-decay",
   FRAUD_SCORING: "fraud-scoring",
   METRICS_AGGREGATION: "metrics-aggregation",
+  CLAIM_RECONCILIATION: "claim-reconciliation",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

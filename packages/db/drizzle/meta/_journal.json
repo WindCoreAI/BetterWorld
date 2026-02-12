@@ -50,6 +50,20 @@
       "when": 1770847767113,
       "tag": "0006_late_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770852286011,
+      "tag": "0007_previous_norman_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1770853774460,
+      "tag": "0008_acoustic_war_machine",
+      "breakpoints": true
     }
   ]
 }
