@@ -49,7 +49,7 @@ describe("Phase 3 Cross-Story Integration", () => {
     const { data } = await registerTestAgent(app);
     expect(data.ok).toBe(true);
 
-    const agentId = data.data.agent.id;
+    const agentId = data.data.agentId;
     const db = getTestDb();
     const creditService = new AgentCreditService(db);
 

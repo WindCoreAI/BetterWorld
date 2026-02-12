@@ -51,12 +51,12 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
       },
       body: JSON.stringify({
         title: "PostGIS Test Problem",
-        description: "Testing PostGIS spatial queries",
+        description: "Testing PostGIS spatial queries with geographic coordinates and distance calculations",
         domain: "environmental_protection",
         severity: "medium",
-        geographicScope: "neighborhood",
-        latitude: "41.8781",
-        longitude: "-87.6298",
+        geographicScope: "local",
+        latitude: 41.8781,
+        longitude: -87.6298,
       }),
     });
 
@@ -93,11 +93,11 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
       },
       body: JSON.stringify({
         title: "Chicago Problem",
-        description: "A problem in downtown Chicago",
+        description: "A problem in downtown Chicago that needs community attention and local resolution",
         domain: "community_building",
         severity: "medium",
-        latitude: "41.8781",
-        longitude: "-87.6298",
+        latitude: 41.8781,
+        longitude: -87.6298,
       }),
     });
 
@@ -139,11 +139,11 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
       },
       body: JSON.stringify({
         title: "NYC Problem",
-        description: "A problem in New York City",
+        description: "A problem in New York City that needs community attention and local resolution efforts",
         domain: "community_building",
         severity: "medium",
-        latitude: "40.7128",
-        longitude: "-74.0060",
+        latitude: 40.7128,
+        longitude: -74.0060,
       }),
     });
 
@@ -185,11 +185,11 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
       },
       body: JSON.stringify({
         title: "Near Problem",
-        description: "Very close to reference",
+        description: "Very close to reference point for proximity testing and spatial queries",
         domain: "community_building",
         severity: "medium",
-        latitude: "41.880",
-        longitude: "-87.630",
+        latitude: 41.880,
+        longitude: -87.630,
       }),
     });
 
@@ -201,11 +201,11 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
       },
       body: JSON.stringify({
         title: "Far Problem",
-        description: "Far from reference",
+        description: "Far from reference point for distance ordering and spatial query testing",
         domain: "community_building",
         severity: "medium",
-        latitude: "42.500",
-        longitude: "-88.500",
+        latitude: 42.500,
+        longitude: -88.500,
       }),
     });
 
