@@ -118,6 +118,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 - PostgreSQL 16 + PostGIS + pgvector (Supabase), Upstash Redis (011-phase3-foundation)
 - TypeScript 5.x (strict mode), Node.js 22+ + Hono (API), Drizzle ORM, BullMQ (3 workers), PostGIS (ST_DWithin affinity), pg_advisory_xact_lock (consensus idempotency), Leaflet + leaflet.heat (city heatmap), Next.js 15 (frontend) (012-phase3-shadow-mode)
 - PostgreSQL 16 + PostGIS (Supabase), Upstash Redis (feature flags, cache) (012-phase3-shadow-mode)
+- TypeScript 5.x (strict mode, zero errors), Node.js 22+ + Hono (API), Drizzle ORM, BullMQ (async workers), Zod (validation), Pino (logging), sharp (image processing), exifr (EXIF), @anthropic-ai/sdk (Claude Vision), Leaflet + react-leaflet (maps) (013-phase3-production-shift)
+- PostgreSQL 16 + PostGIS (Supabase), Upstash Redis (cache/flags/queue), Supabase Storage (photos) (013-phase3-production-shift)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD
