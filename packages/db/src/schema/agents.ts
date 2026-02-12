@@ -16,6 +16,7 @@ import { debates } from "./debates";
 import { claimStatusEnum } from "./enums";
 import { problems } from "./problems";
 import { solutions } from "./solutions";
+import { geographyPoint } from "./types";
 
 export const agents = pgTable(
   "agents",
@@ -58,6 +59,15 @@ export const agents = pgTable(
     previousApiKeyExpiresAt: timestamp("previous_api_key_expires_at", {
       withTimezone: true,
     }),
+
+    // Sprint 10: Phase 3 — Agent credit economy + validator fields
+    creditBalance: integer("credit_balance").notNull().default(0),
+    homeRegionName: varchar("home_region_name", { length: 200 }),
+    homeRegionPoint: geographyPoint("home_region_point"),
+    localProblemsReported: integer("local_problems_reported").notNull().default(0),
+    localReputationScore: decimal("local_reputation_score", { precision: 5, scale: 2 })
+      .notNull()
+      .default("0"),
   },
   (table) => [
     uniqueIndex("agents_username_idx").on(table.username),
@@ -65,6 +75,8 @@ export const agents = pgTable(
     index("agents_claim_status_idx").on(table.claimStatus),
     index("agents_reputation_idx").on(table.reputationScore),
     index("agents_email_idx").on(table.email),
+    // Sprint 10: Phase 3 indexes
+    index("agents_credit_balance_idx").on(table.creditBalance),
   ],
 );
 

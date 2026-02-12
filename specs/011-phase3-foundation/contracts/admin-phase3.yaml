@@ -1,0 +1,248 @@
+# Admin Phase 3 API Contracts
+# Sprint: 011-phase3-foundation
+# Base path: /api/v1/admin
+
+---
+# GET /api/v1/admin/credits/stats
+# Agent credit economy dashboard metrics
+# Auth: humanAuth + requireAdmin
+get_credit_stats:
+  method: GET
+  path: /api/v1/admin/credits/stats
+  auth: humanAuth + requireAdmin
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        totalCreditsInCirculation:
+          type: integer
+          description: SUM of all agent credit_balance values
+        totalStarterGrantsIssued:
+          type: integer
+          description: Count of earn_starter_grant transactions
+        totalCreditsEarned:
+          type: integer
+          description: SUM of positive agent credit transactions
+        totalCreditsSpent:
+          type: integer
+          description: SUM of negative agent credit transactions (abs)
+        faucetSinkRatio:
+          type: number
+          description: earned / spent ratio (target 0.85-1.15)
+        agentCount:
+          type: integer
+          description: Total agents with credit balance > 0
+        distribution:
+          type: object
+          description: Credit balance distribution
+          properties:
+            mean:
+              type: number
+            median:
+              type: number
+            p90:
+              type: number
+            max:
+              type: integer
+      requestId:
+        type: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    403: { code: FORBIDDEN, message: "Admin access required" }
+
+---
+# GET /api/v1/admin/validators/stats
+# Validator pool dashboard metrics
+# Auth: humanAuth + requireAdmin
+get_validator_stats:
+  method: GET
+  path: /api/v1/admin/validators/stats
+  auth: humanAuth + requireAdmin
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        totalValidators:
+          type: integer
+        activeValidators:
+          type: integer
+        suspendedValidators:
+          type: integer
+        tierBreakdown:
+          type: object
+          properties:
+            apprentice:
+              type: integer
+            journeyman:
+              type: integer
+            expert:
+              type: integer
+        averageF1Score:
+          type: number
+        averageResponseRate:
+          type: number
+        totalEvaluationsToday:
+          type: integer
+      requestId:
+        type: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    403: { code: FORBIDDEN, message: "Admin access required" }
+
+---
+# GET /api/v1/admin/feature-flags
+# List all Phase 3 feature flags with current values
+# Auth: humanAuth + requireAdmin
+list_feature_flags:
+  method: GET
+  path: /api/v1/admin/feature-flags
+  auth: humanAuth + requireAdmin
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        flags:
+          type: object
+          properties:
+            PEER_VALIDATION_ENABLED:
+              type: boolean
+              default: false
+            PEER_VALIDATION_TRAFFIC_PCT:
+              type: integer
+              default: 0
+              min: 0
+              max: 100
+            SUBMISSION_COSTS_ENABLED:
+              type: boolean
+              default: false
+            VALIDATION_REWARDS_ENABLED:
+              type: boolean
+              default: false
+            HYPERLOCAL_INGESTION_ENABLED:
+              type: boolean
+              default: false
+            CREDIT_CONVERSION_ENABLED:
+              type: boolean
+              default: false
+            DYNAMIC_RATE_ADJUSTMENT_ENABLED:
+              type: boolean
+              default: false
+            DISPUTES_ENABLED:
+              type: boolean
+              default: false
+      requestId:
+        type: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    403: { code: FORBIDDEN, message: "Admin access required" }
+
+---
+# PUT /api/v1/admin/feature-flags/:flagName
+# Update a feature flag value
+# Auth: humanAuth + requireAdmin
+update_feature_flag:
+  method: PUT
+  path: /api/v1/admin/feature-flags/:flagName
+  auth: humanAuth + requireAdmin
+  params:
+    flagName:
+      type: string
+      required: true
+      enum: [PEER_VALIDATION_ENABLED, PEER_VALIDATION_TRAFFIC_PCT, SUBMISSION_COSTS_ENABLED, VALIDATION_REWARDS_ENABLED, HYPERLOCAL_INGESTION_ENABLED, CREDIT_CONVERSION_ENABLED, DYNAMIC_RATE_ADJUSTMENT_ENABLED, DISPUTES_ENABLED]
+  body:
+    value:
+      type: boolean | integer
+      required: true
+      description: New flag value (boolean for toggles, integer for percentages)
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        flagName:
+          type: string
+        value:
+          type: boolean | integer
+        previousValue:
+          type: boolean | integer
+      requestId:
+        type: string
+  errors:
+    400: { code: VALIDATION_ERROR, message: "Invalid flag name or value" }
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    403: { code: FORBIDDEN, message: "Admin access required" }
+    503: { code: SERVICE_UNAVAILABLE, message: "Redis not available for flag storage" }
+
+---
+# DELETE /api/v1/admin/feature-flags/:flagName
+# Reset a feature flag to its default value
+# Auth: humanAuth + requireAdmin
+reset_feature_flag:
+  method: DELETE
+  path: /api/v1/admin/feature-flags/:flagName
+  auth: humanAuth + requireAdmin
+  params:
+    flagName:
+      type: string
+      required: true
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        flagName:
+          type: string
+        reset: true
+        defaultValue:
+          type: boolean | integer
+      requestId:
+        type: string
+  errors:
+    400: { code: VALIDATION_ERROR, message: "Invalid flag name" }
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    403: { code: FORBIDDEN, message: "Admin access required" }
+    503: { code: SERVICE_UNAVAILABLE, message: "Redis not available" }
+
+---
+# GET /api/v1/admin/open311/stats
+# Open311 ingestion stats per city
+# Auth: humanAuth + requireAdmin
+get_open311_stats:
+  method: GET
+  path: /api/v1/admin/open311/stats
+  auth: humanAuth + requireAdmin
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        cities:
+          type: array
+          items:
+            cityId:
+              type: string
+              example: "chicago"
+            displayName:
+              type: string
+              example: "City of Chicago"
+            enabled:
+              type: boolean
+            lastSyncAt:
+              type: string (ISO 8601) | null
+            totalIngested:
+              type: integer
+            totalSkipped:
+              type: integer
+              description: Duplicates + invalid records
+            lastError:
+              type: string | null
+            lastErrorAt:
+              type: string (ISO 8601) | null
+      requestId:
+        type: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    403: { code: FORBIDDEN, message: "Admin access required" }

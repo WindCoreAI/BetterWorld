@@ -1,0 +1,246 @@
+# Observations API Contracts
+# Sprint: 011-phase3-foundation
+# Base path: /api/v1
+
+---
+# POST /api/v1/problems/:problemId/observations
+# Attach an observation to an existing problem
+# Auth: humanAuth (JWT)
+create_observation_for_problem:
+  method: POST
+  path: /api/v1/problems/:problemId/observations
+  auth: humanAuth
+  params:
+    problemId:
+      type: string (uuid)
+      required: true
+      description: Problem to attach observation to
+  body:
+    observationType:
+      type: string
+      required: true
+      enum: [photo, video_still, text_report, audio_transcript]
+    caption:
+      type: string
+      required: true
+      maxLength: 500
+      description: Description of what was observed
+    gpsLat:
+      type: number
+      required: true
+      description: Device GPS latitude (WGS84)
+      validation: "|lat| <= 80; reject if lat == 0 AND lng == 0 (null island)"
+    gpsLng:
+      type: number
+      required: true
+      description: Device GPS longitude (WGS84)
+      validation: "reject if lat == 0 AND lng == 0 (null island)"
+    gpsAccuracyMeters:
+      type: integer
+      required: false
+      description: GPS accuracy in meters
+      validation: "<= 1000"
+    capturedAt:
+      type: string (ISO 8601)
+      required: false
+      description: When the observation was captured (device time)
+    mediaFile:
+      type: file (multipart)
+      required: false
+      description: Photo or media file
+      maxSize: 10MB
+      mimeTypes: [image/jpeg, image/png, image/webp]
+  response:
+    status: 201
+    body:
+      ok: true
+      data:
+        id:
+          type: string (uuid)
+        problemId:
+          type: string (uuid)
+        observationType:
+          type: string
+        caption:
+          type: string
+        gpsLat:
+          type: number
+        gpsLng:
+          type: number
+        verificationStatus:
+          type: string
+          value: "pending"
+        mediaUrl:
+          type: string | null
+        thumbnailUrl:
+          type: string | null
+        perceptualHash:
+          type: string | null
+        createdAt:
+          type: string (ISO 8601)
+      requestId:
+        type: string
+  errors:
+    400:
+      - { code: VALIDATION_ERROR, message: "Invalid GPS coordinates: null island (0,0) rejected" }
+      - { code: VALIDATION_ERROR, message: "GPS accuracy exceeds 1000m threshold" }
+      - { code: VALIDATION_ERROR, message: "Latitude must be between -80 and 80" }
+      - { code: PROXIMITY_ERROR, message: "Observation location is too far from problem area" }
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    404: { code: NOT_FOUND, message: "Problem not found" }
+    429: { code: RATE_LIMITED, message: "Observation submission rate limit exceeded" }
+
+---
+# POST /api/v1/observations
+# Submit a standalone observation (auto-creates a new problem)
+# Auth: humanAuth (JWT)
+create_standalone_observation:
+  method: POST
+  path: /api/v1/observations
+  auth: humanAuth
+  body:
+    observationType:
+      type: string
+      required: true
+      enum: [photo, video_still, text_report, audio_transcript]
+    caption:
+      type: string
+      required: true
+      maxLength: 500
+    gpsLat:
+      type: number
+      required: true
+    gpsLng:
+      type: number
+      required: true
+    gpsAccuracyMeters:
+      type: integer
+      required: false
+    capturedAt:
+      type: string (ISO 8601)
+      required: false
+    mediaFile:
+      type: file (multipart)
+      required: false
+      maxSize: 10MB
+    # Auto-create problem fields
+    problemTitle:
+      type: string
+      required: true
+      maxLength: 500
+      description: Title for the auto-created problem
+    domain:
+      type: string
+      required: true
+      enum: [poverty_reduction, education_access, healthcare_improvement, environmental_protection, food_security, mental_health_wellbeing, community_building, disaster_response, digital_inclusion, human_rights, clean_water_sanitation, sustainable_energy, gender_equality, biodiversity_conservation, elder_care]
+    severity:
+      type: string
+      required: false
+      default: "medium"
+      enum: [low, medium, high, critical]
+  response:
+    status: 201
+    body:
+      ok: true
+      data:
+        observation:
+          # Same as create_observation_for_problem response
+          type: object
+        problem:
+          id:
+            type: string (uuid)
+          title:
+            type: string
+          domain:
+            type: string
+          guardrailStatus:
+            type: string
+            value: "pending"
+      requestId:
+        type: string
+  errors:
+    400: { code: VALIDATION_ERROR, message: "..." }
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    429: { code: RATE_LIMITED, message: "Observation submission rate limit exceeded" }
+
+---
+# GET /api/v1/observations/:id
+# Get observation details
+# Auth: humanAuth (JWT)
+get_observation:
+  method: GET
+  path: /api/v1/observations/:id
+  auth: humanAuth
+  params:
+    id:
+      type: string (uuid)
+      required: true
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        id: string (uuid)
+        problemId: string (uuid) | null
+        observationType: string
+        caption: string
+        mediaUrl: string | null
+        thumbnailUrl: string | null
+        gpsLat: number
+        gpsLng: number
+        gpsAccuracyMeters: integer | null
+        capturedAt: string (ISO 8601) | null
+        verificationStatus: string
+        verificationNotes: string | null
+        perceptualHash: string | null
+        submittedByHumanId: string (uuid)
+        createdAt: string (ISO 8601)
+        updatedAt: string (ISO 8601)
+      requestId: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    404: { code: NOT_FOUND, message: "Observation not found" }
+
+---
+# GET /api/v1/problems/:problemId/observations
+# List observations for a problem (cursor-paginated)
+# Auth: humanAuth (JWT)
+list_observations_for_problem:
+  method: GET
+  path: /api/v1/problems/:problemId/observations
+  auth: humanAuth
+  params:
+    problemId:
+      type: string (uuid)
+      required: true
+  query:
+    cursor:
+      type: string
+      required: false
+    limit:
+      type: integer
+      required: false
+      default: 20
+      min: 1
+      max: 100
+    verificationStatus:
+      type: string
+      required: false
+      enum: [pending, gps_verified, vision_verified, rejected, fraud_flagged]
+      description: Filter by verification status
+  response:
+    status: 200
+    body:
+      ok: true
+      data:
+        observations:
+          type: array
+          items:
+            # Same fields as get_observation response
+            type: object
+        nextCursor: string | null
+        totalCount: integer
+      requestId: string
+  errors:
+    401: { code: UNAUTHORIZED, message: "Authentication required" }
+    404: { code: NOT_FOUND, message: "Problem not found" }

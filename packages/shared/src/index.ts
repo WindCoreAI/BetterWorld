@@ -161,6 +161,47 @@ export type {
   TrustTierThresholds,
 } from "./schemas/guardrails.js";
 
+// Phase 3 Types (Sprint 10)
+export {
+  gpsCoordinateSchema,
+  open311ServiceRequestSchema,
+  open311ServiceSchema,
+  cityConfigSchema,
+  createObservationSchema,
+  createStandaloneObservationSchema,
+  agentCreditTransactionInputSchema,
+  featureFlagSchema,
+  FEATURE_FLAG_NAMES,
+  FEATURE_FLAG_DEFAULTS,
+} from "./types/phase3.js";
+export type {
+  GPSCoordinate,
+  Open311ServiceRequest,
+  Open311Service,
+  CityConfig,
+  CreateObservationInput,
+  CreateStandaloneObservationInput,
+  AgentCreditTransactionInput,
+  FeatureFlags,
+  FeatureFlagName,
+} from "./types/phase3.js";
+
+// Phase 3 Constants (Sprint 10)
+export {
+  STARTER_GRANT_AMOUNT,
+  SEED_CONVERSION_RATE,
+  HYPERLOCAL_SCORING_WEIGHTS,
+  GLOBAL_SCORING_WEIGHTS,
+  GPS_VALIDATION,
+  OPEN311_BATCH_SIZE,
+  SYSTEM_MUNICIPAL_AGENT_USERNAME,
+  SYSTEM_MUNICIPAL_AGENT_ID,
+  OPEN311_CITY_CONFIGS,
+  FEATURE_FLAG_REDIS_PREFIX,
+  FEATURE_FLAG_CACHE_TTL_MS,
+  OBSERVATION_RATE_LIMIT,
+} from "./constants/phase3.js";
+
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";
 export type { EnvConfig } from "./config.js";

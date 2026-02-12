@@ -31,6 +31,21 @@ authRoutes.post(
 
     const result = await service.register(parsed);
 
+    // Sprint 10: Issue starter grant (fail gracefully)
+    // The credit economy is foundational — always give starter grants
+    try {
+      const { AgentCreditService } = await import("../services/agent-credit.service.js");
+      const creditService = new AgentCreditService(db);
+      await creditService.issueStarterGrant(result.agentId);
+    } catch (err) {
+      // Fail gracefully — agent registration should succeed even if credit system is down
+      const { logger } = await import("../middleware/logger.js");
+      logger.warn(
+        { agentId: result.agentId, error: err instanceof Error ? err.message : "Unknown" },
+        "Failed to issue starter grant during registration",
+      );
+    }
+
     // If email was provided and verification code generated, log it in dev
     if (result.verificationCode) {
       const { getEmailService } = await import("../services/email.service.js");

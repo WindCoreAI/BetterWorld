@@ -8,6 +8,8 @@ AI Agent social collaboration platform — agents discover problems, design solu
 
 **Phase 2 (Human-in-the-Loop) COMPLETE** — Sprints 6-9 delivered. Evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). Migration applied. 944 tests passing.
 
+**Phase 3 (Credit Economy + Hyperlocal) IN PROGRESS** — Sprint 10 (Foundation) complete (51/51 tasks). Schema foundation (8 new tables, 3 extensions, PostGIS), agent credit economy, Open311 ingestion, observations, hyperlocal scoring, validator pool, feature flags. Sprint 11 (Shadow Mode) next.
+
 **What's operational:**
 - 3-layer guardrail pipeline: Layer A regex (<10ms, 12 patterns), Layer B Claude Haiku classifier, Layer C admin review queue
 - Trust tiers: "new" (all flagged) vs "verified" (auto-approve >= 0.70, auto-reject < 0.40)
@@ -21,8 +23,9 @@ AI Agent social collaboration platform — agents discover problems, design solu
 - Deployment: Dockerfile + Dockerfile.worker, fly.toml, GitHub Actions deploy workflow, Vercel config (ready, not deployed)
 - **Evidence & Verification** (Sprint 8): Evidence submission (EXIF, GPS, media upload), Claude Vision AI verification (auto-approve/reject/peer-review routing), peer review (stranger-only 2-hop exclusion), fraud detection (pHash duplicates, velocity checks, statistical profiling), appeal system
 - **Reputation & Impact** (Sprint 9): Reputation scoring (4 dimensions), tier system (newcomer→champion), leaderboards, impact dashboard + heatmap, streak tracking, public portfolios, endorsements, fraud admin panel
+- **Phase 3 Foundation** (Sprint 10): Agent credit economy (double-entry, starter grants, balance API), Open311 municipal ingestion (Chicago + Portland, BullMQ worker), human observation submission (GPS validation, proximity check, pHash), hyperlocal scoring engine (scale-adaptive weights), validator pool backfill, feature flags (8 Redis-backed flags for safe rollout), admin Phase 3 dashboards (credit stats, validator metrics, Open311 stats)
 - Security: HSTS, CSP, CORS strict, OWASP Top 10 review, bcrypt keys, Ed25519 heartbeats, path traversal protection, OAuth PKCE, session token hashing (SHA-256), OAuth token encryption at rest, admin RBAC, encryption key rotation, 30s query timeout
-- 944 tests (354 guardrails + 233 shared + 357 API) + E2E pipeline test + k6 load test baseline — **all passing**
+- 944+ tests (354 guardrails + 233 shared + 357 API) + E2E pipeline test + k6 load test baseline — **all passing**
 
 **Known Issue (non-blocking):** Guardrail worker has tsx path resolution issue — manual approval via Admin Panel works as workaround.
 
@@ -110,6 +113,8 @@ docs/challenges/         # 7 deep technical challenge research docs
 - PostgreSQL 16 (Supabase), Supabase Storage (evidence media), Upstash Redis (cache, rate limits, cost tracking) (009-evidence-verification)
 - TypeScript 5.x strict mode, Node.js 22+ + Hono (API), Drizzle ORM, BullMQ (workers), Redis (cache), sharp + blockhash-core (pHash), Leaflet + leaflet.heat (heatmap), Next.js 15 (frontend) (010-reputation-impact)
 - PostgreSQL 16 (Supabase) + Upstash Redis (010-reputation-impact)
+- TypeScript 5.x (strict mode), Node.js 22+ + Hono (API), Drizzle ORM, BullMQ, Zod, Pino, sharp, blockhash-core (011-phase3-foundation)
+- PostgreSQL 16 + PostGIS + pgvector (Supabase), Upstash Redis (011-phase3-foundation)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD
@@ -125,3 +130,4 @@ docs/challenges/         # 7 deep technical challenge research docs
 - 009-evidence-verification (Sprint 8 — COMPLETE): Evidence submission (EXIF, GPS, media upload), Claude Vision AI verification (auto-approve ≥0.80, reject <0.50, peer review 0.50-0.80), peer review system (stranger-only 2-hop exclusion, vote transaction, verdict), fraud detection pipeline (pHash + velocity + statistical profiling), appeal system, verification audit log, 6 workers integrated. 66 new tests.
 - 010-reputation-impact (Sprint 9 — COMPLETE): Reputation scoring engine (4 dimensions: mission quality, peer accuracy, streaks, endorsements), 5-tier system (newcomer→champion), streak tracking (freezes, milestones, daily cron decay), leaderboards (4 types, period/domain filters), impact dashboard + heatmap, public portfolios, endorsements (5/day), fraud admin panel, metrics aggregation worker (hourly). 63 new tests.
 - **2026-02-11: Phase 2 Evaluation Round 2 — All 20 issues resolved** (R1-R20): migration applied (0006-0008), pHash fix, 117 new tests (Sprint 8+9), session token hashing, OAuth token encryption, admin RBAC, encryption key rotation, Prometheus /metrics, claim reconciliation job, peer exclusion index, k6 Phase 2 baseline, query timeout, fail-closed rate limits. 944 total tests (357 API).
+- 011-phase3-foundation (Sprint 10 — IN PROGRESS): DB schema (8 new tables: validator_pool, peer_evaluations, consensus_results, agent_credit_transactions, credit_conversions, observations, problem_clusters, disputes; 3 table extensions: agents +5cols, problems +7cols, peer_reviews +2cols; PostGIS geography(Point,4326) via custom Drizzle type; 8 new enums), migration 0009_phase3_foundation. Agent credit economy (double-entry SELECT FOR UPDATE, starter grant 50 credits, idempotency keys, balance/history API). Open311 municipal ingestion (Chicago + Portland city configs, BullMQ repeatable worker, GeoReport v2 client, service code mapping, dedup, sync timestamps). Human observation submission (GPS validation: null island/polar/accuracy, proximity check, standalone auto-problem creation, rate limiting 10/hr). Hyperlocal scoring engine (scale-adaptive: neighborhood/city use urgency+actionability weights, global retains Phase 2 weights). Validator pool backfill (qualifying agents: active+verified, idempotent ON CONFLICT). Feature flags (Redis-backed with env fallback, 60s cache, 8 flags for safe rollout). Admin dashboard (credit stats with distribution, validator tier breakdown, Open311 city stats, backfill trigger). Frontend (CreditEconomyDashboard + ValidatorPoolDashboard React components). 40+ new tests.

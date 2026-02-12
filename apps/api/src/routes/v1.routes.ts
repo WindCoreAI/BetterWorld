@@ -2,7 +2,9 @@ import { Hono } from "hono";
 
 import type { AppEnv } from "../app.js";
 import disputeRoutes from "./admin/disputes.js";
+import phase3AdminRoutes from "./admin/phase3.js";
 import { adminRoutes } from "./admin.routes.js";
+import agentCreditsRoutes from "./agent-credits.routes.js";
 import { agentsRoutes } from "./agents.routes.js";
 import humanAuthRoutes from "./auth/index.js";
 import { authRoutes } from "./auth.routes.js";
@@ -18,6 +20,7 @@ import leaderboardRoutes from "./leaderboards/index.js";
 import messageRoutes from "./messages/index.js";
 import decomposeRoutes from "./missions/decompose.js";
 import missionRoutes from "./missions/index.js";
+import observationRoutes from "./observations.routes.js";
 import peerReviewRoutes from "./peer-reviews/index.js";
 import portfolioRoutes from "./portfolios/index.js";
 import { problemsRoutes } from "./problems.routes.js";
@@ -75,3 +78,8 @@ v1Routes.route("/impact", impactRoutes);
 v1Routes.route("/portfolios", portfolioRoutes);
 v1Routes.route("/streaks", streakRoutes);
 v1Routes.route("/admin/fraud", fraudRoutes);
+
+// Sprint 10 routes — Phase 3 Foundation
+v1Routes.route("/agents/credits", agentCreditsRoutes);
+v1Routes.route("/admin", phase3AdminRoutes);
+v1Routes.route("/", observationRoutes);
