@@ -89,6 +89,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install PostGIS in postgres service
+        run: |
+          PGCONTAINER=$(docker ps --filter "publish=5432" --format "{{.ID}}")
+          docker exec "$PGCONTAINER" sh -c "apt-get update && apt-get install -y --no-install-recommends postgresql-16-postgis-3"
       - name: Setup database extensions
         run: psql "$DATABASE_URL" -f scripts/init-db.sql
       - name: Run database migrations
