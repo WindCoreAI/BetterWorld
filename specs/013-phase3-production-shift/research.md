@@ -37,7 +37,7 @@
 - Check hardship protection (balance < 10 credits → skip deduction).
 - Call new `spendCredits()` on AgentCreditService with idempotency key `submission-cost:{contentId}`.
 - Transaction type: new enum values `spend_submission_problem`, `spend_submission_solution`, `spend_submission_debate`.
-- Cost amounts (from roadmap): problems = 2 IT, solutions = 5 IT, debates = 1 IT (full rate). Half rate via `SUBMISSION_COST_MULTIPLIER` flag (0.5 initially).
+- Cost amounts (from roadmap): problems = 2 credits, solutions = 5 credits, debates = 1 credit (full rate). Half rate via `SUBMISSION_COST_MULTIPLIER` flag (0.5 initially). Note: These are agent credits (Phase 3 dual-ledger), not human ImpactTokens.
 
 ---
 

@@ -9,11 +9,12 @@ import { and, eq, desc, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
-import { getDb } from "../lib/container.js";
+import { getDb, getRedis } from "../lib/container.js";
 import { enqueueForEvaluation } from "../lib/guardrail-helpers.js";
 import { parseUuidParam } from "../lib/validation.js";
 import { requireAgent } from "../middleware/auth.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { deductSubmissionCost } from "../services/submission-cost.service.js";
 
 export const solutionsRoutes = new Hono<AuthEnv>();
 
@@ -178,6 +179,7 @@ solutionsRoutes.post("/", requireAgent(), async (c) => {
 
   const agent = c.get("agent")!;
   const { problemId, ...solutionData } = parsed.data;
+  const redis = getRedis();
 
   // Verify problem exists and is active
   const [problem] = await db
@@ -209,6 +211,9 @@ solutionsRoutes.post("/", requireAgent(), async (c) => {
         guardrailStatus: "pending",
       })
       .returning();
+
+    // Sprint 12: Deduct submission cost
+    await deductSubmissionCost(db, redis, agent.id, "solution", solution!.id);
 
     // Increment parent problem's solutionCount
     await tx

@@ -14,6 +14,10 @@ export const QUEUE_NAMES = {
   PEER_CONSENSUS: "peer-consensus",
   EVALUATION_TIMEOUT: "evaluation-timeout",
   CITY_METRICS: "city-metrics",
+  // Sprint 12: Production Shift
+  SPOT_CHECK: "spot-check",
+  ECONOMIC_HEALTH: "economic-health",
+  PRIVACY_PROCESSING: "privacy-processing",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

@@ -156,7 +156,7 @@ Predefined mission templates guide humans through photo-based evidence collectio
 - What happens when the privacy blurring pipeline has high latency or is unavailable?
   - Photos are queued for retry; unprocessed photos are never served to users until privacy processing completes.
 - What happens during a sudden traffic spike that overwhelms the consensus pipeline?
-  - Excess submissions automatically fall back to Layer B; the system degrades gracefully rather than queuing indefinitely.
+  - Excess submissions automatically fall back to Layer B; the system degrades gracefully rather than queuing indefinitely. Implementation relies on existing BullMQ queue depth limits and job TTL — when the peer consensus queue exceeds capacity, consensus jobs timeout and trigger the standard Layer B fallback path (FR-004). No additional backpressure mechanism is needed for Sprint 12 scale (~500 submissions/week).
 - What happens when a spot check reveals systematic disagreement (> 10% disagreement rate)?
   - Operator alert fires, suggesting traffic percentage reduction until the root cause is investigated.
 
@@ -178,7 +178,7 @@ Predefined mission templates guide humans through photo-based evidence collectio
 - **FR-007**: System MUST support tiered submission costs: problems at base rate, solutions at 2.5x base rate, debates at 0.5x base rate.
 - **FR-008**: System MUST distribute credit rewards to validators upon consensus completion, with reward amounts proportional to validator tier.
 - **FR-009**: System MUST implement hardship protection: agents with balance below 10 credits submit at zero cost.
-- **FR-010**: System MUST track and display the daily faucet (total rewards) vs. sink (total costs) ratio.
+- **FR-010**: System MUST track and display the faucet (total rewards) vs. sink (total costs) ratio over a rolling 24-hour window, aggregated hourly.
 - **FR-011**: System MUST alert operators when faucet/sink ratio falls outside the 0.70–1.30 healthy range.
 - **FR-012**: System MUST support a cost multiplier (e.g., 0.5x for initial rollout, 1.0x for full rate) adjustable at runtime.
 
@@ -193,19 +193,19 @@ Predefined mission templates guide humans through photo-based evidence collectio
 
 - **FR-017**: System MUST support paired photo submissions (before/after) linked by a pair identifier for mission evidence.
 - **FR-018**: System MUST validate GPS proximity of evidence photos to the mission location.
-- **FR-019**: System MUST use AI-powered comparison to assess whether the before/after photos demonstrate problem resolution.
+- **FR-019**: System MUST use Claude Sonnet Vision API for AI-powered comparison to assess whether the before/after photos demonstrate problem resolution (extends the Sprint 8 evidence verification pipeline).
 - **FR-020**: System MUST route before/after evidence based on AI confidence: auto-approve >= 0.80, peer review 0.50–0.80, auto-reject < 0.50.
 
 **Privacy Protection**
 
 - **FR-021**: System MUST strip EXIF PII (GPS, device serial, owner name) from all observation photos before storage.
-- **FR-022**: System MUST detect and blur human faces in observation photos before storage.
+- **FR-022**: System MUST detect and blur human faces (>= 50x50 pixels at >= 70% detection confidence) in observation photos before storage. Detection uses local `@vladmandic/face-api` (TensorFlow.js) — no external API.
 - **FR-023**: System MUST detect and blur vehicle license plates in observation photos before storage.
 - **FR-024**: System MUST quarantine photos that fail privacy processing rather than storing them unprocessed.
 
 **Community Attestation**
 
-- **FR-025**: System MUST allow community members to attest to problem status (confirmed, resolved, not found).
+- **FR-025**: System MUST allow authenticated human community members (humanAuth) to attest to problem status (confirmed, resolved, not found). Agents cannot attest.
 - **FR-026**: System MUST prevent duplicate attestations from the same user for the same problem.
 - **FR-027**: System MUST increase problem urgency score by 10% when a problem receives 3 or more "confirmed" attestations.
 
@@ -218,14 +218,14 @@ Predefined mission templates guide humans through photo-based evidence collectio
 **Monitoring & Alerting**
 
 - **FR-031**: System MUST display a production shift dashboard showing: traffic percentage, false negative rate, consensus latency (p50/p95/p99), validator response rate, quorum failure rate, and faucet/sink ratio.
-- **FR-032**: System MUST alert operators when false negative rate exceeds 5%.
+- **FR-032**: System MUST alert operators when the false negative rate exceeds 5% over a rolling 24-hour window. Note: This 5% alert threshold is an early-warning signal; SC-003 defines the sustained quality target as < 3% over 1 week.
 - **FR-033**: System MUST alert operators when consensus latency p95 exceeds 15 seconds.
 - **FR-034**: System MUST alert operators when more than 15% of agents are in hardship protection.
 - **FR-035**: System MUST alert operators when spot check disagreement rate exceeds 10%.
 
 **Decision Gate**
 
-- **FR-036**: System MUST track and display progress against Sprint 12 exit criteria (6 criteria, need >= 5 to pass).
+- **FR-036**: System MUST track and display progress against Sprint 12 exit criteria (6 criteria, need >= 5 to pass): (1) credit economy functional (costs deducted + rewards distributed), (2) >= 50% peer validation traffic, (3) >= 20 hyperlocal problems ingested, (4) no P0 bugs open, (5) API p95 < 500ms, (6) 90%+ sprint deliverables complete. Criteria 1/2/3/5 are automatically computed; 4/6 are manually assessed.
 
 ### Key Entities
 
@@ -263,7 +263,7 @@ Predefined mission templates guide humans through photo-based evidence collectio
 - At least 20 qualified validators exist in the pool (active, verified agents with F1 tracking history from shadow mode).
 - The peer-vs-Layer B agreement rate from shadow mode is >= 80%, providing confidence to begin the traffic shift.
 - The existing feature flag infrastructure (8 Redis-backed flags from Sprint 10) can be extended with new flags for traffic percentage and cost controls.
-- Face and license plate detection will use an external computer vision service; the specific service choice is an implementation detail.
+- Face detection will use local processing via `@vladmandic/face-api` (TensorFlow.js-based); license plate detection will use local blob detection via sharp. No external computer vision APIs are required — all processing stays on-infrastructure for privacy.
 - The before/after photo comparison uses the same AI vision pipeline established in Sprint 8 (evidence verification), extended for comparative analysis.
 - Operators will manually increase traffic percentages based on dashboard metrics rather than automatic escalation (automated escalation is deferred to Sprint 13).
 - The 48-hour monitoring period between traffic phases (10% → 50% → 100%) is a recommended practice, not a system-enforced constraint.
@@ -300,4 +300,4 @@ Predefined mission templates guide humans through photo-based evidence collectio
 - **Sprint 10 (Foundation)**: Agent credit economy schema, Open311 ingestion, feature flags, validator pool — all complete.
 - **Sprint 11 (Shadow Mode)**: Peer validation pipeline, evaluation assignment, consensus engine, F1 tracking, agreement dashboards — all complete.
 - **Sprint 8 (Evidence & Verification)**: Claude Vision AI verification pipeline, peer review system — required for before/after verification extension.
-- **External Vision Service**: Face and license plate detection requires an external computer vision API for privacy blurring.
+- **Local Vision Processing**: Face detection uses `@vladmandic/face-api` (TensorFlow.js) and license plate detection uses sharp blob analysis — both run locally on-infrastructure with no external API dependencies.

@@ -31,6 +31,20 @@ import { initDb, getDb, getRedis } from "../lib/container.js";
 
 const logger = pino({ name: "guardrail-worker" });
 
+// Shared peer consensus queue to avoid creating new Redis connections per enqueue
+let _peerConsensusQueue: Queue | null = null;
+function getPeerConsensusQueue(): Queue {
+  if (!_peerConsensusQueue) {
+    _peerConsensusQueue = new Queue(QUEUE_NAMES.PEER_CONSENSUS, {
+      connection: new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+        maxRetriesPerRequest: null,
+        lazyConnect: true,
+      }),
+    });
+  }
+  return _peerConsensusQueue;
+}
+
 // --- Types ---
 
 export interface EvaluationJobData {
@@ -204,75 +218,80 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 
   logger.info({ evaluationId, trustTier, score, thresholds, finalDecision }, "Decision made");
 
-  // Update evaluation, content status, and flagged_content atomically
-  await db.transaction(async (tx) => {
-    await tx
-      .update(guardrailEvaluations)
-      .set({
-        layerAResult: JSON.stringify(layerAResult),
-        layerBResult: JSON.stringify(layerBResult),
-        finalDecision,
-        alignmentScore: String(score),
-        alignmentDomain: layerBResult.alignedDomain,
-        cacheHit,
-        cacheKey,
-        trustTier,
-        completedAt: new Date(),
-        evaluationDurationMs: Date.now() - startTime,
-      })
-      .where(eq(guardrailEvaluations.id, evaluationId));
+  // Sprint 12: Production traffic routing — replaces Sprint 11 shadow-only enqueue
+  // Determine whether this submission should route to peer consensus for production decisions
+  let routingDecision: "layer_b" | "peer_consensus" = "layer_b";
 
-    await updateContentStatus(tx, contentId, contentType, finalDecision);
+  if (contentType !== "mission") {
+    try {
+      const { routeSubmission } = await import("../services/traffic-router.js");
+      const routeResult = await routeSubmission(contentId, trustTier, redis);
+      routingDecision = routeResult.route;
 
-    // For solutions: persist scores
-    if (contentType === "solution" && layerBResult.solutionScores) {
-      const { impact, feasibility, costEfficiency, composite } = layerBResult.solutionScores;
-      await tx
-        .update(solutions)
-        .set({
-          impactScore: String(impact),
-          feasibilityScore: String(feasibility),
-          costEfficiencyScore: String(costEfficiency),
-          compositeScore: String(composite),
-          alignmentScore: String(score),
-        })
-        .where(eq(solutions.id, contentId));
+      logger.info(
+        { evaluationId, contentId, route: routeResult.route, reason: routeResult.reason, trafficPct: routeResult.trafficPct },
+        "Traffic routing decision",
+      );
+    } catch (routeErr) {
+      // Fail-safe: default to Layer B on routing error
+      logger.warn(
+        { evaluationId, error: (routeErr as Error).message },
+        "Traffic routing failed — defaulting to Layer B",
+      );
     }
+  }
 
-    // For problems: persist alignment info
-    if (contentType === "problem") {
+  if (routingDecision === "peer_consensus") {
+    // PEER CONSENSUS PATH: Hold Layer B result, let peer consensus make the production decision
+    // Record the evaluation with Layer B results but do NOT apply finalDecision to content yet
+    await db.transaction(async (tx) => {
       await tx
-        .update(problems)
+        .update(guardrailEvaluations)
         .set({
+          layerAResult: JSON.stringify(layerAResult),
+          layerBResult: JSON.stringify(layerBResult),
+          // Do NOT set finalDecision — peer consensus will determine it
           alignmentScore: String(score),
           alignmentDomain: layerBResult.alignedDomain,
+          cacheHit,
+          cacheKey,
+          trustTier,
+          routingDecision: "peer_consensus",
+          // Don't set completedAt — evaluation is not complete until consensus
+          evaluationDurationMs: Date.now() - startTime,
         })
-        .where(eq(problems.id, contentId));
-    }
+        .where(eq(guardrailEvaluations.id, evaluationId));
 
-    // If flagged, create entry in flagged_content table for admin review
-    if (finalDecision === "flagged") {
-      await tx.insert(flaggedContent).values({
-        evaluationId,
-        contentId,
-        contentType,
-        agentId,
-        status: "pending_review",
-      });
-      logger.info({ evaluationId, score }, "Content flagged for human review");
-    }
-  });
+      // For solutions: persist scores immediately (not dependent on routing decision)
+      if (contentType === "solution" && layerBResult.solutionScores) {
+        const { impact, feasibility, costEfficiency, composite } = layerBResult.solutionScores;
+        await tx
+          .update(solutions)
+          .set({
+            impactScore: String(impact),
+            feasibilityScore: String(feasibility),
+            costEfficiencyScore: String(costEfficiency),
+            compositeScore: String(composite),
+            alignmentScore: String(score),
+          })
+          .where(eq(solutions.id, contentId));
+      }
 
-  // T012: Shadow peer validation pipeline integration
-  // After Layer B decision, enqueue peer consensus job if shadow mode is enabled
-  try {
-    const { getFlag } = await import("../services/feature-flags.js");
-    const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
+      // For problems: persist alignment info immediately
+      if (contentType === "problem") {
+        await tx
+          .update(problems)
+          .set({
+            alignmentScore: String(score),
+            alignmentDomain: layerBResult.alignedDomain,
+          })
+          .where(eq(problems.id, contentId));
+      }
+    });
 
-    if (peerValidationEnabled && contentType !== "mission") {
-      const peerQueue = new Queue(QUEUE_NAMES.PEER_CONSENSUS, {
-        connection: new Redis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null }),
-      });
+    // Enqueue peer consensus job for production decision-making
+    try {
+      const peerQueue = getPeerConsensusQueue();
 
       const peerJobData: PeerConsensusJobData = {
         submissionId: contentId,
@@ -291,19 +310,138 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
         removeOnFail: 50,
       });
 
-      await peerQueue.close();
-
       logger.info(
-        { evaluationId, contentId, contentType, finalDecision },
-        "Peer consensus job enqueued (shadow mode)",
+        { evaluationId, contentId, contentType, layerBDecision: finalDecision },
+        "Peer consensus job enqueued (production routing)",
+      );
+    } catch (peerErr) {
+      // CRITICAL: If peer enqueue fails, fall back to Layer B decision
+      logger.error(
+        { evaluationId, error: (peerErr as Error).message },
+        "Failed to enqueue peer consensus — falling back to Layer B",
+      );
+
+      // Apply Layer B decision as fallback
+      await db.transaction(async (tx) => {
+        await tx
+          .update(guardrailEvaluations)
+          .set({
+            finalDecision,
+            completedAt: new Date(),
+          })
+          .where(eq(guardrailEvaluations.id, evaluationId));
+
+        await updateContentStatus(tx, contentId, contentType, finalDecision);
+
+        if (finalDecision === "flagged") {
+          await tx.insert(flaggedContent).values({
+            evaluationId,
+            contentId,
+            contentType,
+            agentId,
+            status: "pending_review",
+          });
+        }
+      });
+    }
+  } else {
+    // LAYER B PATH: Apply Layer B decision directly (existing behavior)
+    await db.transaction(async (tx) => {
+      await tx
+        .update(guardrailEvaluations)
+        .set({
+          layerAResult: JSON.stringify(layerAResult),
+          layerBResult: JSON.stringify(layerBResult),
+          finalDecision,
+          alignmentScore: String(score),
+          alignmentDomain: layerBResult.alignedDomain,
+          cacheHit,
+          cacheKey,
+          trustTier,
+          routingDecision: "layer_b",
+          completedAt: new Date(),
+          evaluationDurationMs: Date.now() - startTime,
+        })
+        .where(eq(guardrailEvaluations.id, evaluationId));
+
+      await updateContentStatus(tx, contentId, contentType, finalDecision);
+
+      // For solutions: persist scores
+      if (contentType === "solution" && layerBResult.solutionScores) {
+        const { impact, feasibility, costEfficiency, composite } = layerBResult.solutionScores;
+        await tx
+          .update(solutions)
+          .set({
+            impactScore: String(impact),
+            feasibilityScore: String(feasibility),
+            costEfficiencyScore: String(costEfficiency),
+            compositeScore: String(composite),
+            alignmentScore: String(score),
+          })
+          .where(eq(solutions.id, contentId));
+      }
+
+      // For problems: persist alignment info
+      if (contentType === "problem") {
+        await tx
+          .update(problems)
+          .set({
+            alignmentScore: String(score),
+            alignmentDomain: layerBResult.alignedDomain,
+          })
+          .where(eq(problems.id, contentId));
+      }
+
+      // If flagged, create entry in flagged_content table for admin review
+      if (finalDecision === "flagged") {
+        await tx.insert(flaggedContent).values({
+          evaluationId,
+          contentId,
+          contentType,
+          agentId,
+          status: "pending_review",
+        });
+        logger.info({ evaluationId, score }, "Content flagged for human review");
+      }
+    });
+
+    // Also enqueue shadow peer validation if enabled (for Layer B-routed items)
+    try {
+      const { getFlag } = await import("../services/feature-flags.js");
+      const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
+
+      if (peerValidationEnabled) {
+        const peerQueue = getPeerConsensusQueue();
+
+        const peerJobData: PeerConsensusJobData = {
+          submissionId: contentId,
+          submissionType: contentType as "problem" | "solution" | "debate",
+          agentId,
+          content,
+          domain: layerBResult?.alignedDomain || "community_building",
+          layerBDecision: finalDecision,
+          layerBAlignmentScore: score,
+        };
+
+        await peerQueue.add("peer-consensus", peerJobData, {
+          attempts: 3,
+          backoff: { type: "exponential", delay: 5000 },
+          removeOnComplete: 100,
+          removeOnFail: 50,
+        });
+
+        logger.info(
+          { evaluationId, contentId, contentType, finalDecision },
+          "Peer consensus job enqueued (shadow mode for Layer B-routed item)",
+        );
+      }
+    } catch (peerErr) {
+      // Shadow mode is non-blocking
+      logger.warn(
+        { evaluationId, error: (peerErr as Error).message },
+        "Failed to enqueue peer consensus job (shadow — non-blocking)",
       );
     }
-  } catch (peerErr) {
-    // Shadow mode is non-blocking — do NOT affect Layer B routing
-    logger.warn(
-      { evaluationId, error: (peerErr as Error).message },
-      "Failed to enqueue peer consensus job (shadow mode — non-blocking)",
-    );
   }
 
   const processingTimeMs = Date.now() - startTime;

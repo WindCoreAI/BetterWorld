@@ -21,6 +21,9 @@ async function main() {
   const { createPeerConsensusWorker } = await import("./peer-consensus.js");
   const { createEvaluationTimeoutWorker } = await import("./evaluation-timeout.js");
   const { createCityMetricsWorker } = await import("./city-metrics.js");
+  const { createEconomicHealthWorker } = await import("./economic-health-worker.js");
+  const { createSpotCheckWorker } = await import("./spot-check-worker.js");
+  const { createPrivacyWorker } = await import("./privacy-worker.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -34,6 +37,10 @@ async function main() {
     { name: "peer-consensus", create: createPeerConsensusWorker },
     { name: "evaluation-timeout", create: createEvaluationTimeoutWorker },
     { name: "city-metrics", create: createCityMetricsWorker },
+    // Sprint 12: Production Shift workers
+    { name: "economic-health", create: createEconomicHealthWorker },
+    { name: "spot-check", create: createSpotCheckWorker },
+    { name: "privacy", create: createPrivacyWorker },
   ];
 
   for (const { name, create } of workers) {

@@ -16,6 +16,7 @@ import {
 import {
   evidenceTypeEnum,
   evidenceVerificationStageEnum,
+  photoSequenceTypeEnum,
 } from "./enums";
 import { humans } from "./humans";
 import { missionClaims } from "./missionClaims";
@@ -72,6 +73,11 @@ export const evidence = pgTable(
     isHoneypotSubmission: boolean("is_honeypot_submission")
       .notNull()
       .default(false),
+    // Sprint 12: Before/after photo pairs
+    pairId: uuid("pair_id"),
+    photoSequenceType: photoSequenceTypeEnum("photo_sequence_type")
+      .notNull()
+      .default("standalone"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -97,6 +103,10 @@ export const evidence = pgTable(
       "has_content",
       sql`${table.contentUrl} IS NOT NULL OR ${table.textContent} IS NOT NULL`,
     ),
+    // Sprint 12: pair index for before/after queries
+    index("evidence_pair_idx")
+      .on(table.pairId)
+      .where(sql`pair_id IS NOT NULL`),
   ],
 );
 

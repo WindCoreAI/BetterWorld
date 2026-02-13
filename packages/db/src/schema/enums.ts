@@ -239,4 +239,33 @@ export const agentCreditTypeEnum = pgEnum("agent_credit_type", [
   "earn_validation_domain",
   "earn_starter_grant",
   "spend_conversion",
+  // Sprint 12: Production Shift — submission costs
+  "spend_submission_problem",
+  "spend_submission_solution",
+  "spend_submission_debate",
+]);
+
+// Sprint 12: Production Shift enums
+export const photoSequenceTypeEnum = pgEnum("photo_sequence_type", [
+  "before",
+  "after",
+  "standalone",
+]);
+
+export const privacyProcessingStatusEnum = pgEnum("privacy_processing_status", [
+  "pending",
+  "processing",
+  "completed",
+  "quarantined",
+]);
+
+export const routingDecisionEnum = pgEnum("routing_decision", [
+  "layer_b",
+  "peer_consensus",
+]);
+
+export const attestationStatusEnum = pgEnum("attestation_status", [
+  "confirmed",
+  "resolved",
+  "not_found",
 ]);

@@ -6,7 +6,7 @@
  * GET /api/v1/evidence/:evidenceId - Get evidence detail
  */
 
-import { evidence, missions, missionClaims, verificationAuditLog } from "@betterworld/db";
+import { evidence, missions, missionClaims, missionTemplates, verificationAuditLog } from "@betterworld/db";
 import { AppError } from "@betterworld/shared";
 import { and, eq, desc, lt } from "drizzle-orm";
 import { Hono } from "hono";
@@ -195,6 +195,20 @@ async function handleHoneypotDetection(
   });
 }
 
+// --- Helper: Enqueue before/after comparison ---
+async function enqueueBeforeAfterComparison(pairId: string, afterEvidenceId: string): Promise<void> {
+  try {
+    const { getEvidenceVerificationQueue } = await import("../../lib/evidence-queue.js");
+    const queue = getEvidenceVerificationQueue();
+    await queue.add("compare-pair", { pairId, afterEvidenceId }, {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
+    });
+  } catch {
+    // Queue not available in dev/test - non-fatal
+  }
+}
+
 // --- Helper: Enqueue for AI verification ---
 async function enqueueVerification(evidenceId: string): Promise<void> {
   try {
@@ -261,15 +275,31 @@ async function validateMissionAndClaim(
   missionId: string,
   humanId: string,
 ): Promise<{
-  mission: { id: string; expiresAt: Date; isHoneypot: boolean };
+  mission: { id: string; expiresAt: Date; isHoneypot: boolean; templateId: string | null; requiredLatitude: string | null; requiredLongitude: string | null };
   claim: { id: string; status: string; deadlineAt: Date };
+  gpsRadiusMeters: number | null;
 }> {
   const [mission] = await db
-    .select({ id: missions.id, expiresAt: missions.expiresAt, isHoneypot: missions.isHoneypot })
+    .select({
+      id: missions.id, expiresAt: missions.expiresAt, isHoneypot: missions.isHoneypot,
+      templateId: missions.templateId,
+      requiredLatitude: missions.requiredLatitude, requiredLongitude: missions.requiredLongitude,
+    })
     .from(missions).where(eq(missions.id, missionId)).limit(1);
 
   if (!mission) throw new AppError("NOT_FOUND", "Mission not found");
   if (mission.expiresAt < new Date()) throw new AppError("CONFLICT", "Mission has expired");
+
+  // Fetch template GPS radius if mission was created from a template
+  let gpsRadiusMeters: number | null = null;
+  if (mission.templateId) {
+    const [template] = await db
+      .select({ gpsRadiusMeters: missionTemplates.gpsRadiusMeters })
+      .from(missionTemplates)
+      .where(eq(missionTemplates.id, mission.templateId))
+      .limit(1);
+    if (template) gpsRadiusMeters = template.gpsRadiusMeters;
+  }
 
   const [claim] = await db
     .select({ id: missionClaims.id, status: missionClaims.status, deadlineAt: missionClaims.deadlineAt })
@@ -280,12 +310,25 @@ async function validateMissionAndClaim(
   if (!claim) throw new AppError("FORBIDDEN", "No active claim on this mission");
   if (claim.deadlineAt < new Date()) throw new AppError("CONFLICT", "Claim deadline has passed");
 
-  return { mission, claim };
+  return { mission, claim, gpsRadiusMeters };
+}
+
+// --- Helper: Haversine distance in meters ---
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000; // Earth radius in meters
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // ---------------------------------------------------------------------------
 // POST /api/v1/missions/:missionId/evidence - Submit evidence
 // ---------------------------------------------------------------------------
+// eslint-disable-next-line complexity
 evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
   const db = getDb();
   if (!db) throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
@@ -309,8 +352,23 @@ evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
   const capturedAtInput = parseCapturedAtField(formData);
   const notes = formData.get("notes");
 
+  // Sprint 12: Before/after pair support
+  const pairIdRaw = formData.get("pairId");
+  const photoSequenceTypeRaw = formData.get("photoSequenceType");
+  const pairId = pairIdRaw ? String(pairIdRaw) : undefined;
+  const photoSequenceType = photoSequenceTypeRaw
+    ? (String(photoSequenceTypeRaw) as "before" | "after" | "standalone")
+    : "standalone";
+
+  if (pairId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pairId)) {
+    throw new AppError("VALIDATION_ERROR", "pairId must be a valid UUID");
+  }
+  if (!["before", "after", "standalone"].includes(photoSequenceType)) {
+    throw new AppError("VALIDATION_ERROR", "photoSequenceType must be before, after, or standalone");
+  }
+
   // Validate mission exists and human has active claim
-  const { mission, claim } = await validateMissionAndClaim(db, missionId, human.id);
+  const { mission, claim, gpsRadiusMeters } = await validateMissionAndClaim(db, missionId, human.id);
 
   // Process primary file
   const primaryFile = files[0]!;
@@ -318,6 +376,21 @@ evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
 
   // Extract EXIF and enrich metadata
   const enriched = await extractAndEnrichExif(primaryFile, fileBuffer, gps, capturedAtInput);
+
+  // Sprint 12 T078: GPS radius validation for template-based missions
+  if (gpsRadiusMeters != null && mission.requiredLatitude && mission.requiredLongitude) {
+    if (enriched.latitude == null || enriched.longitude == null) {
+      throw new AppError("VALIDATION_ERROR", "GPS coordinates required for template-based missions");
+    }
+    const distance = haversineMeters(
+      Number(mission.requiredLatitude), Number(mission.requiredLongitude),
+      enriched.latitude, enriched.longitude,
+    );
+    if (distance > gpsRadiusMeters) {
+      throw new AppError("VALIDATION_ERROR",
+        `Evidence location is ${Math.round(distance)}m from mission location, exceeds ${gpsRadiusMeters}m radius`);
+    }
+  }
 
   const evidenceType = getEvidenceType(primaryFile.type);
   const uploaded = await processAndUploadFile(primaryFile, fileBuffer, missionId, claim.id);
@@ -332,10 +405,15 @@ evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
     notes: notes ? String(notes).slice(0, 2000) : null,
     verificationStage: mission.isHoneypot ? "rejected" : "pending",
     isHoneypotSubmission: mission.isHoneypot,
+    pairId: pairId ?? null,
+    photoSequenceType,
   }).returning();
 
   if (mission.isHoneypot) {
     await handleHoneypotDetection(db, evidenceRecord!.id, human.id);
+  } else if (photoSequenceType === "after" && pairId) {
+    // Before/after pair: enqueue comparison instead of standard verification
+    await enqueueBeforeAfterComparison(pairId, evidenceRecord!.id);
   } else {
     await enqueueVerification(evidenceRecord!.id);
   }

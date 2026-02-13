@@ -29,6 +29,8 @@ const COST_PER_IMAGE_CENTS = 5; // ~$0.05/image
 
 export interface VerifyJobData {
   evidenceId: string;
+  pairId?: string;
+  afterEvidenceId?: string;
 }
 
 interface VerifyToolOutput {
@@ -348,6 +350,167 @@ async function routeToPeerReview(
   }
 }
 
+// --- Before/After Pair Comparison (Sprint 12 — T057) ---
+
+// eslint-disable-next-line complexity
+async function processBeforeAfterComparison(
+  dbOverride?: PostgresJsDatabase | null,
+  redisOverride?: Redis | null,
+  pairId?: string,
+): Promise<void> {
+  const db = dbOverride ?? getDb();
+  if (!db) throw new Error("Database not initialized");
+
+  const redis = redisOverride ?? getRedis();
+  if (!pairId) return;
+
+  // Fetch both before and after photos
+  const pairRows = await db
+    .select({
+      id: evidence.id,
+      missionId: evidence.missionId,
+      contentUrl: evidence.contentUrl,
+      photoSequenceType: evidence.photoSequenceType,
+      submittedByHumanId: evidence.submittedByHumanId,
+      latitude: evidence.latitude,
+      longitude: evidence.longitude,
+    })
+    .from(evidence)
+    .where(eq(evidence.pairId, pairId));
+
+  const beforeRow = pairRows.find((r) => r.photoSequenceType === "before");
+  const afterRow = pairRows.find((r) => r.photoSequenceType === "after");
+
+  if (!beforeRow || !afterRow) {
+    logger.warn({ pairId }, "Before/after pair incomplete, skipping comparison");
+    return;
+  }
+
+  // Check pHash similarity — flag if before/after are too similar (possible fraud)
+  try {
+    const { calculatePhash, hammingDistance } = await import("../lib/phash.js");
+    if (beforeRow.contentUrl && afterRow.contentUrl) {
+      const beforeUrl = await getSignedUrl(beforeRow.contentUrl, 600);
+      const afterUrl = await getSignedUrl(afterRow.contentUrl, 600);
+      const [beforeResp, afterResp] = await Promise.all([
+        fetch(beforeUrl), fetch(afterUrl),
+      ]);
+      if (beforeResp.ok && afterResp.ok) {
+        const [beforeBuf, afterBuf] = await Promise.all([
+          Buffer.from(await beforeResp.arrayBuffer()),
+          Buffer.from(await afterResp.arrayBuffer()),
+        ]);
+        const [beforeHash, afterHash] = await Promise.all([
+          calculatePhash(beforeBuf), calculatePhash(afterBuf),
+        ]);
+        const distance = hammingDistance(beforeHash, afterHash);
+        if (distance < 5) {
+          logger.warn({ pairId, distance }, "Before/after photos too similar — flagging as potential fraud");
+          await db.update(evidence).set({
+            verificationStage: "peer_review",
+            aiVerificationReasoning: `Before/after photos suspiciously similar (hamming distance: ${distance}). Flagged for peer review.`,
+            updatedAt: new Date(),
+          }).where(eq(evidence.id, afterRow.id));
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn({ pairId, error: (err as Error).message }, "pHash comparison failed, continuing with AI comparison");
+  }
+
+  // Budget check
+  const budgetAvailable = await checkVisionBudget(redis);
+  if (!budgetAvailable) {
+    logger.warn({ pairId }, "Vision budget exceeded for pair comparison, routing to peer review");
+    await routeToPeerReview(db, afterRow.id, afterRow.submittedByHumanId, "Budget exceeded");
+    return;
+  }
+
+  // AI comparison via before/after service
+  try {
+    const { comparePhotos } = await import("../services/before-after.service.js");
+
+    const [mission] = await db
+      .select({ title: missions.title, description: missions.description })
+      .from(missions)
+      .where(eq(missions.id, beforeRow.missionId))
+      .limit(1);
+
+    const missionContext = mission
+      ? `${mission.title}: ${mission.description}`
+      : "Social good mission";
+
+    // Fetch images as base64
+    let beforeBase64 = "";
+    let afterBase64 = "";
+    let beforeMediaType = "image/jpeg";
+    let afterMediaType = "image/jpeg";
+
+    if (beforeRow.contentUrl) {
+      const url = await getSignedUrl(beforeRow.contentUrl, 600);
+      const resp = await fetch(url);
+      if (resp.ok) {
+        beforeBase64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
+        beforeMediaType = resp.headers.get("content-type") || "image/jpeg";
+      }
+    }
+    if (afterRow.contentUrl) {
+      const url = await getSignedUrl(afterRow.contentUrl, 600);
+      const resp = await fetch(url);
+      if (resp.ok) {
+        afterBase64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
+        afterMediaType = resp.headers.get("content-type") || "image/jpeg";
+      }
+    }
+
+    if (!beforeBase64 || !afterBase64) {
+      logger.warn({ pairId }, "Could not fetch images for comparison, routing to peer review");
+      await routeToPeerReview(db, afterRow.id, afterRow.submittedByHumanId, "Image fetch failed");
+      return;
+    }
+
+    await incrementVisionCost(redis);
+
+    const result = await comparePhotos(
+      beforeBase64, beforeMediaType,
+      afterBase64, afterMediaType,
+      missionContext,
+    );
+
+    // Update both evidence records with comparison results
+    const score = result.confidence;
+    await db.update(evidence).set({
+      aiVerificationScore: String(score.toFixed(2)),
+      aiVerificationReasoning: `Before/after comparison: ${result.reasoning} (improvement: ${(result.improvementScore * 100).toFixed(0)}%)`,
+      updatedAt: new Date(),
+    }).where(eq(evidence.id, afterRow.id));
+
+    // Route based on decision
+    await routeByScore(db, afterRow.id, afterRow, score, {
+      relevanceScore: result.improvementScore,
+      gpsPlausibility: 1,
+      timestampPlausibility: 1,
+      authenticityScore: result.confidence,
+      requirementChecklist: [],
+      overallConfidence: result.confidence,
+      reasoning: result.reasoning,
+    });
+
+    logger.info(
+      { pairId, decision: result.decision, improvementScore: result.improvementScore },
+      "Before/after pair comparison completed",
+    );
+  } catch (err) {
+    logger.error(
+      { pairId, error: (err as Error).message },
+      "Before/after comparison failed",
+    );
+    await routeToPeerReview(db, afterRow.id, afterRow.submittedByHumanId, "Comparison error");
+    throw err;
+  }
+}
+
 // --- Worker initialization ---
 
 export function createEvidenceVerificationWorker(): Worker<VerifyJobData> {
@@ -363,7 +526,11 @@ export function createEvidenceVerificationWorker(): Worker<VerifyJobData> {
   const worker = new Worker<VerifyJobData>(
     QUEUE_NAMES.EVIDENCE_AI_VERIFY,
     async (job: Job<VerifyJobData>) => {
-      await processEvidenceVerification(null, null, job.data.evidenceId);
+      if (job.name === "compare-pair" && job.data.pairId) {
+        await processBeforeAfterComparison(null, null, job.data.pairId);
+      } else {
+        await processEvidenceVerification(null, null, job.data.evidenceId);
+      }
     },
     {
       connection,

@@ -154,7 +154,8 @@ async function readFlag(redis: Redis | null, name: FeatureFlagName): Promise<unk
   if (envValue !== undefined) {
     if (envValue === "true") return true;
     if (envValue === "false") return false;
-    const num = parseInt(envValue, 10);
+    // Use parseFloat for decimal flags (e.g., SUBMISSION_COST_MULTIPLIER=0.5)
+    const num = parseFloat(envValue);
     if (!isNaN(num)) return num;
     return envValue;
   }

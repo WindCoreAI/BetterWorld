@@ -7,6 +7,7 @@ import shadowAdminRoutes from "./admin/shadow.js";
 import { adminRoutes } from "./admin.routes.js";
 import agentCreditsRoutes from "./agent-credits.routes.js";
 import { agentsRoutes } from "./agents.routes.js";
+import attestationRoutes from "./attestations.routes.js";
 import humanAuthRoutes from "./auth/index.js";
 import { authRoutes } from "./auth.routes.js";
 import cityRoutes from "./city.routes.js";
@@ -21,6 +22,7 @@ import { heartbeatRoutes } from "./heartbeat.routes.js";
 import impactRoutes from "./impact/index.js";
 import leaderboardRoutes from "./leaderboards/index.js";
 import messageRoutes from "./messages/index.js";
+import missionTemplateRoutes from "./mission-templates.routes.js";
 import decomposeRoutes from "./missions/decompose.js";
 import missionRoutes from "./missions/index.js";
 import observationRoutes from "./observations.routes.js";
@@ -93,3 +95,7 @@ v1Routes.route("/evaluations", evaluationsRoutes);
 v1Routes.route("/validator", validatorRoutes);
 v1Routes.route("/city", cityRoutes);
 v1Routes.route("/admin", shadowAdminRoutes);
+
+// Sprint 12 routes — Production Shift
+v1Routes.route("/problems", attestationRoutes);
+v1Routes.route("/", missionTemplateRoutes);

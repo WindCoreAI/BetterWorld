@@ -85,7 +85,9 @@ function createMockTx(options: {
     }),
     insert: vi.fn().mockImplementation(() => ({
       values: vi.fn().mockImplementation(() => ({
-        onConflictDoNothing: vi.fn().mockResolvedValue(options.insertResult ?? undefined),
+        onConflictDoNothing: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue(options.insertResult ?? [{ id: "consensus-id-mock" }]),
+        }),
       })),
     })),
     update: vi.fn().mockImplementation(() => ({
@@ -201,10 +203,12 @@ describe("Consensus Engine", () => {
             { id: "e2", recommendation: "approved", confidence: "0.85", safetyFlagged: false, validatorId: "v2", assignedAt },
             { id: "e3", recommendation: "approved", confidence: "0.8", safetyFlagged: false, validatorId: "v3", assignedAt },
           ]},
-          // Validator tier lookups (3 calls)
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
+          // Batch validator tier lookup (single query)
+          { hasLimit: false, result: [
+            { id: "v1", tier: "apprentice" },
+            { id: "v2", tier: "apprentice" },
+            { id: "v3", tier: "apprentice" },
+          ]},
         ],
       });
 
@@ -239,9 +243,12 @@ describe("Consensus Engine", () => {
             { id: "e2", recommendation: "rejected", confidence: "0.85", safetyFlagged: false, validatorId: "v2", assignedAt },
             { id: "e3", recommendation: "rejected", confidence: "0.8", safetyFlagged: false, validatorId: "v3", assignedAt },
           ]},
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
+          // Batch validator tier lookup
+          { hasLimit: false, result: [
+            { id: "v1", tier: "apprentice" },
+            { id: "v2", tier: "apprentice" },
+            { id: "v3", tier: "apprentice" },
+          ]},
         ],
       });
 
@@ -276,9 +283,12 @@ describe("Consensus Engine", () => {
             { id: "e2", recommendation: "rejected", confidence: "0.9", safetyFlagged: false, validatorId: "v2", assignedAt },
             { id: "e3", recommendation: "flagged", confidence: "0.9", safetyFlagged: false, validatorId: "v3", assignedAt },
           ]},
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
-          { hasLimit: true, result: [{ tier: "apprentice" }] },
+          // Batch validator tier lookup
+          { hasLimit: false, result: [
+            { id: "v1", tier: "apprentice" },
+            { id: "v2", tier: "apprentice" },
+            { id: "v3", tier: "apprentice" },
+          ]},
         ],
       });
 
@@ -311,9 +321,12 @@ describe("Consensus Engine", () => {
             { id: "e2", recommendation: "rejected", confidence: "0.9", safetyFlagged: false, validatorId: "v2", assignedAt },
             { id: "e3", recommendation: "rejected", confidence: "0.9", safetyFlagged: false, validatorId: "v3", assignedAt },
           ]},
-          { hasLimit: true, result: [{ tier: "expert" }] },     // v1 expert
-          { hasLimit: true, result: [{ tier: "apprentice" }] },  // v2
-          { hasLimit: true, result: [{ tier: "apprentice" }] },  // v3
+          // Batch validator tier lookup
+          { hasLimit: false, result: [
+            { id: "v1", tier: "expert" },
+            { id: "v2", tier: "apprentice" },
+            { id: "v3", tier: "apprentice" },
+          ]},
         ],
       });
 
