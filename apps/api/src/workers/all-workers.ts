@@ -24,6 +24,8 @@ async function main() {
   const { createEconomicHealthWorker } = await import("./economic-health-worker.js");
   const { createSpotCheckWorker } = await import("./spot-check-worker.js");
   const { createPrivacyWorker } = await import("./privacy-worker.js");
+  const { createPatternAggregationWorker } = await import("./pattern-aggregation-worker.js");
+  const { createRateAdjustmentWorker } = await import("./rate-adjustment-worker.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -41,6 +43,9 @@ async function main() {
     { name: "economic-health", create: createEconomicHealthWorker },
     { name: "spot-check", create: createSpotCheckWorker },
     { name: "privacy", create: createPrivacyWorker },
+    // Sprint 13: Phase 3 Integration workers
+    { name: "pattern-aggregation", create: createPatternAggregationWorker },
+    { name: "rate-adjustment", create: createRateAdjustmentWorker },
   ];
 
   for (const { name, create } of workers) {

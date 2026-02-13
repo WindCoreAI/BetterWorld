@@ -108,6 +108,11 @@ export const agentCreditTransactionInputSchema = z.object({
     "spend_submission_problem",
     "spend_submission_solution",
     "spend_submission_debate",
+    // Sprint 13: disputes & evidence review
+    "spend_dispute_stake",
+    "earn_dispute_refund",
+    "earn_dispute_bonus",
+    "earn_evidence_review",
   ]),
   referenceId: z.string().uuid().optional(),
   referenceType: z.string().max(50).optional(),
@@ -133,6 +138,12 @@ export const featureFlagSchema = z.object({
   // Sprint 12: Production Shift
   SUBMISSION_COST_MULTIPLIER: z.number().min(0).max(1).default(1.0),
   PRIVACY_BLUR_ENABLED: z.boolean().default(false),
+  // Sprint 13: Phase 3 Integration
+  EVIDENCE_REVIEW_ENABLED: z.boolean().default(false),
+  PATTERN_AGGREGATION_ENABLED: z.boolean().default(false),
+  RATE_ADJUSTMENT_PAUSED: z.boolean().default(false),
+  VALIDATION_REWARD_MULTIPLIER: z.number().min(0).max(5).default(1.0),
+  OFFLINE_PWA_ENABLED: z.boolean().default(false),
 });
 
 export type FeatureFlags = z.infer<typeof featureFlagSchema>;
@@ -149,6 +160,11 @@ export const FEATURE_FLAG_NAMES: FeatureFlagName[] = [
   "DISPUTES_ENABLED",
   "SUBMISSION_COST_MULTIPLIER",
   "PRIVACY_BLUR_ENABLED",
+  "EVIDENCE_REVIEW_ENABLED",
+  "PATTERN_AGGREGATION_ENABLED",
+  "RATE_ADJUSTMENT_PAUSED",
+  "VALIDATION_REWARD_MULTIPLIER",
+  "OFFLINE_PWA_ENABLED",
 ];
 
 export const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
@@ -162,4 +178,50 @@ export const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
   DISPUTES_ENABLED: false,
   SUBMISSION_COST_MULTIPLIER: 1.0,
   PRIVACY_BLUR_ENABLED: false,
+  EVIDENCE_REVIEW_ENABLED: false,
+  PATTERN_AGGREGATION_ENABLED: false,
+  RATE_ADJUSTMENT_PAUSED: false,
+  VALIDATION_REWARD_MULTIPLIER: 1.0,
+  OFFLINE_PWA_ENABLED: false,
 };
+
+// ============================================================================
+// Sprint 13: Dispute Schemas
+// ============================================================================
+
+export const fileDisputeSchema = z.object({
+  consensusId: z.string().uuid(),
+  reasoning: z.string().min(50).max(2000),
+});
+
+export type FileDisputeInput = z.infer<typeof fileDisputeSchema>;
+
+export const resolveDisputeSchema = z.object({
+  verdict: z.enum(["upheld", "dismissed"]),
+  adminNotes: z.string().min(10).max(2000),
+});
+
+export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>;
+
+// ============================================================================
+// Sprint 13: Rate Adjustment Schemas
+// ============================================================================
+
+export const rateAdjustmentOverrideSchema = z.object({
+  rewardMultiplier: z.number().min(0.01).max(5.0),
+  costMultiplier: z.number().min(0.01).max(5.0),
+});
+
+export type RateAdjustmentOverrideInput = z.infer<typeof rateAdjustmentOverrideSchema>;
+
+// ============================================================================
+// Sprint 13: Evidence Review Schemas
+// ============================================================================
+
+export const submitEvidenceReviewSchema = z.object({
+  recommendation: z.enum(["verified", "rejected", "needs_more_info"]),
+  confidence: z.number().min(0).max(1),
+  reasoning: z.string().min(10).max(2000),
+});
+
+export type SubmitEvidenceReviewInput = z.infer<typeof submitEvidenceReviewSchema>;

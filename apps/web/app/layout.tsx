@@ -4,6 +4,10 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navigation } from "../src/components/Navigation";
+import { ServiceWorkerRegistration } from "../src/components/pwa/ServiceWorkerRegistration";
+import { InstallPrompt } from "../src/components/pwa/InstallPrompt";
+import { OfflineIndicator } from "../src/components/pwa/OfflineIndicator";
+import { QueueStatus } from "../src/components/pwa/QueueStatus";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,10 +30,18 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#10b981" />
+      </head>
       <body className="min-h-screen antialiased">
         <Providers>
+          <ServiceWorkerRegistration />
+          <OfflineIndicator />
           <Navigation />
           {children}
+          <InstallPrompt />
+          <QueueStatus />
         </Providers>
       </body>
     </html>

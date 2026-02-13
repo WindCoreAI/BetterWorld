@@ -12,6 +12,7 @@ export type ErrorCode =
   | "INVALID_CURSOR"
   | "INVALID_DOMAIN"
   // Resources
+  | "GONE"
   | "NOT_FOUND"
   | "USERNAME_TAKEN"
   | "EMAIL_TAKEN"
@@ -40,6 +41,7 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   AGENT_NOT_VERIFIED: 403,
   INSUFFICIENT_TOKENS: 403,
   "2FA_REQUIRED": 403,
+  GONE: 410,
   NOT_FOUND: 404,
   USERNAME_TAKEN: 409,
   EMAIL_TAKEN: 409,

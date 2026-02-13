@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import type { AppEnv } from "../app.js";
 import disputeRoutes from "./admin/disputes.js";
+import consensusDisputeRoutes from "./disputes.routes.js";
 import phase3AdminRoutes from "./admin/phase3.js";
 import shadowAdminRoutes from "./admin/shadow.js";
 import { adminRoutes } from "./admin.routes.js";
@@ -35,6 +36,10 @@ import { solutionsRoutes } from "./solutions.routes.js";
 import streakRoutes from "./streaks/index.js";
 import tokensRoutes from "./tokens/index.js";
 import validatorRoutes from "./validator.routes.js";
+import crossCityRoutes from "./cross-city.routes.js";
+import evidenceReviewRoutes from "./evidence-reviews.routes.js";
+import patternRoutes from "./pattern.routes.js";
+import { adminRateRoutes } from "./admin-rate.routes.js";
 
 export const v1Routes = new Hono<AppEnv>();
 
@@ -99,3 +104,10 @@ v1Routes.route("/admin", shadowAdminRoutes);
 // Sprint 12 routes — Production Shift
 v1Routes.route("/problems", attestationRoutes);
 v1Routes.route("/", missionTemplateRoutes);
+
+// Sprint 13 routes — Phase 3 Integration
+v1Routes.route("/disputes", consensusDisputeRoutes);
+v1Routes.route("/patterns", patternRoutes);
+v1Routes.route("/cross-city", crossCityRoutes);
+v1Routes.route("/evidence-reviews", evidenceReviewRoutes);
+v1Routes.route("/admin/rate-adjustments", adminRateRoutes);
