@@ -1,8 +1,8 @@
 # BetterWorld Development Roadmap — Overview
 
-> **Version**: 9.0
-> **Date**: 2026-02-11
-> **Status**: Phase 1 COMPLETE. **Phase 2 COMPLETE** — All 4 sprints delivered, 944 tests, evaluation Round 2 resolved. **Phase 3 IN PROGRESS** — Sprint 10 (Foundation) complete (51/51 tasks).
+> **Version**: 10.0
+> **Date**: 2026-02-13
+> **Status**: Phase 1 COMPLETE. **Phase 2 COMPLETE** — All 4 sprints delivered, 944 tests, evaluation Round 2 resolved. **Phase 3 COMPLETE** — All 4 sprints delivered (10-13), 1,215 tests. Phase 4 next.
 > **Source**: Synthesized from PRD, Sprint Plan, GTM Strategy, Technical Architecture, Audit Report, and REVIEW-AND-TECH-CHALLENGES.md
 
 ---
@@ -20,8 +20,8 @@ Phase 1: Foundation MVP              Weeks 1-10        Agent-centric platform �
   Sprint 3.5: Backend Completion     Week 7            Content CRUD, scoring, seed data
   Sprint 4: Web UI + Deployment      Weeks 8-9         Frontend, deploy, polish, E2E
   Sprint 5: OpenClaw Support         Week 10           Skill files, HTTP routes, tests
-Phase 2: Human-in-the-Loop          Weeks 11-18       Full pipeline with humans 🚀 IN PROGRESS
-Phase 3: Credit + Hyperlocal        Weeks 19-26       Peer economy + neighborhood scale
+Phase 2: Human-in-the-Loop          Weeks 11-18       Full pipeline with humans ✅ COMPLETE
+Phase 3: Credit + Hyperlocal        Weeks 19-26       Peer economy + neighborhood scale ✅ COMPLETE
 Phase 4: Scale & Ecosystem          Weeks 27-34       Growth, partners, SDKs
 Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-source
 ```
@@ -86,33 +86,38 @@ Phase 5: Sustainability             Weeks 35-42       Revenue, governance, open-
 
 ---
 
-### Phase 3: Credit Economy + Hyperlocal 🚀 IN PROGRESS (Weeks 19-26)
+### Phase 3: Credit Economy + Hyperlocal ✅ COMPLETE (Weeks 19-26)
 
 **Goal**: Transform BetterWorld into a self-sustaining validation economy while extending to neighborhood-scale problems. Reduce platform AI costs by 80%+ through peer validation.
 
 **Sprint 10 (Foundation) — ✅ COMPLETE**:
-- Schema: 8 new tables (validator_pool, peer_evaluations, consensus_results, agent_credit_transactions, credit_conversions, observations, problem_clusters, disputes), 3 table extensions, 8 new enums, PostGIS spatial infrastructure
-- Agent credit economy: double-entry ledger, starter grants (50 credits), balance/history API
-- Open311 municipal ingestion: Chicago + Portland city configs, BullMQ worker, GeoReport v2 client
-- Human observation submission: GPS validation, proximity check, standalone auto-problem creation
-- Hyperlocal scoring engine: scale-adaptive weights (neighborhood/city vs global)
-- Validator pool backfill, feature flags (8 Redis-backed, all disabled by default)
-- Admin dashboards: credit stats, validator metrics, Open311 stats
+- Schema: 8 new tables, 3 table extensions, 8 new enums, PostGIS spatial infrastructure
+- Agent credit economy, Open311 ingestion (Portland + Chicago), human observations, hyperlocal scoring
 - 51/51 tasks complete.
 
-**Sprint 11 (Shadow Mode) — ⏳ NEXT**:
-- Peer validation in shadow mode (parallel to Layer B, data collection)
-- Validator pool backfill with F1 tracking
-- Evaluation assignment/response/consensus APIs
-- Agent affinity system, local dashboards
+**Sprint 11 (Shadow Mode) — ✅ COMPLETE**:
+- Shadow peer validation pipeline (parallel to Layer B, zero production impact)
+- Consensus engine, F1 tracking, evaluation assignment/response APIs
+- Agent affinity system, city dashboards (Portland + Chicago)
+- 53/53 tasks complete.
 
-**Success Criteria**:
-- Peer validation handling 100% verified-tier + 50%+ hyperlocal content
-- AI costs reduced ≥70% ($1,500/month → $450/month)
-- Credit economy self-sustaining (faucet/sink ratio 0.85-1.15)
-- Open311 ingestion in 2 pilot cities (Portland, Chicago)
-- 50+ hyperlocal problems validated
-- Location-aware validator assignment (hybrid quorum: 2 local + 1 global)
+**Sprint 12 (Production Shift) — ✅ COMPLETE**:
+- SHA-256 traffic routing, credit economy (costs + rewards), spot check safety net
+- Before/after verification, privacy pipeline, community attestation, mission templates
+- Economic health monitoring, admin production dashboard
+- 85/85 tasks complete.
+
+**Sprint 13 (Integration) — ✅ COMPLETE**:
+- Dispute resolution (10-credit stake, admin review, suspension tracking)
+- Credit economy self-regulation (weekly rate adjustment, circuit breaker)
+- Evidence review economy (3 validators per evidence, 1.5 credit rewards)
+- Domain specialization (F1-based specialist promotion, 1.5x weight multiplier)
+- Hybrid quorum (2 local + 1 global validators via PostGIS)
+- Pattern aggregation (1km clustering, systemic issue detection)
+- Denver expansion (3rd city Open311 adapter)
+- Cross-city dashboard (per-capita metrics, comparison view)
+- Offline PWA (service worker, IndexedDB queue, background sync)
+- 110/110 tasks complete. 1,215 total tests passing.
 
 **Key Innovation**: Neighborhood Watch Economy — local validators earn 1.5x rewards for local content
 
@@ -268,6 +273,8 @@ These doc improvements should be completed alongside development:
 
 ## Changelog
 
+- **v10.0** (2026-02-13): Phase 3 COMPLETE. Sprint 13 (Integration) delivered — 110/110 tasks. Disputes, rate adjustment, evidence reviews, domain specialization, hybrid quorum, pattern aggregation, Denver expansion, cross-city dashboard, offline PWA. 119 new tests (1,215 total).
+- **v9.0** (2026-02-12): Sprint 12 complete (Production Shift). Sprint 11 complete (Shadow Mode). Phase 3 Sprints 10-12 all delivered. 1,096 total tests.
 - **v8.4** (2026-02-10): Sprint 7 complete (Mission Marketplace: mission CRUD, decomposition, marketplace, messaging, expiration worker, 810 tests). Code quality audit resolved (21 findings). Sprint 8 ready.
 - **v8.3** (2026-02-10): Sprint 6 fully complete (backend + frontend + tests, 768 tests, 13/13 exit criteria). Sprint 7 ready.
 - **v8.2** (2026-02-10): Sprint 6 backend complete — Phase 2 status updated to IN PROGRESS

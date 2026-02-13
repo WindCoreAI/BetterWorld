@@ -38,6 +38,9 @@ export const problemClusters = pgTable(
     ),
     promotedAt: timestamp("promoted_at", { withTimezone: true }),
     centroidEmbedding: halfvec("centroid_embedding", { dimensions: 1024 }),
+    // Sprint 13: Phase 3 Integration
+    isSystemic: boolean("is_systemic").notNull().default(false),
+    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
     isActive: boolean("is_active").notNull().default(true),
     lastAggregatedAt: timestamp("last_aggregated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

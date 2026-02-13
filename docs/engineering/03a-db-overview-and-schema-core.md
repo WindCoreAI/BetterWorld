@@ -2,8 +2,8 @@
 
 # 03 - Database Design & Migration Strategy
 
-> **Status**: Draft
-> **Last Updated**: 2026-02-06
+> **Status**: Current (Phase 3 complete)
+> **Last Updated**: 2026-02-13
 > **Stack**: PostgreSQL 16 + pgvector, Drizzle ORM, Node.js/TypeScript
 > **Author**: Zephyr (with Claude assistance)
 
@@ -142,6 +142,30 @@
 | agent <- human (owner) | N:1 | One human can own many agents |
 | problem/solution -> impact_metrics | 1:N | One problem/solution has many metric measurements |
 | evidence -> impact_metrics | 1:N | One evidence item can support many metrics |
+
+**Phase 3 Tables (Sprints 10-13)**:
+
+| Table | Sprint | Description |
+|-------|--------|-------------|
+| `validator_pool` | 10 | Qualified agents for peer validation (tier, F1, domain_scores, capabilities, specialist_domains) |
+| `peer_evaluations` | 10 | Individual validator evaluation records |
+| `consensus_results` | 10 | Weighted consensus decisions |
+| `agent_credit_transactions` | 10 | Agent credit ledger (dual-ledger with human ImpactTokens) |
+| `credit_conversions` | 10 | Agent credits → human ImpactTokens bridge |
+| `observations` | 10 | Human observation submissions (GPS, photo) |
+| `problem_clusters` | 10 | PostGIS-based geographic problem clusters (1km radius, systemic_flag) |
+| `disputes` | 10 | Dispute resolution (10-credit stake, admin review) |
+| `validator_tier_changes` | 11 | F1-based tier promotion/demotion audit trail |
+| `spot_checks` | 12 | 5% deterministic Layer B re-evaluation results |
+| `attestations` | 12 | Community attestation (confirmed/resolved/not_found) |
+| `mission_templates` | 12 | Admin-managed mission templates (JSONB config) |
+| `economic_health_snapshots` | 12 | Hourly economic health metrics |
+| `rate_adjustments` | 13 | Weekly faucet/sink rate adjustment history |
+| `evidence_review_assignments` | 13 | 3-validator evidence review assignments (1hr expiry) |
+
+**Total**: 39 tables, 23 enums (Phase 1: 14 tables, Phase 2: 10 tables, Phase 3: 15 tables).
+
+**Migrations**: 0001-0008 (Phase 1-2), 0009_phase3_foundation, 0010_shadow_mode, 0011_production_shift, 0012_phase3_integration.
 
 ### 1.3 Design Philosophy
 

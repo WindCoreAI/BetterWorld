@@ -197,6 +197,7 @@ export {
   SYSTEM_MUNICIPAL_AGENT_USERNAME,
   SYSTEM_MUNICIPAL_AGENT_ID,
   OPEN311_CITY_CONFIGS,
+  CITY_POPULATIONS,
   FEATURE_FLAG_REDIS_PREFIX,
   FEATURE_FLAG_CACHE_TTL_MS,
   OBSERVATION_RATE_LIMIT,
@@ -235,6 +236,80 @@ export {
   SPOT_CHECK_RATE,
   SPOT_CHECK_HASH_SEED,
 } from "./constants/consensus.js";
+
+// Sprint 13: Dispute Resolution constants
+export {
+  DISPUTE_STAKE_AMOUNT,
+  DISPUTE_BONUS,
+  DISPUTE_SUSPENSION_DAYS,
+  DISPUTE_FAILURE_THRESHOLD,
+  DISPUTE_FAILURE_WINDOW_DAYS,
+} from "./constants/phase3.js";
+
+// Sprint 13: Dispute schemas
+export {
+  fileDisputeSchema,
+  resolveDisputeSchema,
+} from "./types/phase3.js";
+export type {
+  FileDisputeInput,
+  ResolveDisputeInput,
+} from "./types/phase3.js";
+
+// Sprint 13: Hybrid Quorum + Pattern Aggregation constants
+export {
+  LOCAL_RADIUS_KM,
+  LOCAL_QUORUM_SIZE,
+  GLOBAL_QUORUM_SIZE,
+  LOCAL_REWARD_MULTIPLIER,
+  CLUSTER_RADIUS_KM,
+  CLUSTER_MIN_SIZE,
+  CLUSTER_SIMILARITY_THRESHOLD,
+  SYSTEMIC_ISSUE_THRESHOLD,
+} from "./constants/phase3.js";
+
+// Sprint 13: Rate Adjustment constants
+export {
+  RATE_ADJUSTMENT_STEP,
+  RATE_ADJUSTMENT_CAP,
+  FAUCET_SINK_UPPER,
+  FAUCET_SINK_LOWER,
+  CIRCUIT_BREAKER_RATIO,
+  CIRCUIT_BREAKER_DAYS,
+} from "./constants/phase3.js";
+
+// Sprint 13: Rate Adjustment schemas
+export {
+  rateAdjustmentOverrideSchema,
+} from "./types/phase3.js";
+export type {
+  RateAdjustmentOverrideInput,
+} from "./types/phase3.js";
+
+// Sprint 13: Evidence Review constants
+export {
+  EVIDENCE_REVIEW_REWARD,
+  EVIDENCE_REVIEW_EXPIRY_HOURS,
+  MIN_EVIDENCE_REVIEWERS,
+  VALIDATOR_CAPABILITIES,
+} from "./constants/phase3.js";
+
+// Sprint 13: Domain Specialization constants
+export {
+  SPECIALIST_F1_THRESHOLD,
+  SPECIALIST_MIN_EVALUATIONS,
+  SPECIALIST_REVOCATION_F1,
+  SPECIALIST_GRACE_EVALUATIONS,
+  SPECIALIST_WEIGHT_MULTIPLIER,
+} from "./constants/phase3.js";
+
+// Sprint 13: Evidence Review schemas
+export {
+  submitEvidenceReviewSchema,
+} from "./types/phase3.js";
+export type {
+  SubmitEvidenceReviewInput,
+} from "./types/phase3.js";
 
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";

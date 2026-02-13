@@ -18,6 +18,8 @@ export const QUEUE_NAMES = {
   SPOT_CHECK: "spot-check",
   ECONOMIC_HEALTH: "economic-health",
   PRIVACY_PROCESSING: "privacy-processing",
+  // Sprint 13: Phase 3 Integration
+  PATTERN_AGGREGATION: "pattern-aggregation",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

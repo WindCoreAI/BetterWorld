@@ -46,7 +46,11 @@ export const validatorPool = pgTable(
     responseRate: decimal("response_rate", { precision: 3, scale: 2 })
       .notNull()
       .default("1.00"),
-    capabilities: jsonb("capabilities").default({}),
+    capabilities: jsonb("capabilities").default([]),
+    // Sprint 13: Phase 3 Integration
+    disputeSuspendedUntil: timestamp("dispute_suspended_until", { withTimezone: true }),
+    localValidationCount: integer("local_validation_count").notNull().default(0),
+    globalValidationCount: integer("global_validation_count").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     suspendedUntil: timestamp("suspended_until", { withTimezone: true }),
     suspensionCount: integer("suspension_count").notNull().default(0),

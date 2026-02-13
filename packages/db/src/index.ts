@@ -59,3 +59,6 @@ export { economicHealthSnapshots } from "./schema/economicHealthSnapshots";
 export { spotChecks } from "./schema/spotChecks";
 export { attestations } from "./schema/attestations";
 export { missionTemplates } from "./schema/missionTemplates";
+// Sprint 13: Phase 3 Integration tables
+export { rateAdjustments } from "./schema/rateAdjustments";
+export { evidenceReviewAssignments } from "./schema/evidenceReviews";

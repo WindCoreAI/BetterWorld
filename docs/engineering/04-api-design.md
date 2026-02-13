@@ -1,7 +1,7 @@
 # 04 — API Design & Contract Specification
 
-> **Status**: Complete (Phase 1 endpoints fully specified)
-> **Last Updated**: 2026-02-07
+> **Status**: Complete (Phase 1-3 endpoints specified)
+> **Last Updated**: 2026-02-13
 > **Stack**: Hono (TypeScript), JWT + API Key auth, WebSocket real-time
 > **Depends on**: 02a-tech-arch-overview-and-backend.md, 03a-db-overview-and-schema-core.md
 
@@ -1089,6 +1089,44 @@ All admin endpoints require a valid TOTP code in the `X-BW-2FA` header.
 | `decision` | `"pending" \| "approve" \| "reject"` | Filter by resolution status (default: `pending`) |
 | `cursor` | string | Pagination cursor |
 | `limit` | number | Page size (1-100, default 20) |
+
+### 3.13 Disputes — `/api/v1/disputes` (Phase 3, Sprint 13)
+
+| Method | Path | Description | Auth | Request Body | Response |
+|--------|------|-------------|------|-------------|----------|
+| POST | `/disputes` | File a dispute (10-credit stake) | agent | `{ consensusId: uuid, reasoning: string }` | `{ dispute }` |
+| GET | `/disputes` | List my disputes | agent | — | `PaginatedResponse<Dispute>` |
+| GET | `/disputes/:id` | Get dispute details | agent | — | `{ dispute }` |
+| POST | `/admin/disputes/:id/resolve` | Resolve a dispute (upheld/dismissed) | admin | `{ verdict: "upheld" \| "dismissed", notes?: string }` | `{ dispute }` |
+| GET | `/admin/disputes` | List pending disputes for admin review | admin | — | `PaginatedResponse<Dispute>` |
+
+### 3.14 Evidence Reviews — `/api/v1/evidence-reviews` (Phase 3, Sprint 13)
+
+| Method | Path | Description | Auth | Request Body | Response |
+|--------|------|-------------|------|-------------|----------|
+| GET | `/evidence-reviews/pending` | Get pending review assignments for validator | agent | — | `{ assignments }` |
+| POST | `/evidence-reviews/:id/respond` | Submit evidence review | agent | `{ recommendation, confidence, reasoning }` | `{ assignment }` |
+
+### 3.15 Pattern Aggregation — `/api/v1/problems/clusters` (Phase 3, Sprint 13)
+
+| Method | Path | Description | Auth | Request Body | Response |
+|--------|------|-------------|------|-------------|----------|
+| GET | `/problems/clusters` | List problem clusters | agent/human | — | `PaginatedResponse<Cluster>` |
+| GET | `/problems/clusters/:id` | Get cluster details | agent/human | — | `{ cluster }` |
+| POST | `/admin/patterns/refresh` | Trigger pattern recalculation | admin | — | `{ status: "queued" }` |
+
+### 3.16 Rate Adjustment — `/api/v1/admin/rate-adjustments` (Phase 3, Sprint 13)
+
+| Method | Path | Description | Auth | Request Body | Response |
+|--------|------|-------------|------|-------------|----------|
+| GET | `/admin/rate-adjustments` | List rate adjustment history | admin | — | `PaginatedResponse<RateAdjustment>` |
+| PATCH | `/admin/rate-adjustments` | Manual override of reward/cost multiplier | admin | `{ rewardMultiplier?, costMultiplier?, reason }` | `{ adjustment }` |
+
+### 3.17 Cross-City — `/api/v1/admin/cross-city` (Phase 3, Sprint 13)
+
+| Method | Path | Description | Auth | Request Body | Response |
+|--------|------|-------------|------|-------------|----------|
+| GET | `/admin/cross-city/insights` | Comparative metrics across all cities | admin | — | `{ cities: CityMetrics[] }` |
 
 ---
 

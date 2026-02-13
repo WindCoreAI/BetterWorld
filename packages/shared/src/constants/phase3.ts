@@ -111,7 +111,27 @@ export const OPEN311_CITY_CONFIGS: Record<string, CityConfig> = {
     pollingIntervalMs: 15 * 60 * 1000,
     enabled: false,
   },
+  denver: {
+    id: "denver",
+    displayName: "City of Denver",
+    endpoint: "https://www.denvergov.org/open311/v2",
+    serviceCodeMapping: {
+      pothole: { domain: "environmental_protection", severity: "medium" },
+      streetlight: { domain: "community_building", severity: "medium" },
+      graffiti: { domain: "environmental_protection", severity: "medium" },
+      illegal_dumping: { domain: "environmental_protection", severity: "high" },
+    },
+    pollingIntervalMs: 15 * 60 * 1000,
+    enabled: false,
+  },
 };
+
+/** City population data for per-capita normalization */
+export const CITY_POPULATIONS: Record<string, number> = {
+  chicago: 2_746_388,
+  portland: 652_503,
+  denver: 715_522,
+} as const;
 
 // ============================================================================
 // Feature Flag Redis Key Prefix
@@ -132,3 +152,121 @@ export const OBSERVATION_RATE_LIMIT = {
   /** Window in seconds */
   WINDOW_SECONDS: 3600,
 } as const;
+
+// ============================================================================
+// Sprint 13: Dispute Resolution Constants
+// ============================================================================
+
+/** Credits staked when filing a dispute */
+export const DISPUTE_STAKE_AMOUNT = 10;
+
+/** Bonus credits awarded when dispute is upheld */
+export const DISPUTE_BONUS = 5;
+
+/** Days of suspension after hitting failure threshold */
+export const DISPUTE_SUSPENSION_DAYS = 60;
+
+/** Number of dismissed disputes in window before suspension */
+export const DISPUTE_FAILURE_THRESHOLD = 3;
+
+/** Rolling window in days for counting dismissed disputes */
+export const DISPUTE_FAILURE_WINDOW_DAYS = 30;
+
+// ============================================================================
+// Sprint 13: Rate Adjustment Constants
+// ============================================================================
+
+/** Percentage step per adjustment cycle */
+export const RATE_ADJUSTMENT_STEP = 0.10;
+
+/** Maximum percentage change per cycle */
+export const RATE_ADJUSTMENT_CAP = 0.20;
+
+/** Faucet/sink ratio upper threshold (rewards too high) */
+export const FAUCET_SINK_UPPER = 1.15;
+
+/** Faucet/sink ratio lower threshold (costs too high) */
+export const FAUCET_SINK_LOWER = 0.85;
+
+/** Ratio threshold that triggers circuit breaker */
+export const CIRCUIT_BREAKER_RATIO = 2.0;
+
+/** Consecutive days above circuit breaker ratio before activation */
+export const CIRCUIT_BREAKER_DAYS = 3;
+
+// ============================================================================
+// Sprint 13: Evidence Review Constants
+// ============================================================================
+
+/** Credits earned per completed evidence review */
+export const EVIDENCE_REVIEW_REWARD = 1.5;
+
+/** Hours before an evidence review assignment expires */
+export const EVIDENCE_REVIEW_EXPIRY_HOURS = 1;
+
+/** Minimum number of peer reviewers for evidence */
+export const MIN_EVIDENCE_REVIEWERS = 3;
+
+/** Allowlist of validator capabilities */
+export const VALIDATOR_CAPABILITIES = [
+  "vision",
+  "document_review",
+  "geo_verification",
+] as const;
+
+// ============================================================================
+// Sprint 13: Domain Specialization Constants
+// ============================================================================
+
+/** F1 score threshold for specialist designation */
+export const SPECIALIST_F1_THRESHOLD = 0.90;
+
+/** Minimum evaluations in a domain for specialist eligibility */
+export const SPECIALIST_MIN_EVALUATIONS = 50;
+
+/** F1 score below which specialist status is revoked */
+export const SPECIALIST_REVOCATION_F1 = 0.85;
+
+/** Grace evaluations before revocation takes effect */
+export const SPECIALIST_GRACE_EVALUATIONS = 10;
+
+/** Consensus weight multiplier for specialist validators */
+export const SPECIALIST_WEIGHT_MULTIPLIER = 1.5;
+
+// ============================================================================
+// Sprint 13: Hybrid Quorum Constants
+// ============================================================================
+
+/** Radius in km to consider a validator "local" */
+export const LOCAL_RADIUS_KM = 50;
+
+/** Number of local validators in a hybrid quorum */
+export const LOCAL_QUORUM_SIZE = 2;
+
+/** Number of global validators in a hybrid quorum */
+export const GLOBAL_QUORUM_SIZE = 1;
+
+/** Reward multiplier for local validators */
+export const LOCAL_REWARD_MULTIPLIER = 1.5;
+
+// ============================================================================
+// Sprint 13: Pattern Aggregation Constants
+// ============================================================================
+
+/** Radius in km for problem clustering */
+export const CLUSTER_RADIUS_KM = 1;
+
+/** Minimum number of problems to form a cluster */
+export const CLUSTER_MIN_SIZE = 5;
+
+/** Cosine similarity threshold for description matching */
+export const CLUSTER_SIMILARITY_THRESHOLD = 0.85;
+
+/** Threshold for systemic issue designation (same as min size) */
+export const SYSTEMIC_ISSUE_THRESHOLD = 5;
+
+// ============================================================================
+// Sprint 13: Denver City Configuration
+// ============================================================================
+
+// Denver is added to OPEN311_CITY_CONFIGS below

@@ -50,3 +50,7 @@ export * from "./spotChecks";
 export * from "./attestations";
 export * from "./missionTemplates";
 export * from "./economicHealthSnapshots";
+
+// Sprint 13: Phase 3 Integration schemas
+export * from "./rateAdjustments";
+export * from "./evidenceReviews";

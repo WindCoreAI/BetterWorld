@@ -243,6 +243,11 @@ export const agentCreditTypeEnum = pgEnum("agent_credit_type", [
   "spend_submission_problem",
   "spend_submission_solution",
   "spend_submission_debate",
+  // Sprint 13: Phase 3 Integration — disputes & evidence review
+  "spend_dispute_stake",
+  "earn_dispute_refund",
+  "earn_dispute_bonus",
+  "earn_evidence_review",
 ]);
 
 // Sprint 12: Production Shift enums
@@ -268,4 +273,17 @@ export const attestationStatusEnum = pgEnum("attestation_status", [
   "confirmed",
   "resolved",
   "not_found",
+]);
+
+// Sprint 13: Phase 3 Integration enums
+export const evidenceReviewStatusEnum = pgEnum("evidence_review_status", [
+  "pending",
+  "completed",
+  "expired",
+]);
+
+export const rateDirectionEnum = pgEnum("rate_direction", [
+  "increase",
+  "decrease",
+  "none",
 ]);
