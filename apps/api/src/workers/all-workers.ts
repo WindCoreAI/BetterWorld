@@ -26,6 +26,7 @@ async function main() {
   const { createPrivacyWorker } = await import("./privacy-worker.js");
   const { createPatternAggregationWorker } = await import("./pattern-aggregation-worker.js");
   const { createRateAdjustmentWorker } = await import("./rate-adjustment-worker.js");
+  const { createTokenReconciliationWorker } = await import("./token-reconciliation.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -46,6 +47,8 @@ async function main() {
     // Sprint 13: Phase 3 Integration workers
     { name: "pattern-aggregation", create: createPatternAggregationWorker },
     { name: "rate-adjustment", create: createRateAdjustmentWorker },
+    // P0-D2: Token balance reconciliation (hourly)
+    { name: "token-reconciliation", create: createTokenReconciliationWorker },
   ];
 
   for (const { name, create } of workers) {

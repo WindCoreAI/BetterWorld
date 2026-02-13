@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Organic shape (human - curves) -->
+  <path d="M24 4C14 4 8 12 8 20C8 28 14 36 24 44" stroke="#C4704B" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- Geometric shape (AI - angles) -->
+  <path d="M24 4L40 20L24 36L40 44" stroke="#4A8C6F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Upward arrow in negative space -->
+  <path d="M20 28L24 20L28 28" stroke="#C4704B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Center dot -->
+  <circle cx="24" cy="24" r="2" fill="#C4704B"/>
+</svg>

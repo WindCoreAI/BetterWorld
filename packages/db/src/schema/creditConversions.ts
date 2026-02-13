@@ -24,6 +24,7 @@ export const creditConversions = pgTable(
     agentCreditsSpent: integer("agent_credits_spent").notNull(),
     agentCreditTransactionId: uuid("agent_credit_transaction_id").references(
       () => agentCreditTransactions.id,
+      { onDelete: "restrict" },
     ),
     humanId: uuid("human_id")
       .notNull()
@@ -31,6 +32,7 @@ export const creditConversions = pgTable(
     impactTokensReceived: integer("impact_tokens_received").notNull(),
     humanTransactionId: uuid("human_transaction_id").references(
       () => tokenTransactions.id,
+      { onDelete: "restrict" },
     ),
     conversionRate: decimal("conversion_rate", { precision: 8, scale: 4 }).notNull(),
     rateSnapshot: jsonb("rate_snapshot").default({}),

@@ -191,12 +191,28 @@ describe("rateLimit middleware", () => {
     mockGetRedis.mockReturnValue(mockRedis as never);
     const app = createTestApp();
 
+    // Fly-Client-IP is trusted (set by Fly.io edge, not user-controllable)
     await app.request("/test", {
-      headers: { "X-Forwarded-For": "192.168.1.100" },
+      headers: { "Fly-Client-IP": "192.168.1.100" },
     });
 
     const pipeline = mockRedis._pipeline;
     const keyArg = pipeline.zremrangebyscore.mock.calls[0]?.[0] as string;
     expect(keyArg).toBe("ratelimit:ip:192.168.1.100");
+  });
+
+  it("ignores X-Forwarded-For from untrusted proxies", async () => {
+    const mockRedis = createMockRedis(0);
+    mockGetRedis.mockReturnValue(mockRedis as never);
+    const app = createTestApp();
+
+    // Raw X-Forwarded-For without trusted proxy should NOT be used
+    await app.request("/test", {
+      headers: { "X-Forwarded-For": "1.2.3.4, 5.6.7.8" },
+    });
+
+    const pipeline = mockRedis._pipeline;
+    const keyArg = pipeline.zremrangebyscore.mock.calls[0]?.[0] as string;
+    expect(keyArg).toBe("ratelimit:ip:unknown");
   });
 });

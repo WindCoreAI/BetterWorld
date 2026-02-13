@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FAF7F2;
+  --foreground: #2D2A26;
+  --terracotta: #C4704B;
+  --terracotta-dark: #A85A38;
+  --terracotta-light: #E8A88A;
+  --cream: #FAF7F2;
+  --warm-white: #FEFCF9;
+  --charcoal: #2D2A26;
+  --warm-gray: #6B6560;
+  --stone: #D9D2CA;
+  --sage: #4A8C6F;
+  --sage-dark: #3A7058;
+  --success: #3D8B5E;
+  --warning: #C4922A;
+  --error: #C45044;
+  --info: #4A7FB5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-dark: var(--terracotta-dark);
+  --color-terracotta-light: var(--terracotta-light);
+  --color-cream: var(--cream);
+  --color-warm-white: var(--warm-white);
+  --color-charcoal: var(--charcoal);
+  --color-warm-gray: var(--warm-gray);
+  --color-stone: var(--stone);
+  --color-sage: var(--sage);
+  --color-sage-dark: var(--sage-dark);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1A1B1E;
+    --foreground: #E8E4DF;
+    --warm-white: #242528;
+    --cream: #1A1B1E;
+    --stone: #3A3B3F;
+    --warm-gray: #9C958E;
+    --terracotta: #D4845F;
+    --terracotta-dark: #E89A74;
+    --terracotta-light: #A85A38;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 20s ease infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-gradient,
+  .animate-float,
+  .animate-pulse-subtle {
+    animation: none;
+  }
+}

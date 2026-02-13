@@ -1,8 +1,50 @@
 import { AppError, RATE_LIMIT_DEFAULTS, AGENT_RATE_LIMIT_TIERS } from "@betterworld/shared";
 import type { RateLimitRole, ClaimStatus } from "@betterworld/shared";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 
 import type { AuthEnv } from "./auth.js";
+
+/**
+ * Trusted proxy CIDRs. Only trust X-Forwarded-For from these sources.
+ * Configurable via TRUSTED_PROXIES env var (comma-separated IPs/CIDRs).
+ * Fly.io sets Fly-Client-IP which is always trustworthy from their edge.
+ */
+const TRUSTED_PROXY_SET = new Set(
+  (process.env.TRUSTED_PROXIES ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+
+/**
+ * Extract a reliable client IP for rate-limiting.
+ *
+ * Priority:
+ * 1. Fly-Client-IP header — set by Fly.io edge, not user-controllable
+ * 2. X-Forwarded-For first hop — only if the connecting IP is a trusted proxy
+ * 3. Direct connection IP via Hono's c.req.header("x-real-ip") or "unknown"
+ */
+export function getClientIp(c: Context): string {
+  // Fly.io always sets this at the edge — cannot be spoofed by clients
+  const flyClientIp = c.req.header("Fly-Client-IP");
+  if (flyClientIp) {
+    return flyClientIp.trim();
+  }
+
+  // Only trust X-Forwarded-For if the immediate upstream is a known proxy
+  const connectingIp = c.req.header("X-Real-IP") ?? "";
+  if (TRUSTED_PROXY_SET.size > 0 && TRUSTED_PROXY_SET.has(connectingIp)) {
+    const forwarded = c.req.header("X-Forwarded-For");
+    if (forwarded) {
+      const firstHop = forwarded.split(",")[0]?.trim();
+      if (firstHop) return firstHop;
+    }
+  }
+
+  // Fall back to X-Real-IP (set by most reverse proxies) or unknown
+  return connectingIp || "unknown";
+}
 
 /**
  * Redis sliding window rate limiter.
@@ -52,9 +94,8 @@ export function rateLimit(overrides?: Partial<Record<RateLimitRole, { limit: num
     } else if (user) {
       identifier = `user:${user.sub}`;
     } else {
-      // For public: use IP
-      const forwarded = c.req.header("X-Forwarded-For");
-      identifier = `ip:${forwarded?.split(",")[0]?.trim() ?? "unknown"}`;
+      // For public: use trusted client IP (not raw X-Forwarded-For)
+      identifier = `ip:${getClientIp(c)}`;
     }
 
     const key = `ratelimit:${identifier}`;
