@@ -16,7 +16,6 @@ import {
   CLUSTER_RADIUS_KM,
   CLUSTER_MIN_SIZE,
   SYSTEMIC_ISSUE_THRESHOLD,
-  CLUSTER_SIMILARITY_THRESHOLD,
 } from "@betterworld/shared";
 import { and, eq, gte, sql, desc } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";

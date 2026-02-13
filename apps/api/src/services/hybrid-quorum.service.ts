@@ -16,7 +16,7 @@ import {
   LOCAL_QUORUM_SIZE,
   GLOBAL_QUORUM_SIZE,
 } from "@betterworld/shared";
-import { and, eq, ne, or, isNull, lt, sql, not, inArray } from "drizzle-orm";
+import { and, eq, or, isNull, lt, sql, not, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { logger } from "../middleware/logger.js";

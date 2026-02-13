@@ -88,7 +88,7 @@ describe("Dispute Service", () => {
 
   describe("fileDispute", () => {
     it("should file dispute successfully", async () => {
-      const { db, mockSelect, mockSelectFrom, mockSelectWhere, mockSelectLimit, mockInsertReturning } = createMockDb();
+      const { db, mockSelect, mockInsertReturning } = createMockDb();
       const now = new Date();
 
       // Call 1: consensus lookup → found with terminal status
@@ -566,7 +566,7 @@ describe("Dispute Service", () => {
     });
 
     it("should trigger suspension when dismissed count reaches threshold", async () => {
-      const { db, mockSelect, mockUpdate, mockUpdateSet, mockUpdateWhere, mockUpdateReturning } = createMockDb();
+      const { db, mockSelect, mockUpdate } = createMockDb();
       const now = new Date();
 
       // Fetch dispute

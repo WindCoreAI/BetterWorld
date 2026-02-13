@@ -7,7 +7,7 @@
  */
 import { evidenceReviewAssignments, evidence } from "@betterworld/db";
 import { submitEvidenceReviewSchema, AppError } from "@betterworld/shared";
-import { and, eq, gt, asc } from "drizzle-orm";
+import { and, eq, gt, asc, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { getDb } from "../lib/container.js";
@@ -70,38 +70,40 @@ evidenceReviewRoutes.get("/pending", requireAgent(), async (c) => {
   const hasMore = assignments.length > limit;
   const results = hasMore ? assignments.slice(0, limit) : assignments;
 
-  // Enrich with evidence details
-  const enriched = await Promise.all(
-    results.map(async (a) => {
-      let evidenceDetails: { evidenceType: string; missionId: string } | null = null;
-      try {
-        const [ev] = await db
-          .select({
-            evidenceType: evidence.evidenceType,
-            missionId: evidence.missionId,
-          })
-          .from(evidence)
-          .where(eq(evidence.id, a.evidenceId))
-          .limit(1);
-        if (ev) {
-          evidenceDetails = ev;
-        }
-      } catch {
-        // Non-fatal
+  // Batch-fetch evidence details to avoid N+1 queries
+  const evidenceIds = [...new Set(results.map((a) => a.evidenceId))];
+  const evidenceMap = new Map<string, { evidenceType: string; missionId: string }>();
+  if (evidenceIds.length > 0) {
+    try {
+      const evidenceRows = await db
+        .select({
+          id: evidence.id,
+          evidenceType: evidence.evidenceType,
+          missionId: evidence.missionId,
+        })
+        .from(evidence)
+        .where(inArray(evidence.id, evidenceIds));
+      for (const ev of evidenceRows) {
+        evidenceMap.set(ev.id, { evidenceType: ev.evidenceType, missionId: ev.missionId });
       }
+    } catch {
+      // Non-fatal — evidence details will be null
+    }
+  }
 
-      return {
-        id: a.id,
-        evidenceId: a.evidenceId,
-        evidenceType: evidenceDetails?.evidenceType ?? null,
-        missionId: evidenceDetails?.missionId ?? null,
-        capabilityMatch: a.capabilityMatch,
-        status: a.status,
-        assignedAt: a.assignedAt.toISOString(),
-        expiresAt: a.expiresAt.toISOString(),
-      };
-    }),
-  );
+  const enriched = results.map((a) => {
+    const evidenceDetails = evidenceMap.get(a.evidenceId) ?? null;
+    return {
+      id: a.id,
+      evidenceId: a.evidenceId,
+      evidenceType: evidenceDetails?.evidenceType ?? null,
+      missionId: evidenceDetails?.missionId ?? null,
+      capabilityMatch: a.capabilityMatch,
+      status: a.status,
+      assignedAt: a.assignedAt.toISOString(),
+      expiresAt: a.expiresAt.toISOString(),
+    };
+  });
 
   const nextCursor =
     hasMore && results.length > 0
@@ -163,38 +165,20 @@ evidenceReviewRoutes.post("/:id/respond", requireAgent(), async (c) => {
 
   const { recommendation, confidence, reasoning } = parsed.data;
 
-  try {
-    const result = await submitEvidenceReview(
-      db,
-      reviewId,
-      agent.id,
-      recommendation,
-      confidence,
-      reasoning,
-    );
+  const result = await submitEvidenceReview(
+    db,
+    reviewId,
+    agent.id,
+    recommendation,
+    confidence,
+    reasoning,
+  );
 
-    return c.json({
-      ok: true,
-      data: result,
-      requestId: c.get("requestId"),
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-
-    if (message.includes("not found")) {
-      throw new AppError("NOT_FOUND", message);
-    }
-    if (message.includes("not assigned")) {
-      throw new AppError("FORBIDDEN", message);
-    }
-    if (message.includes("expired")) {
-      throw new AppError("GONE", message);
-    }
-    if (message.includes("already completed")) {
-      throw new AppError("CONFLICT", message);
-    }
-    throw err;
-  }
+  return c.json({
+    ok: true,
+    data: result,
+    requestId: c.get("requestId"),
+  });
 });
 
 // ============================================================================

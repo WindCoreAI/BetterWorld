@@ -6,14 +6,14 @@
  */
 import { rateAdjustments } from "@betterworld/db";
 import { rateAdjustmentOverrideSchema, AppError } from "@betterworld/shared";
-import { desc, lt } from "drizzle-orm";
+import { desc, eq, lt } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
 import type { AppEnv } from "../app.js";
 import { getDb, getRedis } from "../lib/container.js";
-import { logger } from "../middleware/logger.js";
 import { humanAuth } from "../middleware/humanAuth.js";
+import { logger } from "../middleware/logger.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { getFlag, setFlag } from "../services/feature-flags.js";
 
@@ -33,23 +33,23 @@ adminRateRoutes.get("/", humanAuth(), requireAdmin(), async (c) => {
   const limitParam = Number(c.req.query("limit") ?? 20);
   const limit = Math.min(Math.max(limitParam, 1), 100);
 
-  const conditions = [];
+  // Cursor pagination using createdAt (ordered DESC)
+  let cursorCreatedAt: Date | null = null;
   if (cursor) {
     const cursorParsed = z.string().uuid().safeParse(cursor);
     if (!cursorParsed.success) {
       throw new AppError("VALIDATION_ERROR", "Invalid cursor format");
     }
-    // Fetch the createdAt of the cursor record to use for cursor pagination
+    // Fetch the createdAt of the cursor record for time-based pagination
     const [cursorRecord] = await db
       .select({ createdAt: rateAdjustments.createdAt })
       .from(rateAdjustments)
-      .where(lt(rateAdjustments.id, cursor))
-      .limit(0);
+      .where(eq(rateAdjustments.id, cursor))
+      .limit(1);
 
-    // Use ID-based cursor: fetch records with createdAt < cursor record's createdAt
-    // For simplicity, use ID ordering (UUID v4 is random, so order by createdAt DESC)
-    void cursorRecord; // cursor is just used as a marker
-    conditions.push(lt(rateAdjustments.id, cursor));
+    if (cursorRecord) {
+      cursorCreatedAt = cursorRecord.createdAt;
+    }
   }
 
   const rows = await db
@@ -69,7 +69,7 @@ adminRateRoutes.get("/", humanAuth(), requireAdmin(), async (c) => {
       createdAt: rateAdjustments.createdAt,
     })
     .from(rateAdjustments)
-    .where(conditions.length > 0 ? conditions[0] : undefined)
+    .where(cursorCreatedAt ? lt(rateAdjustments.createdAt, cursorCreatedAt) : undefined)
     .orderBy(desc(rateAdjustments.createdAt))
     .limit(limit + 1);
 

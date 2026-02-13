@@ -3,10 +3,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 // Hoisted mocks (required for vi.mock factory references)
 const {
   mockAdd,
-  mockQueueClose,
+  mockQueueClose: _mockQueueClose,
   mockWorkerOn,
   mockWorkerClose,
-  MockWorker,
+  MockWorker: _MockWorker,
   MockQueue,
   mockGetDb,
   mockGetFlag,

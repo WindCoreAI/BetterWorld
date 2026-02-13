@@ -26,7 +26,8 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }>
 };
 
 export default function DisputeCard({ dispute }: DisputeCardProps) {
-  const style = STATUS_STYLES[dispute.status] ?? STATUS_STYLES.open;
+  const defaultStyle = { bg: "bg-blue-100", text: "text-blue-800", label: "Open" };
+  const style = STATUS_STYLES[dispute.status] ?? defaultStyle;
 
   return (
     <Card>

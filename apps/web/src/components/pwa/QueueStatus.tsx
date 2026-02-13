@@ -1,5 +1,7 @@
 "use client";
+
 import { useState, useEffect } from "react";
+
 import { getQueueCount } from "../../lib/offline-queue";
 
 export function QueueStatus() {

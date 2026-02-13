@@ -64,7 +64,21 @@ patternRoutes.get("/", async (c) => {
   }
 
   const rows = await db
-    .select()
+    .select({
+      id: problemClusters.id,
+      title: problemClusters.title,
+      description: problemClusters.description,
+      domain: problemClusters.domain,
+      scope: problemClusters.scope,
+      city: problemClusters.city,
+      memberCount: problemClusters.memberCount,
+      memberProblemIds: problemClusters.memberProblemIds,
+      isSystemic: problemClusters.isSystemic,
+      isActive: problemClusters.isActive,
+      lastAggregatedAt: problemClusters.lastAggregatedAt,
+      createdAt: problemClusters.createdAt,
+      updatedAt: problemClusters.updatedAt,
+    })
     .from(problemClusters)
     .where(and(...conditions))
     .orderBy(desc(problemClusters.createdAt))
@@ -76,11 +90,10 @@ patternRoutes.get("/", async (c) => {
 
   return c.json({
     ok: true,
-    data: items,
-    meta: {
+    data: {
+      clusters: items,
       hasMore,
       nextCursor: hasMore && lastItem ? lastItem.id : null,
-      count: items.length,
     },
     requestId: c.get("requestId"),
   });
@@ -97,7 +110,21 @@ patternRoutes.get("/:id", async (c) => {
   const id = parseUuidParam(c.req.param("id"), "id");
 
   const [cluster] = await db
-    .select()
+    .select({
+      id: problemClusters.id,
+      title: problemClusters.title,
+      description: problemClusters.description,
+      domain: problemClusters.domain,
+      scope: problemClusters.scope,
+      city: problemClusters.city,
+      memberCount: problemClusters.memberCount,
+      memberProblemIds: problemClusters.memberProblemIds,
+      isSystemic: problemClusters.isSystemic,
+      isActive: problemClusters.isActive,
+      lastAggregatedAt: problemClusters.lastAggregatedAt,
+      createdAt: problemClusters.createdAt,
+      updatedAt: problemClusters.updatedAt,
+    })
     .from(problemClusters)
     .where(eq(problemClusters.id, id))
     .limit(1);

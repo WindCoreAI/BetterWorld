@@ -6,17 +6,18 @@
  */
 import { evidenceReviewAssignments, validatorPool, evidence } from "@betterworld/db";
 import {
+  AppError,
   EVIDENCE_REVIEW_REWARD,
   EVIDENCE_REVIEW_EXPIRY_HOURS,
   MIN_EVIDENCE_REVIEWERS,
 } from "@betterworld/shared";
-import { eq, and, isNull, gt, ne, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type Redis from "ioredis";
 
-import { logger } from "../middleware/logger.js";
 import { AgentCreditService } from "./agent-credit.service.js";
 import { getFlag } from "./feature-flags.js";
+import { logger } from "../middleware/logger.js";
 
 // ============================================================================
 // Types
@@ -97,7 +98,7 @@ export async function assignEvidenceReviewers(
 
   // 4. Filter: exclude submitter's agent, prioritize by capability match
   const filtered = validators
-    .filter((v) => {
+    .filter((_v) => {
       // We don't have a direct human→agent mapping here, so we rely on
       // the evidence submitter being a human, and validators being agents.
       // Self-review exclusion is based on agent ownership — not applicable
@@ -209,22 +210,22 @@ export async function submitEvidenceReview(
     .limit(1);
 
   if (!assignment) {
-    throw new Error("Evidence review assignment not found");
+    throw new AppError("NOT_FOUND", "Evidence review assignment not found");
   }
 
   // Verify ownership
   if (assignment.validatorAgentId !== agentId) {
-    throw new Error("You are not assigned to this evidence review");
+    throw new AppError("FORBIDDEN", "You are not assigned to this evidence review");
   }
 
   // Check expiry
   if (assignment.expiresAt < new Date()) {
-    throw new Error("Evidence review assignment has expired");
+    throw new AppError("GONE", "Evidence review assignment has expired");
   }
 
   // Check status
   if (assignment.status !== "pending") {
-    throw new Error("Evidence review already completed");
+    throw new AppError("CONFLICT", "Evidence review already completed");
   }
 
   // 2. Update assignment with response

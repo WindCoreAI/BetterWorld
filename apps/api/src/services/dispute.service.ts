@@ -12,6 +12,7 @@ import {
   validatorPool,
   peerEvaluations,
 } from "@betterworld/db";
+import { AppError } from "@betterworld/shared";
 import {
   DISPUTE_STAKE_AMOUNT,
   DISPUTE_BONUS,
@@ -19,8 +20,7 @@ import {
   DISPUTE_FAILURE_THRESHOLD,
   DISPUTE_FAILURE_WINDOW_DAYS,
 } from "@betterworld/shared/constants/phase3";
-import { AppError } from "@betterworld/shared";
-import { eq, sql, and, desc, gte, count } from "drizzle-orm";
+import { eq, and, gte, count } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import { AgentCreditService } from "./agent-credit.service.js";
@@ -161,9 +161,13 @@ export async function fileDispute(
       createdAt: disputes.createdAt,
     });
 
+  if (!dispute) {
+    throw new AppError("SERVICE_UNAVAILABLE", "Failed to create dispute record");
+  }
+
   logger.info(
     {
-      disputeId: dispute!.id,
+      disputeId: dispute.id,
       agentId,
       consensusId,
       stakeAmount: DISPUTE_STAKE_AMOUNT,
@@ -171,7 +175,7 @@ export async function fileDispute(
     "Dispute filed",
   );
 
-  return dispute!;
+  return dispute;
 }
 
 // ============================================================================
@@ -270,6 +274,10 @@ export async function resolveDispute(
       resolvedAt: disputes.resolvedAt,
     });
 
+  if (!updated) {
+    throw new AppError("SERVICE_UNAVAILABLE", "Failed to update dispute record");
+  }
+
   logger.info(
     {
       disputeId,
@@ -282,7 +290,7 @@ export async function resolveDispute(
     "Dispute resolved",
   );
 
-  return updated!;
+  return updated;
 }
 
 // ============================================================================

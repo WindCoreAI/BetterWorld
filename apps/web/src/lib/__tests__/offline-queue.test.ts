@@ -1,4 +1,6 @@
+// eslint-disable-next-line import/no-unresolved
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import {
   calculateBackoff,
   shouldRetry,
@@ -138,7 +140,7 @@ describe("offline-queue", () => {
     function createFakeIDB() {
       fakeStore = new Map();
 
-      const createTransaction = (mode: string) => {
+      const createTransaction = (_mode: string) => {
         let oncompleteCb: (() => void) | null = null;
         let onerrorCb: (() => void) | null = null;
 
@@ -285,7 +287,7 @@ describe("offline-queue", () => {
 
       const results = await getPendingObservations();
       expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("entry-1");
+      expect(results[0]!.id).toBe("entry-1");
     });
 
     it("removeObservation deletes entry from store", async () => {

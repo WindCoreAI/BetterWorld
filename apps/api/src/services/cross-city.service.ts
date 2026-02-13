@@ -4,7 +4,6 @@
  * Provides comparative metrics across cities, normalized by population.
  * Aggregates problem counts, observation counts, and validator density.
  */
-import { problems, observations, validatorPool } from "@betterworld/db";
 import {
   CITY_POPULATIONS,
   OPEN311_CITY_CONFIGS,

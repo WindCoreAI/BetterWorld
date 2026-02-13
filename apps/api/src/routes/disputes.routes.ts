@@ -27,11 +27,11 @@ import type { AuthEnv } from "../middleware/auth.js";
 import { requireAgent } from "../middleware/auth.js";
 import { humanAuth } from "../middleware/humanAuth.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
-import { getFlag } from "../services/feature-flags.js";
 import {
   fileDispute,
   resolveDispute,
 } from "../services/dispute.service.js";
+import { getFlag } from "../services/feature-flags.js";
 
 const disputesRoutes = new Hono<AuthEnv>();
 
@@ -112,7 +112,13 @@ disputesRoutes.get("/", requireAgent(), async (c) => {
   }
 
   const agent = c.get("agent")!;
-  const query = listQuerySchema.parse(c.req.query());
+  const parsed = listQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) {
+    throw new AppError("VALIDATION_ERROR", "Invalid query parameters", {
+      fields: parsed.error.flatten().fieldErrors,
+    });
+  }
+  const query = parsed.data;
 
   const conditions = [eq(disputes.challengerAgentId, agent.id)];
 
@@ -227,7 +233,13 @@ disputesRoutes.get("/admin/queue", humanAuth(), requireAdmin(), async (c) => {
     throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
   }
 
-  const query = listQuerySchema.parse(c.req.query());
+  const parsed = listQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) {
+    throw new AppError("VALIDATION_ERROR", "Invalid query parameters", {
+      fields: parsed.error.flatten().fieldErrors,
+    });
+  }
+  const query = parsed.data;
 
   const conditions = [
     inArray(disputes.status, ["open", "admin_review"]),

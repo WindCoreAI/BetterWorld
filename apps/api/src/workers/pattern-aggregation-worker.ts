@@ -7,9 +7,8 @@
  *
  * Feature-flagged via PATTERN_AGGREGATION_ENABLED.
  */
-import { OPEN311_CITY_CONFIGS, QUEUE_NAMES } from "@betterworld/shared";
-import { ALLOWED_DOMAINS } from "@betterworld/shared";
-import { Queue, Worker } from "bullmq";
+import { ALLOWED_DOMAINS, OPEN311_CITY_CONFIGS, QUEUE_NAMES } from "@betterworld/shared";
+import { Worker } from "bullmq";
 import Redis from "ioredis";
 import pino from "pino";
 
@@ -51,16 +50,11 @@ export function createPatternAggregationWorker(): Worker {
   const worker = new Worker(
     QUEUE_NAMES.PATTERN_AGGREGATION,
     async () => {
-      // 1. Check feature flag
-      const flagRedis = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
-      try {
-        const enabled = await isPatternAggregationEnabled(flagRedis);
-        if (!enabled) {
-          logger.info("Pattern aggregation disabled via feature flag; skipping");
-          return { skipped: true };
-        }
-      } finally {
-        await flagRedis.quit();
+      // 1. Check feature flag (reuse worker's Redis connection)
+      const enabled = await isPatternAggregationEnabled(connection);
+      if (!enabled) {
+        logger.info("Pattern aggregation disabled via feature flag; skipping");
+        return { skipped: true };
       }
 
       // 2. Get DB connection
@@ -102,7 +96,7 @@ export function createPatternAggregationWorker(): Worker {
               if (cluster.isNew && cluster.memberProblemIds.length > 0) {
                 // Generate a basic summary (AI-generated summary gated by future flag)
                 const summary = generateClusterSummary(
-                  cluster.memberProblemIds.map((id) => ({
+                  cluster.memberProblemIds.map((_id) => ({
                     title: cluster.title,
                     description: "",
                     locationName: null,

@@ -901,4 +901,29 @@ At the Enterprise tier, the fine-tuned open model for guardrails becomes essenti
 
 ---
 
+## 11. BullMQ Worker Inventory (Phase 3 Complete)
+
+All workers run in the worker process (`Dockerfile.worker` / `fly.worker.toml`).
+
+| Worker | Schedule | Concurrency | Description | Sprint |
+|--------|----------|-------------|-------------|--------|
+| guardrail-evaluation | On demand | 5 | Layer B Claude Haiku evaluation | 3 |
+| mission-expiration | Daily (0 2 * * *) | 1 | Expire uncompleted missions past deadline | 7 |
+| evidence-verification | On demand | 3 | Claude Vision AI evidence verification | 8 |
+| fraud-scoring | On demand | 3 | pHash + velocity + statistical fraud detection | 8 |
+| reputation-decay | Daily cron | 1 | Streak decay and reputation maintenance | 9 |
+| metrics-aggregation | Hourly cron | 1 | Impact metrics hourly aggregation | 9 |
+| open311-ingestion | Every 30 min | 1 | Portland/Chicago/Denver Open311 fetch | 10 |
+| peer-consensus | On demand | 5 | Peer evaluation dispatch + consensus | 11 |
+| evaluation-timeout | Every 60s + daily | 1 | Expire stale evaluations, reset daily counts | 11 |
+| city-metrics | Daily (6AM UTC) | 1 | City-level metrics aggregation | 11 |
+| economic-health | Hourly cron | 1 | Economic health snapshot (6 criteria) | 12 |
+| spot-check | On demand | 3 | 5% Layer B re-evaluation of peer decisions | 12 |
+| rate-adjustment | Weekly cron | 1 | Faucet/sink ratio calculation, ±10% adjustment | 13 |
+| pattern-aggregation | Daily (3AM UTC) | 1 | PostGIS clustering, systemic issue detection | 13 |
+
+**Total**: 14 workers (7 on-demand, 7 scheduled).
+
+---
+
 *End of DevOps & Infrastructure Plan. This document should be maintained alongside the codebase and updated as infrastructure decisions evolve. Configuration files in this document are designed to be copy-pasted directly into the repository.*

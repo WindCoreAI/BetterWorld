@@ -18,8 +18,8 @@ import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type Redis from "ioredis";
 
-import { logger } from "../middleware/logger.js";
 import { getFlag, setFlag } from "./feature-flags.js";
+import { logger } from "../middleware/logger.js";
 
 // ── Constants ────────────────────────────────────────────────
 const MULTIPLIER_MIN = 0.01;

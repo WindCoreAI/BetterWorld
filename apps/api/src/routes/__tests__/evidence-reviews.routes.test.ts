@@ -15,6 +15,7 @@
  *  10. GET /evidence-reviews/:id — returns 403 for non-owner
  *  11. GET /evidence-reviews/:id — returns 404 for missing review
  */
+import { AppError } from "@betterworld/shared";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -127,7 +128,7 @@ describe("GET /evidence-reviews/pending", () => {
     const assignedAt = new Date();
     const expiresAt = new Date(Date.now() + 3600000);
 
-    // Pending assignments query
+    // Pending assignments query (uses .where().orderBy().limit())
     mockLimit.mockResolvedValueOnce([
       {
         id: REVIEW_ID,
@@ -139,10 +140,14 @@ describe("GET /evidence-reviews/pending", () => {
       },
     ]);
 
-    // Evidence details enrichment
-    mockLimit.mockResolvedValueOnce([
-      { evidenceType: "photo", missionId: "mission-1" },
-    ]);
+    // Evidence batch fetch (uses .select().from().where() — no .limit())
+    // Call 1 to mockWhere returns normal chain (for assignments), consumed by default.
+    // Call 2 to mockWhere must resolve as promise (for batch evidence fetch).
+    mockWhere
+      .mockReturnValueOnce({ limit: mockLimit, orderBy: mockOrderBy }) // assignments query
+      .mockResolvedValueOnce([ // batch evidence fetch
+        { id: EVIDENCE_ID, evidenceType: "photo", missionId: "mission-1" },
+      ]);
 
     const res = await app.request("/evidence-reviews/pending", {
       method: "GET",
@@ -225,7 +230,7 @@ describe("POST /evidence-reviews/:id/respond", () => {
 
   it("should return 404 for non-existent review", async () => {
     mockSubmitEvidenceReview.mockRejectedValue(
-      new Error("Evidence review assignment not found"),
+      new AppError("NOT_FOUND", "Evidence review assignment not found"),
     );
 
     const res = await app.request(`/evidence-reviews/${REVIEW_ID}/respond`, {
@@ -246,7 +251,7 @@ describe("POST /evidence-reviews/:id/respond", () => {
 
   it("should return 403 for wrong agent", async () => {
     mockSubmitEvidenceReview.mockRejectedValue(
-      new Error("You are not assigned to this evidence review"),
+      new AppError("FORBIDDEN", "You are not assigned to this evidence review"),
     );
 
     const res = await app.request(`/evidence-reviews/${REVIEW_ID}/respond`, {
@@ -267,7 +272,7 @@ describe("POST /evidence-reviews/:id/respond", () => {
 
   it("should return 410 for expired review", async () => {
     mockSubmitEvidenceReview.mockRejectedValue(
-      new Error("Evidence review assignment has expired"),
+      new AppError("GONE", "Evidence review assignment has expired"),
     );
 
     const res = await app.request(`/evidence-reviews/${REVIEW_ID}/respond`, {
@@ -288,7 +293,7 @@ describe("POST /evidence-reviews/:id/respond", () => {
 
   it("should return 409 for already completed review", async () => {
     mockSubmitEvidenceReview.mockRejectedValue(
-      new Error("Evidence review already completed"),
+      new AppError("CONFLICT", "Evidence review already completed"),
     );
 
     const res = await app.request(`/evidence-reviews/${REVIEW_ID}/respond`, {

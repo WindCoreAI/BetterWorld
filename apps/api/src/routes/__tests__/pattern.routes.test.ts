@@ -121,9 +121,9 @@ describe("Pattern Routes", () => {
       const res = await app.request("/patterns");
       expect(res.status).toBe(200);
 
-      const body = await jsonBody(res) as { ok: boolean; data: unknown[]; meta: { hasMore: boolean } };
+      const body = await jsonBody(res) as { ok: boolean; data: { clusters: unknown[]; hasMore: boolean } };
       expect(body.ok).toBe(true);
-      expect(body.meta.hasMore).toBe(false);
+      expect(body.data.hasMore).toBe(false);
     });
 
     it("filters by domain and city", async () => {
