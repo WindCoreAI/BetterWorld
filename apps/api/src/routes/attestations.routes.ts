@@ -17,7 +17,6 @@ import {
   submitAttestation,
   getAttestationCounts,
   removeAttestation,
-  getUserAttestation,
 } from "../services/attestation.service.js";
 
 const attestationRoutes = new Hono<AppEnv>();
