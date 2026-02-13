@@ -95,24 +95,19 @@ attestationRoutes.post("/:problemId/attestations", humanAuth(), async (c) => {
   );
 });
 
-// GET /problems/:problemId/attestations
-attestationRoutes.get("/:problemId/attestations", humanAuth(), async (c) => {
+// GET /problems/:problemId/attestations (public — no auth required)
+attestationRoutes.get("/:problemId/attestations", async (c) => {
   const db = getDb();
   if (!db) throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
 
   const problemId = parseUuidParam(c.req.param("problemId"), "problemId");
-  const human = c.get("human");
 
-  const [counts, userAttestation] = await Promise.all([
-    getAttestationCounts(db, problemId),
-    getUserAttestation(db, problemId, human.id),
-  ]);
+  const counts = await getAttestationCounts(db, problemId);
 
   return c.json({
     ok: true,
     data: {
       counts,
-      userAttestation,
     },
     requestId: c.get("requestId"),
   });

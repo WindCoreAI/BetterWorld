@@ -1,6 +1,6 @@
 import { peerEvaluations, validatorPool } from "@betterworld/db";
 import { VALIDATION_REWARDS } from "@betterworld/shared";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type Redis from "ioredis";
 
@@ -68,25 +68,32 @@ export async function distributeRewards(
     [];
   let totalCredits = 0;
 
-  // 3. For each completed evaluation, look up tier and distribute reward
-  for (const evaluation of completedEvals) {
-    // Skip if already rewarded (idempotency at the DB level)
-    if (evaluation.rewardCreditTransactionId) {
-      logger.debug(
-        { evaluationId: evaluation.id },
-        "Evaluation already rewarded, skipping",
-      );
-      continue;
+  // Filter out already-rewarded evaluations (idempotency)
+  const unrewarded = completedEvals.filter((e) => {
+    if (e.rewardCreditTransactionId) {
+      logger.debug({ evaluationId: e.id }, "Evaluation already rewarded, skipping");
+      return false;
     }
+    return true;
+  });
 
-    // 3a. Look up validator tier
-    const [validator] = await db
-      .select({ tier: validatorPool.tier })
-      .from(validatorPool)
-      .where(eq(validatorPool.id, evaluation.validatorId))
-      .limit(1);
+  if (unrewarded.length === 0) {
+    return { rewardsDistributed: 0, totalCredits: 0, validators: [] };
+  }
 
-    if (!validator) {
+  // 3. Batch-fetch all validator tiers (eliminates N+1)
+  const validatorIds = [...new Set(unrewarded.map((e) => e.validatorId))];
+  const validators = await db
+    .select({ id: validatorPool.id, tier: validatorPool.tier })
+    .from(validatorPool)
+    .where(inArray(validatorPool.id, validatorIds));
+
+  const tierMap = new Map(validators.map((v) => [v.id, v.tier]));
+
+  // 4. Distribute rewards using pre-fetched tiers
+  for (const evaluation of unrewarded) {
+    const tier = tierMap.get(evaluation.validatorId);
+    if (!tier) {
       logger.warn(
         { validatorId: evaluation.validatorId, evaluationId: evaluation.id },
         "Validator not found in pool, skipping reward",
@@ -94,14 +101,10 @@ export async function distributeRewards(
       continue;
     }
 
-    const tier = validator.tier;
-
-    // 3b. Compute reward from tier-based table (default to apprentice)
     const reward =
       VALIDATION_REWARDS[tier as keyof typeof VALIDATION_REWARDS] ??
       VALIDATION_REWARDS.apprentice;
 
-    // 3c. Earn credits with idempotency key
     const idempotencyKey = `validation:${evaluation.id}`;
     try {
       const { transactionId } = await creditService.earnCredits(
@@ -113,7 +116,6 @@ export async function distributeRewards(
         `Validation reward (${tier}) for ${submissionType} ${submissionId}`,
       );
 
-      // 3d. Update peerEvaluations with the transaction ID
       await db
         .update(peerEvaluations)
         .set({ rewardCreditTransactionId: transactionId })
@@ -145,7 +147,6 @@ export async function distributeRewards(
         },
         "Failed to distribute validation reward",
       );
-      // Continue with remaining validators — partial distribution is acceptable
     }
   }
 

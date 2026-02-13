@@ -31,6 +31,20 @@ import { initDb, getDb, getRedis } from "../lib/container.js";
 
 const logger = pino({ name: "guardrail-worker" });
 
+// Shared peer consensus queue to avoid creating new Redis connections per enqueue
+let _peerConsensusQueue: Queue | null = null;
+function getPeerConsensusQueue(): Queue {
+  if (!_peerConsensusQueue) {
+    _peerConsensusQueue = new Queue(QUEUE_NAMES.PEER_CONSENSUS, {
+      connection: new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+        maxRetriesPerRequest: null,
+        lazyConnect: true,
+      }),
+    });
+  }
+  return _peerConsensusQueue;
+}
+
 // --- Types ---
 
 export interface EvaluationJobData {
@@ -277,9 +291,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 
     // Enqueue peer consensus job for production decision-making
     try {
-      const peerQueue = new Queue(QUEUE_NAMES.PEER_CONSENSUS, {
-        connection: new Redis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null }),
-      });
+      const peerQueue = getPeerConsensusQueue();
 
       const peerJobData: PeerConsensusJobData = {
         submissionId: contentId,
@@ -297,8 +309,6 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
         removeOnComplete: 100,
         removeOnFail: 50,
       });
-
-      await peerQueue.close();
 
       logger.info(
         { evaluationId, contentId, contentType, layerBDecision: finalDecision },
@@ -401,9 +411,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
       const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
 
       if (peerValidationEnabled) {
-        const peerQueue = new Queue(QUEUE_NAMES.PEER_CONSENSUS, {
-          connection: new Redis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null }),
-        });
+        const peerQueue = getPeerConsensusQueue();
 
         const peerJobData: PeerConsensusJobData = {
           submissionId: contentId,
@@ -421,8 +429,6 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
           removeOnComplete: 100,
           removeOnFail: 50,
         });
-
-        await peerQueue.close();
 
         logger.info(
           { evaluationId, contentId, contentType, finalDecision },

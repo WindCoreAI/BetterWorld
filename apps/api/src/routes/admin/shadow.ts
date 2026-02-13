@@ -11,6 +11,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { getDb, getRedis } from "../../lib/container.js";
+import { parseUuidParam } from "../../lib/validation.js";
 import type { AuthEnv } from "../../middleware/auth.js";
 import { requireAdmin } from "../../middleware/auth.js";
 import {
@@ -336,7 +337,7 @@ shadowAdminRoutes.put("/spot-checks/:id/review", requireAdmin(), async (c) => {
     );
   }
 
-  const id = c.req.param("id");
+  const id = parseUuidParam(c.req.param("id"), "id");
   const body = await c.req.json();
   const parsed = reviewVerdictSchema.safeParse(body);
   if (!parsed.success) {

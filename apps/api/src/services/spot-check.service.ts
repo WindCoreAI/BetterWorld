@@ -7,8 +7,23 @@
 import { createHash } from "node:crypto";
 
 import { spotChecks } from "@betterworld/db";
-import { SPOT_CHECK_RATE, SPOT_CHECK_HASH_SEED } from "@betterworld/shared";
+import { QUEUE_NAMES, SPOT_CHECK_RATE, SPOT_CHECK_HASH_SEED } from "@betterworld/shared";
+import { Queue } from "bullmq";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type Redis from "ioredis";
+
+// Shared spot check queue to avoid creating new connections per enqueue
+let _spotCheckQueue: Queue | null = null;
+
+/**
+ * Get or create a shared spot check queue instance.
+ */
+export function getSpotCheckQueue(redis: Redis): Queue {
+  if (!_spotCheckQueue) {
+    _spotCheckQueue = new Queue(QUEUE_NAMES.SPOT_CHECK, { connection: redis });
+  }
+  return _spotCheckQueue;
+}
 
 /**
  * Deterministically decide if a submission should be spot-checked.

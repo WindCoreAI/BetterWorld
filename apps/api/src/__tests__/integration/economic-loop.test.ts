@@ -361,9 +361,10 @@ describe("Economic Loop Integration", () => {
         },
       ];
 
-      const validatorTiers = [
-        { tier: "apprentice" },
-        { tier: "expert" },
+      // Batch validator tier results (with id for Map keying)
+      const batchValidatorTiers = [
+        { id: "validator-pool-1", tier: "apprentice" },
+        { id: "validator-pool-2", tier: "expert" },
       ];
 
       let selectCallCount = 0;
@@ -377,10 +378,7 @@ describe("Economic Loop Integration", () => {
                 resolve(completedEvals);
               } else if (selectCallCount === 1) {
                 selectCallCount++;
-                resolve([validatorTiers[0]]);
-              } else if (selectCallCount === 2) {
-                selectCallCount++;
-                resolve([validatorTiers[1]]);
+                resolve(batchValidatorTiers);
               } else {
                 resolve([]);
               }
@@ -486,7 +484,7 @@ describe("Economic Loop Integration", () => {
                 selectCallCount++;
                 resolve(completedEvals);
               } else {
-                resolve([{ tier: "journeyman" }]);
+                resolve([{ id: "validator-pool-3", tier: "journeyman" }]);
               }
             },
             limit: vi.fn(function (this: { then: (resolve: (value: unknown[]) => void) => void }) {
@@ -577,7 +575,7 @@ describe("Economic Loop Integration", () => {
                 selectCallCount++;
                 resolve(completedEvals);
               } else {
-                resolve([{ tier: "expert" }]);
+                resolve([{ id: "validator-pool-4", tier: "expert" }]);
               }
             },
             limit: vi.fn(function (this: { then: (resolve: (value: unknown[]) => void) => void }) {

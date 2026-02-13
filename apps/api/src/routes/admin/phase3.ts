@@ -587,7 +587,7 @@ phase3AdminRoutes.get("/production-shift/dashboard", requireAdmin(), async (c) =
     SELECT
       COUNT(*) as total,
       COUNT(*) FILTER (WHERE agrees = false) as disagreements,
-      COUNT(*) FILTER (WHERE disagrement_type = 'false_negative' OR disagreement_type = 'false_negative') as false_negatives
+      COUNT(*) FILTER (WHERE disagreement_type = 'false_negative') as false_negatives
     FROM spot_checks
     WHERE created_at >= ${fromDate}
   `);

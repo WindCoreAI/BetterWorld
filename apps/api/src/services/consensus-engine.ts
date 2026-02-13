@@ -16,7 +16,7 @@ import {
   missions,
   validatorPool,
 } from "@betterworld/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import pino from "pino";
 
@@ -36,6 +36,7 @@ const APPROVE_THRESHOLD = parseFloat(process.env.PEER_CONSENSUS_APPROVE_THRESHOL
 const REJECT_THRESHOLD = parseFloat(process.env.PEER_CONSENSUS_REJECT_THRESHOLD || "0.67");
 
 export interface ConsensusComputationResult {
+  id: string | null;
   decision: "approved" | "rejected" | "escalated" | "expired";
   confidence: number;
   quorumSize: number;
@@ -143,20 +144,21 @@ export async function computeConsensus(
       return result;
     }
 
-    // 5. Compute weighted votes
+    // 5. Batch-fetch validator tiers (eliminates N+1)
+    const validatorIds = [...new Set(completedEvals.map((e) => e.validatorId))];
+    const validators = await tx
+      .select({ id: validatorPool.id, tier: validatorPool.tier })
+      .from(validatorPool)
+      .where(inArray(validatorPool.id, validatorIds));
+    const tierMap = new Map(validators.map((v) => [v.id, v.tier]));
+
+    // Compute weighted votes
     let weightedApprove = 0;
     let weightedReject = 0;
     let weightedEscalate = 0;
 
     for (const evaluation of completedEvals) {
-      // Look up the validator's tier
-      const [validator] = await tx
-        .select({ tier: validatorPool.tier })
-        .from(validatorPool)
-        .where(eq(validatorPool.id, evaluation.validatorId))
-        .limit(1);
-
-      const tierWeight = TIER_WEIGHTS[validator?.tier ?? "apprentice"] ?? 1.0;
+      const tierWeight = TIER_WEIGHTS[tierMap.get(evaluation.validatorId) ?? "apprentice"] ?? 1.0;
       const confidence = Number(evaluation.confidence ?? 0.5);
       const weight = tierWeight * confidence;
 
@@ -258,7 +260,7 @@ export async function computeConsensus(
       const { distributeRewards } = await import("./validation-reward.service.js");
       const { getRedis } = await import("../lib/container.js");
       const redis = getRedis();
-      await distributeRewards(tx as PostgresJsDatabase, redis, result.consensusLatencyMs?.toString() ?? submissionId, submissionId, submissionType);
+      await distributeRewards(tx as PostgresJsDatabase, redis, result.id ?? submissionId, submissionId, submissionType);
     } catch (err) {
       logger.warn(
         { submissionId, error: (err as Error).message },
@@ -268,14 +270,12 @@ export async function computeConsensus(
 
     // Sprint 12: Spot check — enqueue Layer B verification for 5% of peer-validated submissions
     try {
-      const { shouldSpotCheck } = await import("./spot-check.service.js");
+      const { shouldSpotCheck, getSpotCheckQueue } = await import("./spot-check.service.js");
       if (shouldSpotCheck(submissionId)) {
-        const { Queue } = await import("bullmq");
-        const { QUEUE_NAMES: QN } = await import("@betterworld/shared");
         const { getRedis: getR } = await import("../lib/container.js");
         const r = getR();
         if (r) {
-          const spotCheckQueue = new Queue(QN.SPOT_CHECK, { connection: r });
+          const spotCheckQueue = getSpotCheckQueue(r);
           await spotCheckQueue.add("spot-check", {
             submissionId,
             submissionType,
@@ -441,7 +441,7 @@ async function insertConsensusResult(
 
   const wasEarlyConsensus = data.responsesReceived < data.quorumSize;
 
-  await tx
+  const [inserted] = await tx
     .insert(consensusResults)
     .values({
       submissionId: data.submissionId,
@@ -460,9 +460,11 @@ async function insertConsensusResult(
       wasEarlyConsensus,
       escalationReason: data.escalationReason,
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: consensusResults.id });
 
   return {
+    id: inserted?.id ?? null,
     decision: data.decision as "approved" | "rejected" | "escalated" | "expired",
     confidence: data.confidence,
     quorumSize: data.quorumSize,
