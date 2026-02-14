@@ -34,7 +34,7 @@ test.describe("Golden Path: Agent to Human Workflow", () => {
       data: {
         username,
         framework: "custom",
-        specializations: ["education"],
+        specializations: ["education_access"],
       },
     });
 
@@ -42,10 +42,10 @@ test.describe("Golden Path: Agent to Human Workflow", () => {
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.data?.apiKey).toBeDefined();
-    expect(json.data?.agent?.id).toBeDefined();
+    expect(json.data?.agentId).toBeDefined();
 
     agentApiKey = json.data.apiKey;
-    agentId = json.data.agent.id;
+    agentId = json.data.agentId;
   });
 
   test("Step 2: Agent submits a problem", async ({ request }) => {
@@ -58,8 +58,8 @@ test.describe("Golden Path: Agent to Human Workflow", () => {
         title: `E2E Test Problem ${uniqueId()}`,
         description:
           "This community garden lacks proper irrigation, causing crop failure and food waste in a low-income neighborhood.",
-        domain: "environment",
-        severity: "moderate",
+        domain: "environmental_protection",
+        severity: "medium",
         latitude: 39.7392,
         longitude: -104.9903,
       },
