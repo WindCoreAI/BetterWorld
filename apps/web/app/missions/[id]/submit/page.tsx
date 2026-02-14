@@ -7,11 +7,13 @@ import { EvidenceChecklist } from "../../../../src/components/evidence/EvidenceC
 import { EvidencePreview } from "../../../../src/components/evidence/EvidencePreview";
 import { EvidenceSubmitForm } from "../../../../src/components/evidence/EvidenceSubmitForm";
 import { GPSIndicator } from "../../../../src/components/evidence/GPSIndicator";
-import { getHumanToken } from "../../../../src/lib/api";
+import { getHumanAuthHeaders } from "../../../../src/lib/api";
+import { useOnboardingGuard } from "../../../../src/lib/onboardingGuard";
 
 export default function SubmitEvidencePage() {
   const params = useParams();
   const router = useRouter();
+  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
   const missionId = params.id as string;
 
   const [gpsStatus, setGpsStatus] = useState<"detecting" | "detected" | "denied" | "unavailable">("detecting");
@@ -36,6 +38,17 @@ export default function SubmitEvidencePage() {
     }
   }, []);
 
+  // FR-023: Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!onboardingChecking && needsOnboarding) {
+      router.push("/onboarding");
+    }
+  }, [onboardingChecking, needsOnboarding, router]);
+
+  if (onboardingChecking || needsOnboarding) {
+    return <div className="py-12 text-center text-gray-400">Loading...</div>;
+  }
+
   const checklistItems = [
     { label: "Photo selected", passed: selectedFile !== null },
     { label: "GPS detected", passed: gpsStatus === "detected" },
@@ -48,15 +61,10 @@ export default function SubmitEvidencePage() {
       formData.append("longitude", String(longitude));
     }
 
-    const headers: Record<string, string> = {};
-    const token = getHumanToken();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
+    // FR-014: Use standard auth wrapper instead of manual auth headers
     const res = await fetch(`/api/v1/missions/${missionId}/evidence`, {
       method: "POST",
-      headers,
+      headers: getHumanAuthHeaders(),
       body: formData,
     });
 

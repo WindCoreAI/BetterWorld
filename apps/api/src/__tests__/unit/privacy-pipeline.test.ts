@@ -1,6 +1,26 @@
 import sharp from "sharp";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Mock @vladmandic/face-api to avoid @tensorflow/tfjs-node dependency
+vi.mock("@vladmandic/face-api", () => {
+  const mockDispose = vi.fn();
+  const mockTensor = { dispose: mockDispose };
+  return {
+    default: {},
+    nets: {
+      ssdMobilenetv1: {
+        loadFromDisk: vi.fn().mockResolvedValue(undefined),
+      },
+    },
+    detectAllFaces: vi.fn().mockResolvedValue([]),
+    SsdMobilenetv1Options: vi.fn().mockImplementation(() => ({})),
+    tf: {
+      tensor3d: vi.fn().mockReturnValue(mockTensor),
+    },
+    TNetInput: {},
+  };
+});
+
 import { processPhoto } from "../../services/privacy-pipeline.js";
 
 describe("Privacy Pipeline", () => {

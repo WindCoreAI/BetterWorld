@@ -6,9 +6,14 @@
  */
 import pino from "pino";
 
+import { initSentry, captureException } from "../lib/sentry.js";
+
 const logger = pino({ name: "all-workers" });
 
 async function main() {
+  // FR-024: Initialize Sentry for worker error tracking
+  initSentry();
+
   logger.info("Starting all BullMQ workers...");
 
   const { createGuardrailWorker } = await import("./guardrail-worker.js");
@@ -57,6 +62,11 @@ async function main() {
       logger.info({ worker: name }, "Worker started");
     } catch (err) {
       logger.error({ worker: name, error: (err as Error).message }, "Failed to start worker");
+      // FR-024: Report worker startup failures to Sentry
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        worker: name,
+        phase: "startup",
+      });
     }
   }
 

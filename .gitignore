@@ -42,3 +42,6 @@ docker-compose.override.yml
 
 # Evidence local storage
 apps/api/storage/
+
+# Face detection model files (copied from node_modules)
+apps/api/assets/models/

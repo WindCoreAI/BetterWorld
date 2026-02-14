@@ -26,8 +26,8 @@ export function getFraudScoringQueue(): Queue {
       defaultJobOptions: {
         attempts: 3,
         backoff: { type: "exponential", delay: 1000 },
-        removeOnComplete: 1000,
-        removeOnFail: false,
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 50 },
       },
     });
   }

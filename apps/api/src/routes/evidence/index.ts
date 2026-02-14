@@ -234,8 +234,11 @@ async function enqueueFraudScoring(evidenceId: string, humanId: string, imageBuf
       // Pass image as base64 for pHash duplicate detection in fraud-scoring worker
       imageBuffer: imageBuffer ? imageBuffer.toString("base64") : undefined,
     }, {
+      jobId: `fraud-${evidenceId}`,
       attempts: 3,
       backoff: { type: "exponential", delay: 2000 },
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 50 },
     });
   } catch {
     // Queue not available in dev/test - non-fatal

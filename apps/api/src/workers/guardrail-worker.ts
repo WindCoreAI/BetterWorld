@@ -28,6 +28,8 @@ import pino from "pino";
 
 import { checkBudgetAvailable, recordAiCost } from "../lib/budget.js";
 import { initDb, getDb, getRedis } from "../lib/container.js";
+import { getFlag } from "../services/feature-flags.js";
+import { routeSubmission } from "../services/traffic-router.js";
 
 const logger = pino({ name: "guardrail-worker" });
 
@@ -224,7 +226,6 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 
   if (contentType !== "mission") {
     try {
-      const { routeSubmission } = await import("../services/traffic-router.js");
       const routeResult = await routeSubmission(contentId, trustTier, redis);
       routingDecision = routeResult.route;
 
@@ -304,10 +305,11 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
       };
 
       await peerQueue.add("peer-consensus", peerJobData, {
+        jobId: `peer-${contentType}-${contentId}`,
         attempts: 3,
         backoff: { type: "exponential", delay: 5000 },
-        removeOnComplete: 100,
-        removeOnFail: 50,
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 50 },
       });
 
       logger.info(
@@ -407,7 +409,6 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 
     // Also enqueue shadow peer validation if enabled (for Layer B-routed items)
     try {
-      const { getFlag } = await import("../services/feature-flags.js");
       const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
 
       if (peerValidationEnabled) {
@@ -424,10 +425,11 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
         };
 
         await peerQueue.add("peer-consensus", peerJobData, {
+          jobId: `peer-${contentType}-${contentId}`,
           attempts: 3,
           backoff: { type: "exponential", delay: 5000 },
-          removeOnComplete: 100,
-          removeOnFail: 50,
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 50 },
         });
 
         logger.info(

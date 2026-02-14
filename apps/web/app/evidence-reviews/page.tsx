@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 
 import EvidenceReviewCard from "../../src/components/evidence/EvidenceReviewCard";
 import EvidenceReviewForm from "../../src/components/evidence/EvidenceReviewForm";
+import { useOnboardingGuard } from "../../src/lib/onboardingGuard";
 
 interface Assignment {
   id: string;
@@ -15,6 +17,8 @@ interface Assignment {
 }
 
 export default function EvidenceReviewsPage() {
+  const router = useRouter();
+  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +41,17 @@ export default function EvidenceReviewsPage() {
   useEffect(() => {
     fetchAssignments();
   }, [fetchAssignments]);
+
+  // FR-023: Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!onboardingChecking && needsOnboarding) {
+      router.push("/onboarding");
+    }
+  }, [onboardingChecking, needsOnboarding, router]);
+
+  if (onboardingChecking || needsOnboarding) {
+    return <div className="py-12 text-center text-gray-400">Loading...</div>;
+  }
 
   const handleSubmitReview = async (data: {
     recommendation: "verified" | "rejected" | "needs_more_info";

@@ -10,6 +10,8 @@ COPY packages/guardrails/package.json packages/guardrails/
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm turbo build --filter=@betterworld/api
+# Bake face detection models into assets/ for privacy pipeline (T076)
+RUN node scripts/download-face-models.js --copy
 
 # Stage 2: Runtime
 FROM node:22-slim AS runtime
@@ -18,6 +20,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/apps/api/assets ./apps/api/assets
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/

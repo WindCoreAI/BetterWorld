@@ -1,15 +1,20 @@
 "use client";
 
 import type { MissionListItem } from "@betterworld/shared";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
 import MissionCard from "@/components/missions/MissionCard";
 import MissionFilters from "@/components/missions/MissionFilters";
 import MissionMap from "@/components/missions/MissionMap";
+import { useOnboardingGuard } from "@/lib/onboardingGuard";
 
 export default function MissionsPage() {
+  const router = useRouter();
+  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
   const [missions, setMissions] = useState<MissionListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string | undefined>>({});
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -34,8 +39,10 @@ export default function MissionsPage() {
         setNextCursor(data.data.nextCursor);
         setHasMore(data.data.hasMore);
       }
+      setError(null);
     } catch {
-      // fetch failed — missions remain empty
+      // FR-015: Display error message with retry button instead of silent failure
+      setError("Failed to load missions. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -44,6 +51,17 @@ export default function MissionsPage() {
   useEffect(() => {
     fetchMissions();
   }, [fetchMissions]);
+
+  // FR-023: Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!onboardingChecking && needsOnboarding) {
+      router.push("/onboarding");
+    }
+  }, [onboardingChecking, needsOnboarding, router]);
+
+  if (onboardingChecking || needsOnboarding) {
+    return <div className="py-12 text-center text-gray-400">Loading...</div>;
+  }
 
   const handleFilterChange = (newFilters: Record<string, string | undefined>) => {
     setFilters(newFilters);
@@ -80,6 +98,17 @@ export default function MissionsPage() {
           </aside>
 
           <main className="flex-1">
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+                <p className="text-red-700">{error}</p>
+                <button
+                  onClick={() => fetchMissions()}
+                  className="mt-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
             {viewMode === "list" ? (
               <div>
                 {loading && missions.length === 0 ? (

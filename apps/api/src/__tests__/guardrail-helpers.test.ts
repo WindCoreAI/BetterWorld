@@ -108,7 +108,7 @@ describe("Guardrail Helpers", () => {
           agentId: "agent-123",
           trustTier: "new",
         },
-        { jobId: evaluationId },
+        expect.objectContaining({ jobId: evaluationId }),
       );
     });
 
@@ -303,7 +303,7 @@ describe("Guardrail Helpers", () => {
       expect(mockQueueAdd).toHaveBeenCalledWith(
         "evaluate",
         expect.any(Object),
-        { jobId: evaluationId },
+        expect.objectContaining({ jobId: evaluationId }),
       );
     });
   });

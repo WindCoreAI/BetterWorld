@@ -137,7 +137,7 @@ export const featureFlagSchema = z.object({
   DISPUTES_ENABLED: z.boolean().default(false),
   // Sprint 12: Production Shift
   SUBMISSION_COST_MULTIPLIER: z.number().min(0).max(1).default(1.0),
-  PRIVACY_BLUR_ENABLED: z.boolean().default(false),
+  PRIVACY_BLUR_ENABLED: z.boolean().default(true),
   // Sprint 13: Phase 3 Integration
   EVIDENCE_REVIEW_ENABLED: z.boolean().default(false),
   PATTERN_AGGREGATION_ENABLED: z.boolean().default(false),
@@ -177,7 +177,7 @@ export const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
   DYNAMIC_RATE_ADJUSTMENT_ENABLED: false,
   DISPUTES_ENABLED: false,
   SUBMISSION_COST_MULTIPLIER: 1.0,
-  PRIVACY_BLUR_ENABLED: false,
+  PRIVACY_BLUR_ENABLED: true,
   EVIDENCE_REVIEW_ENABLED: false,
   PATTERN_AGGREGATION_ENABLED: false,
   RATE_ADJUSTMENT_PAUSED: false,

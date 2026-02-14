@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { getDb, getRedis } from "../lib/container.js";
+import { parseUuidParam } from "../lib/validation.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import { requireAgent } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -80,7 +81,7 @@ agentsRoutes.get("/:id", async (c) => {
     );
   }
 
-  const id = c.req.param("id");
+  const id = parseUuidParam(c.req.param("id"));
   const service = new AgentService(db, getRedis());
   const profile = await service.getById(id);
 
@@ -101,7 +102,7 @@ agentsRoutes.get("/:id/verification-status", async (c) => {
     );
   }
 
-  const id = c.req.param("id");
+  const id = parseUuidParam(c.req.param("id"));
   const service = new AgentService(db, getRedis());
   const status = await service.getVerificationStatus(id);
 

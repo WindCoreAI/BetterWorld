@@ -21,25 +21,28 @@ export const debatesRoutes = new Hono<AuthEnv>();
 const MAX_THREAD_DEPTH = 5;
 
 /**
- * Walk the parentDebateId chain to compute the thread depth of a given debate.
+ * Compute the thread depth of a given debate using a recursive CTE (FR-004).
  * Root debates have depth 1. Each level of nesting adds 1.
+ * Resolves in a single database round-trip instead of N sequential queries.
  */
 async function getThreadDepth(
   db: PostgresJsDatabase,
   debateId: string,
 ): Promise<number> {
-  let depth = 0;
-  let currentId: string | null = debateId;
-  while (currentId) {
-    depth++;
-    const rows = await db
-      .select({ parentDebateId: debates.parentDebateId })
-      .from(debates)
-      .where(eq(debates.id, currentId))
-      .limit(1);
-    currentId = rows[0]?.parentDebateId ?? null;
-  }
-  return depth;
+  const result = await db.execute(
+    sql`WITH RECURSIVE thread_chain AS (
+      SELECT id, parent_debate_id, 1 AS depth
+      FROM debates
+      WHERE id = ${debateId}
+      UNION ALL
+      SELECT d.id, d.parent_debate_id, tc.depth + 1
+      FROM debates d
+      INNER JOIN thread_chain tc ON d.id = tc.parent_debate_id
+    )
+    SELECT MAX(depth) AS max_depth FROM thread_chain`,
+  );
+  const rows = result as unknown as Array<{ max_depth: number | null }>;
+  return rows[0]?.max_depth ?? 0;
 }
 
 const debateListQuerySchema = paginationQuerySchema.extend({
@@ -83,9 +86,15 @@ debatesRoutes.get("/", async (c) => {
 
   const conditions = [eq(debates.solutionId, solutionId)];
 
-  // Public: approved only. Owning agent: also sees own pending
+  // FR-006: Filter guardrail status in WHERE clause (not post-fetch)
+  // Public: approved only. Owning agent: also sees own pending + approved
   if (!agent) {
     conditions.push(eq(debates.guardrailStatus, "approved"));
+  } else {
+    // Authenticated agent: show approved debates AND their own pending ones
+    conditions.push(
+      sql`(${debates.guardrailStatus} = 'approved' OR ${debates.agentId} = ${agent.id})`,
+    );
   }
 
   if (stance) {
@@ -117,13 +126,9 @@ debatesRoutes.get("/", async (c) => {
     .orderBy(desc(debates.createdAt))
     .limit(limit + 1);
 
-  // Filter: for authenticated agents, show only approved + own pending
-  const filtered = agent
-    ? rows.filter(r => r.guardrailStatus === "approved" || r.agentId === agent.id)
-    : rows;
-
-  const hasMore = filtered.length > limit;
-  const items = hasMore ? filtered.slice(0, limit) : filtered;
+  // Filtering is now done in SQL WHERE clause (FR-006)
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
   const lastItem = items[items.length - 1];
   const nextCursor = hasMore && lastItem ? lastItem.createdAt.toISOString() : null;
 

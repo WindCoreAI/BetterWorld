@@ -179,10 +179,11 @@ adminRateRoutes.post("/override", humanAuth(), requireAdmin(), async (c) => {
     triggeredBy: "admin",
   });
 
+  // FR-029: Log admin ID instead of email to prevent PII leakage in logs
   const human = c.get("human");
   logger.info(
     {
-      admin: human?.email,
+      adminId: human?.id ?? "unknown",
       rewardMultiplier: `${currentReward} -> ${rewardMultiplier}`,
       costMultiplier: `${currentCost} -> ${costMultiplier}`,
     },

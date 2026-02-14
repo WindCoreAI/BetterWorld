@@ -5,11 +5,11 @@
  * Triggered by the guardrail worker after Layer B completes.
  * Assigns validators and initiates the consensus pipeline.
  */
-import { problems, solutions, debates } from "@betterworld/db";
+import { problems, solutions, debates, peerEvaluations } from "@betterworld/db";
 import { QUEUE_NAMES } from "@betterworld/shared";
 import type { PeerConsensusJobData } from "@betterworld/shared";
 import { Worker, type Job } from "bullmq";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import Redis from "ioredis";
 import pino from "pino";
 
@@ -83,6 +83,32 @@ export function createPeerConsensusWorker(): Worker<PeerConsensusJobData> {
           "Failed to fetch submission details, using content from job data",
         );
         submission = { title: content.slice(0, 100), description: content };
+      }
+
+      // FR-007: Idempotency check — skip if validators are already assigned
+      const existingEvals = await db
+        .select({ id: peerEvaluations.id })
+        .from(peerEvaluations)
+        .where(
+          and(
+            eq(peerEvaluations.submissionId, submissionId),
+            eq(peerEvaluations.submissionType, submissionType),
+          ),
+        )
+        .limit(1);
+
+      if (existingEvals.length > 0) {
+        logger.info(
+          { submissionId, submissionType },
+          "Validators already assigned for submission — skipping (idempotency)",
+        );
+        return {
+          assignedValidators: 0,
+          tierFallback: false,
+          quorumRequired: 0,
+          skipped: true,
+          reason: "already_assigned",
+        };
       }
 
       // Assign validators

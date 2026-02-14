@@ -36,15 +36,27 @@ async function humanFetch<T>(
   if (res.status === 401 && getHumanRefreshToken()) {
     const refreshed = await humanAuthApi.refresh();
     if (refreshed) {
-      // Retry the original request with new token
-      const retryRes = await fetch(`${API_BASE}/api/v1${path}`, {
-        ...options,
-        headers: {
-          ...getHumanAuthHeaders(),
-          ...(options.headers ?? {}),
+      // FR-013: Only retry idempotent requests (GET/HEAD) after token refresh.
+      // POST/PUT/PATCH/DELETE are NOT retried to prevent duplicate operations.
+      const method = (options.method ?? "GET").toUpperCase();
+      if (method === "GET" || method === "HEAD") {
+        const retryRes = await fetch(`${API_BASE}/api/v1${path}`, {
+          ...options,
+          headers: {
+            ...getHumanAuthHeaders(),
+            ...(options.headers ?? {}),
+          },
+        });
+        return retryRes.json();
+      }
+      // Non-idempotent request: return error indicating user must retry manually
+      return {
+        ok: false,
+        error: {
+          code: "TOKEN_REFRESHED",
+          message: "Your session was refreshed. Please try your action again.",
         },
-      });
-      return retryRes.json();
+      } as ApiResponse<T>;
     }
     // Refresh failed — clear tokens
     clearHumanTokens();

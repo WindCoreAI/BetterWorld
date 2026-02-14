@@ -130,7 +130,25 @@ export async function syncQueuedObservations(
 
   for (const obs of pending.sort((a, b) => a.createdAt - b.createdAt)) {
     if (!shouldRetry(obs)) {
-      if (obs.retryCount >= MAX_RETRIES) failed++;
+      if (obs.retryCount >= MAX_RETRIES) {
+        // T069: Remove permanently failed observations from IndexedDB
+        // and emit a user-visible notification
+        await removeObservation(obs.id);
+        failed++;
+
+        // Emit notification event for UI to display
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("bw-offline-permanent-failure", {
+              detail: {
+                observationId: obs.id,
+                retryCount: obs.retryCount,
+                message: `Observation failed after ${obs.retryCount} retries and has been removed from the queue.`,
+              },
+            }),
+          );
+        }
+      }
       continue;
     }
 

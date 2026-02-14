@@ -65,12 +65,13 @@ describe("Health Endpoints", () => {
     const res = await app.request("/readyz");
     expect(res.status).toBe(200);
 
-    const body = (await res.json()) as ReadyBody;
-    expect(body.status).toBe("ready");
-    expect(body.checks.database).toBe("ok");
-    expect(body.checks.redis).toBe("ok");
-    expect(body.version).toBe("0.1.0");
-    expect(typeof body.uptime).toBe("number");
+    const body = (await res.json()) as { ok: boolean; data: ReadyBody; requestId: string };
+    expect(body.ok).toBe(true);
+    expect(body.data.status).toBe("ready");
+    expect(body.data.checks.database).toBe("ok");
+    expect(body.data.checks.redis).toBe("ok");
+    expect(body.data.version).toBe("0.1.0");
+    expect(typeof body.data.uptime).toBe("number");
   });
 
   it("GET /api/v1/health returns 200 with ok: true", async () => {
@@ -144,15 +145,16 @@ describe("Auth — JWT via optionalAuth", () => {
     expect(body.ok).toBe(true);
   });
 
-  it("falls through to public for invalid JWT", async () => {
+  it("returns 401 for invalid JWT (FR-027 optionalAuth hardening)", async () => {
     const res = await app.request("/healthz", {
       headers: { Authorization: "Bearer invalid-token-string" },
     });
 
-    // optionalAuth falls through to "public" — request still succeeds
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as HealthBody;
-    expect(body.ok).toBe(true);
+    // FR-027: optionalAuth returns 401 when credentials are present but invalid
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as { ok: boolean; error: { code: string } };
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("UNAUTHORIZED");
   });
 
   it("falls through to public when no auth header is provided", async () => {

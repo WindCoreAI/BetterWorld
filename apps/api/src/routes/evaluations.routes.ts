@@ -16,7 +16,7 @@ import {
   peerEvaluationResponseSchema,
   evaluationPendingQuerySchema,
 } from "@betterworld/shared";
-import { and, eq, gt, asc } from "drizzle-orm";
+import { and, eq, gt, asc, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { getDb } from "../lib/container.js";
@@ -70,58 +70,75 @@ evaluationsRoutes.get("/pending", requireAgent(), async (c) => {
   const hasMore = evals.length > limit;
   const results = hasMore ? evals.slice(0, limit) : evals;
 
-  // Enrich with submission details
-  const enriched = await Promise.all(
-    results.map(async (evaluation) => {
-      let submission = { title: "", description: "", domain: "" };
+  // Batch-fetch submission details (FR-003: replaces N+1 per-evaluation queries)
+  const problemIds = results.filter(e => e.submissionType === "problem").map(e => e.submissionId);
+  const solutionIds = results.filter(e => e.submissionType === "solution").map(e => e.submissionId);
+  const debateIds = results.filter(e => e.submissionType === "debate").map(e => e.submissionId);
 
-      try {
-        if (evaluation.submissionType === "problem") {
-          const [p] = await db
-            .select({ title: problems.title, description: problems.description, domain: problems.domain })
-            .from(problems)
-            .where(eq(problems.id, evaluation.submissionId))
-            .limit(1);
-          if (p) submission = p;
-        } else if (evaluation.submissionType === "solution") {
-          const [s] = await db
-            .select({ title: solutions.title, description: solutions.description })
-            .from(solutions)
-            .where(eq(solutions.id, evaluation.submissionId))
-            .limit(1);
-          if (s) {
-            // Get domain from linked problem
-            submission = { title: s.title, description: s.description, domain: "" };
-          }
-        } else if (evaluation.submissionType === "debate") {
-          const [d] = await db
-            .select({ content: debates.content, stance: debates.stance })
-            .from(debates)
-            .where(eq(debates.id, evaluation.submissionId))
-            .limit(1);
-          if (d) {
-            submission = { title: d.content.slice(0, 100), description: d.content, domain: "" };
-          }
-        }
-      } catch {
-        // Non-fatal — return empty submission
+  const problemMap = new Map<string, { title: string; description: string; domain: string }>();
+  const solutionMap = new Map<string, { title: string; description: string }>();
+  const debateMap = new Map<string, { content: string }>();
+
+  try {
+    if (problemIds.length > 0) {
+      const problemRows = await db
+        .select({ id: problems.id, title: problems.title, description: problems.description, domain: problems.domain })
+        .from(problems)
+        .where(inArray(problems.id, problemIds));
+      for (const p of problemRows) {
+        problemMap.set(p.id, { title: p.title, description: p.description, domain: p.domain });
       }
+    }
+    if (solutionIds.length > 0) {
+      const solutionRows = await db
+        .select({ id: solutions.id, title: solutions.title, description: solutions.description })
+        .from(solutions)
+        .where(inArray(solutions.id, solutionIds));
+      for (const s of solutionRows) {
+        solutionMap.set(s.id, { title: s.title, description: s.description });
+      }
+    }
+    if (debateIds.length > 0) {
+      const debateRows = await db
+        .select({ id: debates.id, content: debates.content })
+        .from(debates)
+        .where(inArray(debates.id, debateIds));
+      for (const d of debateRows) {
+        debateMap.set(d.id, { content: d.content });
+      }
+    }
+  } catch {
+    // Non-fatal — maps will be empty, submissions will have defaults
+  }
 
-      return {
-        id: evaluation.id,
-        submissionId: evaluation.submissionId,
-        submissionType: evaluation.submissionType,
-        submission,
-        rubric: {
-          domainAlignment: "Rate how well this submission aligns with its claimed domain (1-5)",
-          factualAccuracy: "Rate the factual accuracy and evidence quality (1-5)",
-          impactPotential: "Rate the potential impact if addressed (1-5)",
-        },
-        assignedAt: evaluation.assignedAt.toISOString(),
-        expiresAt: evaluation.expiresAt.toISOString(),
-      };
-    }),
-  );
+  const enriched = results.map((evaluation) => {
+    let submission = { title: "", description: "", domain: "" };
+
+    if (evaluation.submissionType === "problem") {
+      const p = problemMap.get(evaluation.submissionId);
+      if (p) submission = p;
+    } else if (evaluation.submissionType === "solution") {
+      const s = solutionMap.get(evaluation.submissionId);
+      if (s) submission = { title: s.title, description: s.description, domain: "" };
+    } else if (evaluation.submissionType === "debate") {
+      const d = debateMap.get(evaluation.submissionId);
+      if (d) submission = { title: d.content.slice(0, 100), description: d.content, domain: "" };
+    }
+
+    return {
+      id: evaluation.id,
+      submissionId: evaluation.submissionId,
+      submissionType: evaluation.submissionType,
+      submission,
+      rubric: {
+        domainAlignment: "Rate how well this submission aligns with its claimed domain (1-5)",
+        factualAccuracy: "Rate the factual accuracy and evidence quality (1-5)",
+        impactPotential: "Rate the potential impact if addressed (1-5)",
+      },
+      assignedAt: evaluation.assignedAt.toISOString(),
+      expiresAt: evaluation.expiresAt.toISOString(),
+    };
+  });
 
   const nextCursor = hasMore && results.length > 0
     ? results[results.length - 1]!.assignedAt.toISOString()

@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-13 (v24.0 — Phase 3 Complete, Sprint 13 delivered)
-> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 development. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks): dispute resolution, credit economy self-regulation, evidence review economy, domain specialization, hybrid quorum, pattern aggregation, Denver expansion, cross-city dashboard, offline PWA. 1,215 total tests (354 guardrails + 233 shared + 628 API).
+> **Last Review**: 2026-02-13 (v25.0 — MVP Production Readiness Complete, Sprint 15 delivered)
+> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 + MVP Production Readiness. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks). **Sprint 15 (MVP Production Readiness) complete** — 78/78 tasks, 35/35 functional requirements: guardrail worker fix, performance optimizations, worker reliability, privacy pipeline (real face/plate detection), Sentry monitoring, security hardening, E2E testing, CI hardening. 1,254 total tests (354 guardrails + 233 shared + 667 API + 43 frontend).
 
 ---
 

@@ -73,8 +73,16 @@ export async function processReputationDecay(
 
     for (const { humanId } of inactiveHumans) {
       result.processedCount++;
-      const { decayed } = await applyDecay(db, humanId);
-      if (decayed) result.decayedCount++;
+      try {
+        const { decayed } = await applyDecay(db, humanId);
+        if (decayed) result.decayedCount++;
+      } catch (err) {
+        // FR-012: Per-item error isolation — one failure doesn't block the batch
+        logger.warn(
+          { humanId, error: (err as Error).message },
+          "Decay failed for human — continuing with batch",
+        );
+      }
     }
 
     offset += BATCH_SIZE;
