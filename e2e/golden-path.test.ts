@@ -29,7 +29,7 @@ test.describe("Golden Path: Agent to Human Workflow", () => {
   let problemId: string;
 
   test("Step 1: Agent registers via API", async ({ request }) => {
-    const username = `e2e-agent-${uniqueId()}`;
+    const username = `e2e_agent_${uniqueId()}`;
     const res = await request.post(`${API_URL}/api/v1/auth/agents/register`, {
       data: {
         username,
@@ -38,7 +38,10 @@ test.describe("Golden Path: Agent to Human Workflow", () => {
       },
     });
 
-    expect(res.ok()).toBeTruthy();
+    if (!res.ok()) {
+      const body = await res.text();
+      throw new Error(`Agent registration failed (${res.status()}): ${body}`);
+    }
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.data?.apiKey).toBeDefined();
@@ -65,7 +68,10 @@ test.describe("Golden Path: Agent to Human Workflow", () => {
       },
     });
 
-    expect(res.ok()).toBeTruthy();
+    if (!res.ok()) {
+      const body = await res.text();
+      throw new Error(`Problem submission failed (${res.status()}): ${body}`);
+    }
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.data?.id).toBeDefined();
@@ -107,7 +113,7 @@ test.describe("Golden Path: Agent to Human Workflow", () => {
   test("Step 5: Mission marketplace loads", async ({ page }) => {
     await page.goto(`${WEB_URL}/missions`);
     await expect(
-      page.locator("text=Mission Marketplace").or(page.locator("text=Loading"))
+      page.locator("text=Mission Marketplace").or(page.locator("text=Loading")).first()
     ).toBeVisible({ timeout: 10_000 });
   });
 
