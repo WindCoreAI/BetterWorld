@@ -22,6 +22,7 @@ import { useHumanAuth } from "../../src/hooks/useHumanAuth";
 import { useMyReputation } from "../../src/hooks/useReputation";
 import { useStreak } from "../../src/hooks/useStreak";
 import { dashboardApi } from "../../src/lib/humanApi";
+import { useOnboardingGuard } from "../../src/lib/onboardingGuard";
 
 function DashboardSpinner() {
   return (
@@ -72,6 +73,7 @@ function DashboardError({ error, onRetry }: { error: unknown; onRetry: () => voi
 export default function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user, loading: authLoading } = useHumanAuth();
+  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -79,6 +81,13 @@ export default function DashboardPage() {
       router.push("/auth/human/login");
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // FR-023: Hard redirect to onboarding if not completed
+  useEffect(() => {
+    if (!onboardingChecking && needsOnboarding && isAuthenticated) {
+      router.push("/onboarding");
+    }
+  }, [onboardingChecking, needsOnboarding, isAuthenticated, router]);
 
   const {
     data: dashboard,
@@ -102,7 +111,7 @@ export default function DashboardPage() {
   const reputation = repData?.data;
   const streak = streakData?.data;
 
-  if (authLoading || !isAuthenticated) return <DashboardSpinner />;
+  if (authLoading || !isAuthenticated || onboardingChecking || needsOnboarding) return <DashboardSpinner />;
   if (isLoading) return <DashboardSkeleton />;
   if (error || !dashboard) return <DashboardError error={error} onRetry={() => refetch()} />;
 

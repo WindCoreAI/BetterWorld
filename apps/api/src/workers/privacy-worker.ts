@@ -14,6 +14,7 @@ import pino from "pino";
 
 import { initDb, getDb, getRedis } from "../lib/container.js";
 import { uploadFile, getSignedUrl } from "../lib/storage.js";
+import { getFlag } from "../services/feature-flags.js";
 import { processPhoto } from "../services/privacy-pipeline.js";
 
 const logger = pino({ name: "privacy-worker" });
@@ -106,16 +107,13 @@ export function createPrivacyWorker(): Worker<PrivacyJobData> {
         return { error: "download_failed" };
       }
 
-      // Check blur feature flag
-      let blurEnabled = false;
+      // Check blur feature flag (defaults to true via Zod schema)
+      let blurEnabled = true;
       try {
         const redis = getRedis();
-        if (redis) {
-          const flag = await redis.get("feature:PRIVACY_BLUR_ENABLED");
-          blurEnabled = flag === "true" || flag === "1";
-        }
+        blurEnabled = await getFlag(redis, "PRIVACY_BLUR_ENABLED");
       } catch {
-        // Default to false
+        // Default to true — fail-safe: blur PII when flag read fails
       }
 
       // Run privacy pipeline
@@ -193,11 +191,12 @@ export function createPrivacyWorker(): Worker<PrivacyJobData> {
     );
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", async (job, err) => {
     const attemptsMade = job?.attemptsMade ?? 0;
     const maxAttempts = job?.opts?.attempts ?? 3;
 
     if (attemptsMade >= maxAttempts) {
+      // FR-008: Dead-letter handler — quarantine observation when all retries exhausted
       logger.error(
         {
           jobId: job?.id,
@@ -205,8 +204,36 @@ export function createPrivacyWorker(): Worker<PrivacyJobData> {
           attemptsMade,
           error: err.message,
         },
-        "DEAD LETTER: Privacy job exhausted all retries",
+        "DEAD LETTER: Privacy job exhausted all retries — quarantining observation",
       );
+
+      if (job?.data?.observationId) {
+        try {
+          const db = getDb();
+          if (db) {
+            await db
+              .update(observations)
+              .set({
+                privacyProcessingStatus: "quarantined",
+                updatedAt: new Date(),
+              })
+              .where(eq(observations.id, job.data.observationId));
+
+            logger.info(
+              { observationId: job.data.observationId },
+              "Observation quarantined after dead-letter",
+            );
+          }
+        } catch (quarantineErr) {
+          logger.error(
+            {
+              observationId: job.data.observationId,
+              error: (quarantineErr as Error).message,
+            },
+            "Failed to quarantine observation after dead-letter",
+          );
+        }
+      }
     } else {
       logger.warn(
         {

@@ -336,10 +336,25 @@ export function optionalAuth() {
           }
         }
       } catch {
-        // Silently fall through to public
+        // DB/Redis lookup error — reject with 401 since header was present
       }
+
+      // FR-027: Authorization header was present but both JWT and API key failed.
+      // Return 401 instead of falling through to public role.
+      return c.json(
+        {
+          ok: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Invalid or expired credentials",
+          },
+          requestId: c.get("requestId"),
+        },
+        401,
+      );
     }
 
+    // No Authorization header at all → public access
     c.set("authRole", "public");
     await next();
   });

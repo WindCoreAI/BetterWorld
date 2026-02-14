@@ -63,7 +63,7 @@ export default function ProductionShiftDashboard() {
     async function fetch_() {
       try {
         setLoading(true);
-        const res = await fetch("/api/v1/admin/production-shift/dashboard");
+        const res = await fetch("/api/v1/admin/phase3/production-shift/dashboard");
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         const json = await res.json();
         if (!cancelled) setData(json.data);

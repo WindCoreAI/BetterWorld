@@ -110,11 +110,18 @@ export function createRateAdjustmentWorker(): Worker {
   // Schedule repeatable job (weekly — Sunday midnight UTC)
   const schedulerConnection = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
   const schedulerQueue = new Queue(QUEUE_NAME, { connection: schedulerConnection });
+  // FR-009: Use deterministic jobId based on ISO year-week to prevent duplicate runs
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+  const isoYearWeek = `${now.getFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
+
   schedulerQueue
     .add(
       "weekly-adjustment",
       {},
       {
+        jobId: `rate-adj-${isoYearWeek}`,
         repeat: { pattern: "0 0 * * 0" }, // Sunday midnight UTC
         removeOnComplete: { count: 10 },
         removeOnFail: { count: 5 },

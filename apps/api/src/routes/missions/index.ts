@@ -119,6 +119,12 @@ missionRoutes.post("/", requireAgent(), async (c) => {
   const { solutionId, ...missionData } = parsed.data;
 
   const result = await db.transaction(async (tx) => {
+    // FR-005: Populate PostGIS location column when coordinates are provided
+    const locationSql =
+      missionData.requiredLatitude != null && missionData.requiredLongitude != null
+        ? sql`ST_MakePoint(${missionData.requiredLongitude}, ${missionData.requiredLatitude})::geography`
+        : null;
+
     const [mission] = await tx
       .insert(missions)
       .values({
@@ -139,6 +145,7 @@ missionRoutes.post("/", requireAgent(), async (c) => {
           missionData.requiredLongitude != null
             ? String(missionData.requiredLongitude)
             : null,
+        location: locationSql,
         locationRadiusKm: missionData.locationRadiusKm ?? 5,
         estimatedDurationMinutes: missionData.estimatedDurationMinutes,
         difficulty: missionData.difficulty ?? "intermediate",
@@ -432,14 +439,10 @@ missionRoutes.get("/", async (c) => {
   }
 
   if (searchLat !== undefined && searchLng !== undefined) {
+    // FR-005: Use PostGIS ST_DWithin with GIST index for efficient geo-search
+    const radiusMeters = searchRadius * 1000;
     conditions.push(
-      sql`(
-        6371 * acos(
-          cos(radians(${searchLat})) * cos(radians(CAST(${missions.requiredLatitude} AS double precision)))
-          * cos(radians(CAST(${missions.requiredLongitude} AS double precision)) - radians(${searchLng}))
-          + sin(radians(${searchLat})) * sin(radians(CAST(${missions.requiredLatitude} AS double precision)))
-        )
-      ) <= ${searchRadius}`,
+      sql`ST_DWithin(${missions.location}, ST_MakePoint(${searchLng}, ${searchLat})::geography, ${radiusMeters})`,
     );
   }
 
@@ -766,6 +769,7 @@ missionRoutes.patch("/:id/claims/:claimId", humanAuth(), async (c) => {
 // ---------------------------------------------------------------------------
 // T018: PATCH /:id — Update mission
 // ---------------------------------------------------------------------------
+// eslint-disable-next-line complexity
 missionRoutes.patch("/:id", requireAgent(), async (c) => {
   const db = getDb();
   if (!db) {
@@ -845,6 +849,16 @@ missionRoutes.patch("/:id", requireAgent(), async (c) => {
   }
   if (updateData.requiredLongitude !== undefined) {
     setFields.requiredLongitude = updateData.requiredLongitude != null ? String(updateData.requiredLongitude) : null;
+  }
+  // FR-005: Update PostGIS location column when coordinates change
+  if (updateData.requiredLatitude !== undefined || updateData.requiredLongitude !== undefined) {
+    const lat = updateData.requiredLatitude ?? null;
+    const lng = updateData.requiredLongitude ?? null;
+    if (lat != null && lng != null) {
+      setFields.location = sql`ST_MakePoint(${lng}, ${lat})::geography`;
+    } else {
+      setFields.location = null;
+    }
   }
   if (updateData.expiresAt !== undefined) {
     setFields.expiresAt = new Date(updateData.expiresAt);

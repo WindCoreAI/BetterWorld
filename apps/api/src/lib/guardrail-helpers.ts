@@ -57,6 +57,8 @@ export async function enqueueForEvaluation(
   const queue = getGuardrailEvaluationQueue();
   await queue.add("evaluate", jobData, {
     jobId: evaluation.id,
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 50 },
   });
 
   return evaluation.id;

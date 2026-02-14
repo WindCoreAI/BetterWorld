@@ -54,6 +54,16 @@ If running: Execute `pnpm test:integration`.
 
 On failure: Report which integration tests failed. Remind the user that integration tests require local PostgreSQL (port 5432) and Redis (port 6379) running.
 
+### Step 6: E2E Golden Path (conditional)
+
+Parse `$ARGUMENTS` for flags:
+- If `$ARGUMENTS` contains `--full` or `--e2e` or `all`: Run E2E tests.
+- If `$ARGUMENTS` is empty or doesn't contain those flags: **Skip** E2E tests and note they were skipped (they require local PostgreSQL + Redis).
+
+If running: Execute `pnpm exec playwright test e2e/golden-path.test.ts`. This mirrors the CI `e2e` job (FR-032).
+
+On failure: Report which E2E steps failed. Include the full error message and response body if available. Remind the user that E2E tests require local PostgreSQL (port 5432), Redis (port 6379), and Playwright browsers installed (`pnpm exec playwright install chromium`).
+
 ## Reporting
 
 After all steps complete (or on first failure), output a summary:
@@ -69,6 +79,7 @@ After all steps complete (or on first failure), output a summary:
 | Unit Tests          | ✅/❌  | Xs       |
 | Build               | ✅/❌  | Xs       |
 | Integration Tests   | ✅/❌/⏭️ | Xs    |
+| E2E Golden Path     | ✅/❌/⏭️ | Xs    |
 
 **Result**: ✅ All checks passed — safe to push / ❌ Failed at [step]
 ```
@@ -97,9 +108,10 @@ If a step fails:
 
 | Argument | Effect |
 |----------|--------|
-| (empty) | Run steps 0-4 (skip integration tests) |
-| `--full` or `all` | Run all steps including integration tests |
+| (empty) | Run steps 0-4 (skip integration and E2E tests) |
+| `--full` or `all` | Run all steps including integration and E2E tests |
 | `--integration` | Run all steps including integration tests |
+| `--e2e` | Run all steps including E2E golden path tests |
 | `--skip-install` | Skip step 0 (dependency check) for faster runs |
 | `--from <step>` | Start from a specific step (e.g., `--from test` to skip lint/typecheck) |
 

@@ -115,10 +115,9 @@ describe("GET /evaluations/pending", () => {
       },
     ]);
 
-    // problem details enrichment
-    mockLimit.mockResolvedValueOnce([
-      { title: "Pothole on Main St", description: "Large pothole", domain: "infrastructure" },
-    ]);
+    // Note: Batch enrichment (T018) now uses .where(inArray(...)) without .limit(),
+    // so it does not go through mockLimit. The try-catch in the route handles the
+    // non-array return gracefully (maps remain empty).
 
     const res = await app.request("/evaluations/pending");
     expect(res.status).toBe(200);

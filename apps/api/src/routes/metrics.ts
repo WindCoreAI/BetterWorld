@@ -1,11 +1,14 @@
 /**
- * Prometheus /metrics endpoint (Sprint 9: Observability)
+ * Prometheus /metrics endpoint (Sprint 9: Observability, Sprint 15: Worker Queue Metrics)
  *
  * Exports platform metrics in Prometheus text exposition format.
  * Reads from Redis-cached aggregated metrics (computed by metrics-aggregation worker).
  * Process-level metrics (memory, event loop) collected locally.
+ * Worker queue metrics (waiting, active, failed) per queue (FR-025).
  */
 
+import { QUEUE_NAMES } from "@betterworld/shared";
+import { Queue } from "bullmq";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../app.js";
@@ -103,6 +106,32 @@ metricsRoutes.get("/", async () => {
       }
     } catch {
       // Redis unavailable — process metrics still exported
+    }
+  }
+
+  // FR-025: Worker queue metrics
+  if (redis) {
+    try {
+      lines.push("# HELP betterworld_worker_queue_waiting Jobs waiting in queue.");
+      lines.push("# TYPE betterworld_worker_queue_waiting gauge");
+      lines.push("# HELP betterworld_worker_queue_active Jobs actively processing.");
+      lines.push("# TYPE betterworld_worker_queue_active gauge");
+      lines.push("# HELP betterworld_worker_queue_failed Jobs that have failed.");
+      lines.push("# TYPE betterworld_worker_queue_failed gauge");
+
+      for (const [, queueName] of Object.entries(QUEUE_NAMES)) {
+        const queue = new Queue(queueName, { connection: redis.duplicate() });
+        try {
+          const counts = await queue.getJobCounts("waiting", "active", "failed");
+          lines.push(`betterworld_worker_queue_waiting{queue="${queueName}"} ${counts.waiting ?? 0}`);
+          lines.push(`betterworld_worker_queue_active{queue="${queueName}"} ${counts.active ?? 0}`);
+          lines.push(`betterworld_worker_queue_failed{queue="${queueName}"} ${counts.failed ?? 0}`);
+        } finally {
+          await queue.close();
+        }
+      }
+    } catch {
+      // Worker queue metrics unavailable — other metrics still exported
     }
   }
 

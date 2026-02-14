@@ -92,14 +92,16 @@ v1Routes.route("/admin/fraud", fraudRoutes);
 
 // Sprint 10 routes — Phase 3 Foundation
 v1Routes.route("/agents/credits", agentCreditsRoutes);
-v1Routes.route("/admin", phase3AdminRoutes);
+// FR-030: De-overlap admin routes — phase3 admin routes now at /admin/phase3
+v1Routes.route("/admin/phase3", phase3AdminRoutes);
 v1Routes.route("/", observationRoutes);
 
 // Sprint 11 routes — Shadow Mode
 v1Routes.route("/evaluations", evaluationsRoutes);
 v1Routes.route("/validator", validatorRoutes);
 v1Routes.route("/city", cityRoutes);
-v1Routes.route("/admin", shadowAdminRoutes);
+// FR-030: De-overlap admin routes — shadow admin routes now at /admin/shadow
+v1Routes.route("/admin/shadow", shadowAdminRoutes);
 
 // Sprint 12 routes — Production Shift
 v1Routes.route("/problems", attestationRoutes);

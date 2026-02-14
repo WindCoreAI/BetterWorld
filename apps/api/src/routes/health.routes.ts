@@ -5,9 +5,14 @@ import type { AppEnv } from "../app.js";
 export const healthRoutes = new Hono<AppEnv>();
 
 // GET /healthz — Liveness check (is the process running?)
+// FR-025: Wrapped in standard envelope with `data` field
 healthRoutes.get("/healthz", (c) => {
   return c.json({
     ok: true,
+    data: {
+      status: "alive",
+      uptime: process.uptime(),
+    },
     requestId: c.get("requestId"),
   });
 });
@@ -61,10 +66,14 @@ healthRoutes.get("/readyz", async (c) => {
 
   return c.json(
     {
-      status,
-      checks,
-      version: "0.1.0",
-      uptime: process.uptime(),
+      ok: status !== "unhealthy",
+      data: {
+        status,
+        checks,
+        version: "0.1.0",
+        uptime: process.uptime(),
+      },
+      requestId: c.get("requestId"),
     },
     statusCode,
   );

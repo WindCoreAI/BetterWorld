@@ -58,6 +58,8 @@ export const peerReviews = pgTable(
     ),
     index("idx_peer_reviews_type").on(table.reviewType),
     index("idx_peer_reviews_observation").on(table.observationId),
+    // Sprint 15: Composite index for efficient observation+type lookups
+    index("idx_peer_reviews_observation_type").on(table.observationId, table.reviewType),
   ],
 );
 

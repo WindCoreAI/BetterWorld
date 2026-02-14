@@ -80,6 +80,7 @@ export function createEvaluationTimeoutWorker(): Worker {
         const submissionId = parts[0]!;
         const submissionType = parts[1]!;
 
+        try {
         // Check if there are still pending evaluations
         const [pendingResult] = await db
           .select({ count: count() })
@@ -144,6 +145,13 @@ export function createEvaluationTimeoutWorker(): Worker {
               "Quorum timeout — created escalated consensus",
             );
           }
+        }
+        } catch (err) {
+          // FR-012: Per-item error isolation — one failure doesn't block the batch
+          logger.warn(
+            { submissionId, submissionType, error: (err as Error).message },
+            "Quorum timeout check failed for submission — continuing with batch",
+          );
         }
       }
 

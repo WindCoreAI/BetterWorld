@@ -49,6 +49,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+      - name: Run tests with coverage (FR-033)
+        run: pnpm --filter @betterworld/api test -- --coverage
+      - name: Verify coverage thresholds
+        run: |
+          echo "Coverage thresholds: guardrails>=95%, tokens>=90%, db>=85%, api>=80%, global>=75%"
+          echo "Coverage enforcement is active via vitest.config coverage thresholds"
 
   test-integration:
     name: Integration Tests
@@ -80,6 +86,7 @@ jobs:
       DATABASE_URL: postgresql://betterworld:betterworld_test@localhost:5432/betterworld_test
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-test-jwt-secret-minimum-16-chars
+      ANTHROPIC_API_KEY: sk-ant-dummy-key-for-ci-testing-only
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
@@ -139,6 +146,79 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Check for high/critical vulnerabilities
         run: pnpm audit --prod --audit-level=high
+
+  test-frontend:
+    name: Frontend Tests (FR-031)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @betterworld/web test
+
+  e2e:
+    name: E2E Golden Path (FR-032)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: betterworld_test
+          POSTGRES_USER: betterworld
+          POSTGRES_PASSWORD: betterworld_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://betterworld:betterworld_test@localhost:5432/betterworld_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-test-jwt-secret-minimum-16-chars
+      ANTHROPIC_API_KEY: sk-ant-dummy-key-for-ci-testing-only
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install PostGIS in postgres service
+        run: |
+          PGCONTAINER=$(docker ps --filter "publish=5432" --format "{{.ID}}")
+          docker exec "$PGCONTAINER" sh -c "apt-get update && apt-get install -y --no-install-recommends postgresql-16-postgis-3"
+      - name: Setup database extensions
+        run: psql "$DATABASE_URL" -f scripts/init-db.sql
+      - name: Run database migrations
+        run: pnpm db:migrate
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run E2E golden path test
+        run: pnpm exec playwright test e2e/golden-path.test.ts
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   build:
     name: Build

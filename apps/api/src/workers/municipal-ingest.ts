@@ -11,6 +11,7 @@ import { eq, and } from "drizzle-orm";
 import Redis from "ioredis";
 import pino from "pino";
 
+import { initDb, getDb } from "../lib/container.js";
 import { getFlag } from "../services/feature-flags.js";
 import {
   Open311Client,
@@ -81,13 +82,12 @@ export function createMunicipalIngestWorker() {
           "Fetched Open311 requests",
         );
 
-        // Initialize DB for processing
-        const { drizzle } = await import("drizzle-orm/postgres-js");
-        const postgres = (await import("postgres")).default;
-        const pgClient = postgres(DATABASE_URL, {
-          connection: { statement_timeout: 30000 },
-        });
-        const db = drizzle(pgClient);
+        // FR-010: Use shared database connection pool instead of creating new connections
+        initDb(DATABASE_URL);
+        const db = getDb();
+        if (!db) {
+          throw new Error("Database not initialized");
+        }
 
         let ingested = 0;
         let skipped = 0;
@@ -164,7 +164,7 @@ export function createMunicipalIngestWorker() {
           "Municipal ingestion complete",
         );
 
-        await pgClient.end();
+        // Database connection is managed by the shared pool (FR-010)
 
         return { ingested, skipped, errors };
       } finally {

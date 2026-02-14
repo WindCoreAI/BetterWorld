@@ -50,7 +50,7 @@ describe("Agent Authentication", () => {
     expect(data.ok).toBe(false);
   });
 
-  it("returns 403 for deactivated agent", async () => {
+  it("returns 401 for deactivated agent (FR-027 optionalAuth hardening)", async () => {
     const { data: regData } = await registerTestAgent(app);
     const apiKey = regData.data.apiKey;
     const agentId = regData.data.agentId;
@@ -62,11 +62,13 @@ describe("Agent Authentication", () => {
       .set({ isActive: false })
       .where(eq(agents.id, agentId));
 
+    // FR-027: Global optionalAuth intercepts before requireAgent — deactivated
+    // agent credentials are treated as invalid, returning 401 instead of 403
     const res = await app.request("/api/v1/agents/me", {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
   it("returns cached auth on second request", async () => {

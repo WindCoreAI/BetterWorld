@@ -1,3 +1,21 @@
+# FR-026: Alert delivery receivers
+# Set ALERT_WEBHOOK_URL in production for Slack/Discord notification delivery
+# e.g., ALERT_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+receivers:
+  - name: default-webhook
+    webhook_configs:
+      - url: "${ALERT_WEBHOOK_URL}"
+        send_resolved: true
+        http_config:
+          bearer_token: "${ALERT_WEBHOOK_TOKEN}"
+
+route:
+  receiver: default-webhook
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
 groups:
   - name: guardrail_alerts
     rules:

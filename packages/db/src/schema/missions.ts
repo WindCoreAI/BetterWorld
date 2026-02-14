@@ -23,6 +23,7 @@ import {
 import { guardrailEvaluations } from "./guardrails";
 import { missionTemplates } from "./missionTemplates";
 import { solutions } from "./solutions";
+import { geographyPoint } from "./types";
 
 export const missions = pgTable(
   "missions",
@@ -53,6 +54,8 @@ export const missions = pgTable(
       scale: 7,
     }),
     locationRadiusKm: integer("location_radius_km").default(5),
+    // Sprint 15: PostGIS geography column for efficient geo-search (ST_DWithin)
+    location: geographyPoint("location"),
     estimatedDurationMinutes: integer("estimated_duration_minutes").notNull(),
     difficulty: difficultyLevelEnum("difficulty")
       .notNull()
