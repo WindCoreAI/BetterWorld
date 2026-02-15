@@ -142,6 +142,143 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ── Social Suite / Blueprint Foundation (T035) ── */}
+      <section
+        aria-label="Social suite foundation"
+        className="px-4 py-16 bg-white"
+      >
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-bold text-center text-charcoal mb-4">
+            Built on the Science of Good Societies
+          </h2>
+          <p className="text-center text-charcoal-light mb-12 max-w-3xl mx-auto leading-relaxed">
+            Research by Nicholas Christakis shows that every successful human
+            community &mdash; from shipwreck survivors to modern cities &mdash;
+            shares eight evolutionary traits. BetterWorld is designed around this{" "}
+            <em>social suite</em>, so cooperation emerges naturally, not just
+            through incentives.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Trait 1 — Identity */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x1F9EC;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">
+                Individual Identity
+              </h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                Rich profiles, soulbound tokens, and earned reputation tiers
+                ensure every participant is recognized for who they are and what
+                they contribute.
+              </p>
+            </div>
+            {/* Trait 2 — Friendship & Care */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x1F91D;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">
+                Friendship &amp; Care
+              </h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                Peer review, endorsements, and community circles build genuine
+                bonds &mdash; because lasting change grows from relationships,
+                not transactions.
+              </p>
+            </div>
+            {/* Trait 3 — Social Networks */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x1F310;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">
+                Social Networks
+              </h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                Like carbon atoms forming diamond, how people connect matters
+                more than headcount. Local validators, city chapters, and domain
+                communities create resilient structure.
+              </p>
+            </div>
+            {/* Trait 4 — Cooperation */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x1F3D7;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">Cooperation</h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                A credit economy, peer validation, and structured debates make
+                cooperation tangible. Every contribution is visible, every
+                free-rider detectable.
+              </p>
+            </div>
+            {/* Trait 5 — In-Group Belonging */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x1F3E0;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">
+                Group Belonging
+              </h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                Fifteen domains and city-based chapters channel our natural drive
+                for group identity toward shared purpose &mdash; clean water
+                advocates, education champions, local neighbors.
+              </p>
+            </div>
+            {/* Trait 6 — Mild Hierarchy */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x1F3CB;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">
+                Earned Hierarchy
+              </h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                Trust tiers from newcomer to champion are transparent, earned
+                through action, and unlock responsibilities &mdash; not just
+                privileges. No one starts at the top.
+              </p>
+            </div>
+            {/* Trait 7 — Social Learning */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x1F4DA;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">
+                Social Learning
+              </h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                Structured debates, evidence review cycles, and pattern
+                aggregation turn every interaction into a learning opportunity
+                for the entire community.
+              </p>
+            </div>
+            {/* Trait 8 — Love / Verified Impact */}
+            <div className="p-5 rounded-xl shadow-neu-sm bg-cream">
+              <p className="text-2xl mb-2" aria-hidden="true">
+                &#x2764;
+              </p>
+              <h3 className="font-semibold text-charcoal mb-2">
+                Verified Impact
+              </h3>
+              <p className="text-sm text-charcoal-light leading-relaxed">
+                Evidence-backed verification ensures that care translates into
+                real-world outcomes. The shipwreck crews that survived were the
+                ones that rescued each other first.
+              </p>
+            </div>
+          </div>
+          <p className="text-center text-sm text-charcoal-light mt-8 max-w-2xl mx-auto italic">
+            &ldquo;When you put a group of people together, if they are able to
+            form a society at all, they make one that is, at its core, quite
+            predictable. Evolution has a blueprint.&rdquo; &mdash; Nicholas A.
+            Christakis
+          </p>
+        </div>
+      </section>
+
       {/* ── How It Works (T032) ── */}
       <section aria-label="How it works" className="px-4 py-16 bg-cream">
         <div className="max-w-5xl mx-auto">
