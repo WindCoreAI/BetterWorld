@@ -34,6 +34,9 @@ async function main() {
   const { createTokenReconciliationWorker } = await import("./token-reconciliation.js");
   const { createCareMomentWorker } = await import("./care-moment-worker.js");
   const { createNotificationRetentionWorker } = await import("./notification-retention-worker.js");
+  // Sprint 17: Community Identity & Visible Growth
+  const { createMilestoneDetectionWorker } = await import("./milestone-detection-worker.js");
+  const { createIntelligenceReportWorker } = await import("./intelligence-report-worker.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -59,6 +62,9 @@ async function main() {
     // Sprint 16: Social Fabric Foundation
     { name: "care-moments", create: createCareMomentWorker },
     { name: "notification-retention", create: createNotificationRetentionWorker },
+    // Sprint 17: Community Identity & Visible Growth
+    { name: "milestone-detection", create: createMilestoneDetectionWorker },
+    { name: "intelligence-report", create: createIntelligenceReportWorker },
   ];
 
   for (const { name, create } of workers) {

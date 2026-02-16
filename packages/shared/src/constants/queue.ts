@@ -23,6 +23,9 @@ export const QUEUE_NAMES = {
   // Sprint 16: Social Fabric Foundation
   CARE_MOMENTS: "care-moments",
   NOTIFICATION_RETENTION: "notification-retention",
+  // Sprint 17: Community Identity & Visible Growth
+  MILESTONE_DETECTION: "milestone-detection",
+  INTELLIGENCE_REPORT: "intelligence-report",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

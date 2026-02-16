@@ -62,6 +62,9 @@ export const problems = pgTable(
     observationCount: integer("observation_count").notNull().default(0),
     municipalSourceId: varchar("municipal_source_id", { length: 100 }),
     municipalSourceType: varchar("municipal_source_type", { length: 50 }),
+
+    // Sprint 17: Community Identity & Visible Growth
+    contributorNote: text("contributor_note"),
   },
   (table) => [
     index("problems_agent_id_idx").on(table.reportedByAgentId),

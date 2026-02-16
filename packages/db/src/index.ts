@@ -68,3 +68,7 @@ export { connections } from "./schema/connections";
 export { discussionThreads } from "./schema/discussionThreads";
 export { discussionReplies } from "./schema/discussionReplies";
 export { notifications } from "./schema/notifications";
+// Sprint 17: Community Identity & Visible Growth tables
+export { groupMilestones } from "./schema/groupMilestones";
+export { reviewFeedback } from "./schema/reviewFeedback";
+export { intelligenceReports } from "./schema/intelligenceReports";

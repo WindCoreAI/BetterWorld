@@ -200,6 +200,10 @@ function buildProfileUpdateSet(
     ["bio", data.bio, data.bio !== undefined],
     ["walletAddress", data.walletAddress, data.walletAddress !== undefined],
     ["certifications", data.certifications, data.certifications !== undefined],
+    // Sprint 17: Motivation & narrative fields
+    ["motivation", data.motivation, data.motivation !== undefined],
+    ["primaryDomain", data.primaryDomain, data.primaryDomain !== undefined],
+    ["localContext", data.localContext, data.localContext !== undefined],
   ];
 
   const result: Record<string, unknown> = { updatedAt: new Date() };

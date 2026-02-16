@@ -1,8 +1,8 @@
 # BetterWorld Roadmap Documentation
 
-> **Version**: 10.0
-> **Last Updated**: 2026-02-13
-> **Status**: Phase 1 COMPLETE, Phase 2 COMPLETE, Phase 3 COMPLETE (Sprints 10-13)
+> **Version**: 12.0
+> **Last Updated**: 2026-02-16
+> **Status**: Phase 1 COMPLETE, Phase 2 COMPLETE, Phase 3 COMPLETE (Sprints 10-13), Sprint 15 (MVP Readiness) COMPLETE, Sprint 16 (Social Fabric) COMPLETE, Sprint 17 (Community Identity) COMPLETE
 
 ## Overview
 
@@ -54,7 +54,7 @@ High-level roadmap summary covering all 5 phases (~10 months), budget trajectory
 | [Phase 4](./phase4-scale-ecosystem.md) | Scale & Ecosystem | 📋 Planned |
 | [Phase 5](./phase5-sustainability.md) | Sustainability | 📋 Planned |
 
-## Current Status (2026-02-13)
+## Current Status (2026-02-16)
 
 **Phase 1: ✅ COMPLETE**
 - All 6 sprints delivered (1, 2, 3, 3.5, 4, 5)
@@ -70,8 +70,22 @@ High-level roadmap summary covering all 5 phases (~10 months), budget trajectory
 - Sprint 11 (Shadow Mode) complete: 53/53 tasks — peer validation pipeline, consensus engine, F1 tracking, city dashboards
 - Sprint 12 (Production Shift) complete: 85/85 tasks — SHA-256 traffic routing, credit economy costs/rewards, spot checks, before/after verification, privacy pipeline, community attestation, mission templates, economic health monitoring
 - Sprint 13 (Integration) complete: 110/110 tasks — dispute resolution, rate adjustment, evidence reviews, domain specialization, hybrid quorum, pattern aggregation, Denver expansion, cross-city dashboard, offline PWA
-- 1,215 tests passing (354 guardrails + 233 shared + 628 API)
-- **Phase 4 next**
+
+**Sprint 15 (MVP Production Readiness): ✅ COMPLETE**
+- 78/78 tasks, 35/35 functional requirements, 8 user stories
+- Guardrail worker fix, performance optimizations, worker reliability, privacy pipeline, Sentry monitoring, security hardening, frontend tests, E2E test
+- 1,254 tests passing (667 API + 43 frontend + 354 guardrails + 233 shared)
+
+**Sprint 16 (Social Fabric Foundation): ✅ COMPLETE**
+- 85/85 tasks, 6 user stories — Blueprint Spec 1
+- Follow system, connection graph, discussion spaces, network dashboard, care moments, contribution ripple effect, notification system
+- 1,429 tests passing (842 API + 43 frontend + 354 guardrails + 233 shared)
+
+**Sprint 17 (Community Identity & Visible Growth): ✅ COMPLETE**
+- 76 tasks, 8 user stories — Blueprint Spec 2
+- Domain community pages, city chapter identity, group milestones, skill progression dashboard, review feedback loop, identity-rich content cards, motivation fields, community intelligence
+- 1,484 tests passing (824 API + 73 frontend + 354 guardrails + 233 shared)
+- **Spec 3 (Cooperative Depth & Governance) next**
 
 ## Reading Order
 
@@ -102,6 +116,9 @@ High-level roadmap summary covering all 5 phases (~10 months), budget trajectory
 
 ## Changelog
 
+- **v12.0** (2026-02-16): Sprint 17 (Community Identity & Visible Growth) COMPLETE — Blueprint Spec 2 delivered. 76 tasks, 8 user stories. 1,484 total tests.
+- **v11.0** (2026-02-16): Sprint 16 (Social Fabric Foundation) COMPLETE — Blueprint Spec 1 delivered. 85 tasks, 6 user stories. 1,429 total tests.
+- **v10.5** (2026-02-13): Sprint 15 (MVP Production Readiness) COMPLETE. 78 tasks, 35 FRs. 1,254 total tests.
 - **v10.0** (2026-02-13): Phase 3 fully COMPLETE (Sprints 10-13). Sprint 13 Integration delivered (110/110 tasks). 1,215 total tests. Disputes, rate adjustment, evidence reviews, domain specialization, hybrid quorum, pattern aggregation, Denver, cross-city, PWA.
 - **v9.0** (2026-02-12): Phase 3 Sprints 10-12 COMPLETE. Sprint 12 Production Shift delivered (85/85 tasks). 1,096 total tests.
 - **v8.0** (2026-02-11): Phase 2 COMPLETE, Phase 3 Sprint 10 complete. Updated all statuses, current status section, reading order, quick links.

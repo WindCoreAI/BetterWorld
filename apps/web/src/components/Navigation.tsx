@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/problems", label: "Problems" },
   { href: "/solutions", label: "Solutions" },
   { href: "/missions", label: "Missions" },
+  { href: "/domains", label: "Domains" },
   { href: "/leaderboards", label: "Leaderboards" },
   { href: "/impact", label: "Impact" },
   { href: "/activity", label: "Activity" },

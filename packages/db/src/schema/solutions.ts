@@ -66,6 +66,9 @@ export const solutions = pgTable(
     status: solutionStatusEnum("status").notNull().default("proposed"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+
+    // Sprint 17: Community Identity & Visible Growth
+    contributorNote: text("contributor_note"),
   },
   (table) => [
     index("solutions_problem_id_idx").on(table.problemId),

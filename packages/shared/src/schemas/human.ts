@@ -73,6 +73,16 @@ export const ProfileCreateSchema = z.object({
     .array(z.string().min(1).max(200))
     .max(20, "Maximum 20 certifications allowed")
     .optional(),
+  // Sprint 17: Community Identity & Visible Growth
+  motivation: z.string().max(500, "Motivation must be at most 500 characters").optional(),
+  primaryDomain: z.enum([
+    "poverty_reduction", "education_access", "healthcare_improvement",
+    "environmental_protection", "food_security", "mental_health_wellbeing",
+    "community_building", "disaster_response", "digital_inclusion",
+    "human_rights", "clean_water_sanitation", "sustainable_energy",
+    "gender_equality", "biodiversity_conservation", "elder_care",
+  ]).optional(),
+  localContext: z.string().max(300, "Local context must be at most 300 characters").optional(),
 });
 
 export const ProfileUpdateSchema = ProfileCreateSchema.partial();

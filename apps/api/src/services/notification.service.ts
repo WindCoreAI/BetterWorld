@@ -23,7 +23,11 @@ type NotificationType =
   | "reply"
   | "connection_request"
   | "connection_accepted"
-  | "follow";
+  | "follow"
+  // Sprint 17: Community Identity & Visible Growth
+  | "feedback"
+  | "milestone_celebration"
+  | "intelligence_report";
 
 interface CreateNotificationParams {
   recipientHumanId: string;

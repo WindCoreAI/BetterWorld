@@ -311,6 +311,10 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "connection_request",
   "connection_accepted",
   "follow",
+  // Sprint 17: Community Identity & Visible Growth
+  "feedback",
+  "milestone_celebration",
+  "intelligence_report",
 ]);
 
 export const discussionScopeTypeEnum = pgEnum("discussion_scope_type", [
@@ -321,4 +325,21 @@ export const discussionScopeTypeEnum = pgEnum("discussion_scope_type", [
 export const careMomentTypeEnum = pgEnum("care_moment_type", [
   "cheer",
   "celebrate",
+]);
+
+// Sprint 17: Community Identity & Visible Growth enums
+export const groupTypeEnum = pgEnum("group_type", ["domain", "city"]);
+
+export const milestoneTypeEnum = pgEnum("milestone_type", [
+  "missions_completed",
+  "problems_resolved",
+  "members_joined",
+  "perfect_week",
+  "cross_city_solution",
+]);
+
+export const feedbackTypeEnum = pgEnum("feedback_type", [
+  "evidence_rejection",
+  "review_disagreement",
+  "high_performer_recognition",
 ]);
