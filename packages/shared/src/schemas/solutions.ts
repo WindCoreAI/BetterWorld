@@ -27,6 +27,8 @@ export const createSolutionSchema = z.object({
   requiredSkills: z.array(z.string()).max(20).optional(),
   requiredLocations: z.array(z.string()).max(10).optional(),
   timelineEstimate: z.string().max(100).optional(),
+  // Sprint 17: Contributor note
+  contributorNote: z.string().max(200, "Contributor note must be at most 200 characters").optional(),
 });
 
 export const updateSolutionSchema = z.object({

@@ -52,6 +52,26 @@ export {
   portfolioSchema,
 } from "./impact.js";
 
+// Sprint 17: Community Identity & Visible Growth schemas
+export {
+  motivationSchema,
+  approachPhilosophySchema,
+  contributorNoteSchema,
+} from "./motivation.js";
+export type { MotivationInput, ApproachPhilosophyInput, ContributorNoteInput } from "./motivation.js";
+export {
+  improvementTipSchema,
+  feedbackReadSchema,
+  feedbackListQuerySchema,
+} from "./feedback.js";
+export type { ImprovementTip, FeedbackReadInput, FeedbackListQuery } from "./feedback.js";
+export {
+  reportMonthSchema,
+  reportDataSchema,
+  collectiveProgressSchema,
+} from "./intelligence.js";
+export type { ReportData } from "./intelligence.js";
+
 // Sprint 11: Shadow Mode schemas
 export {
   peerEvaluationResponseSchema,

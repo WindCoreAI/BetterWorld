@@ -294,6 +294,27 @@ export async function computeConsensus(
       );
     }
 
+    // Sprint 17: Generate feedback after consensus decision (non-blocking)
+    try {
+      const { FeedbackService } = await import("./feedback.service.js");
+      const feedbackService = new FeedbackService(tx as PostgresJsDatabase);
+      await feedbackService.generateFeedback(
+        tx as PostgresJsDatabase,
+        submissionId,
+        submissionType,
+        decision,
+        completedEvals.map((e) => ({
+          validatorId: e.validatorId,
+          decision: e.recommendation || "approve",
+        })),
+      );
+    } catch (err) {
+      logger.warn(
+        { submissionId, error: (err as Error).message },
+        "Failed to generate feedback (non-blocking)",
+      );
+    }
+
     logger.info(
       {
         submissionId,

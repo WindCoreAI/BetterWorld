@@ -15,6 +15,8 @@ export const createProblemSchema = z.object({
   existingSolutions: z.array(z.unknown()).optional(),
   dataSources: z.array(z.unknown()).optional(),
   evidenceLinks: z.array(z.string().url()).max(20).optional(),
+  // Sprint 17: Contributor note
+  contributorNote: z.string().max(200, "Contributor note must be at most 200 characters").optional(),
 });
 
 export const updateProblemSchema = z.object({

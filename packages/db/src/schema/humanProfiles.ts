@@ -10,6 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { problemDomainEnum } from "./enums";
 import { humans } from "./humans";
 
 export const humanProfiles = pgTable(
@@ -40,6 +41,11 @@ export const humanProfiles = pgTable(
     // Optional (15% of profile completeness)
     walletAddress: varchar("wallet_address", { length: 100 }),
     certifications: text("certifications").array(),
+
+    // Sprint 17: Motivation & Narrative fields
+    motivation: text("motivation"), // "What drives you?" (max 500 chars, app-level)
+    primaryDomain: problemDomainEnum("primary_domain"), // Preferred domain
+    localContext: text("local_context"), // "Biggest challenge in your community?" (max 300 chars, app-level)
 
     // Metadata
     metadata: jsonb("metadata").notNull().default({}), // Orientation progress, preferences
@@ -74,5 +80,9 @@ export const humanProfiles = pgTable(
     index("human_profiles_completeness_idx").on(table.profileCompletenessScore),
     // Last active for engagement tracking
     index("human_profiles_last_active_idx").on(table.lastActiveAt),
+    // Sprint 17: Primary domain index
+    index("human_profiles_primary_domain_idx")
+      .on(table.primaryDomain)
+      .where(sql`primary_domain IS NOT NULL`),
   ],
 );

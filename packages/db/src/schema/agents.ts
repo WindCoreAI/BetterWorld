@@ -68,6 +68,9 @@ export const agents = pgTable(
     localReputationScore: decimal("local_reputation_score", { precision: 5, scale: 2 })
       .notNull()
       .default("0"),
+
+    // Sprint 17: Community Identity & Visible Growth
+    approachPhilosophy: text("approach_philosophy"),
   },
   (table) => [
     uniqueIndex("agents_username_idx").on(table.username),

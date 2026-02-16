@@ -5,6 +5,7 @@ import postgres from "postgres";
 
 import { agents } from "./schema/agents";
 import { debates } from "./schema/debates";
+import { groupMilestones } from "./schema/groupMilestones";
 import {
   forbiddenPatterns,
   approvedDomains,
@@ -850,6 +851,57 @@ async function seed() {
     ]);
 
     console.log("  Inserted 2 trust tiers");
+
+    // Sprint 17: Seed group milestones for all 15 domains + 3 cities
+    const domainSlugs = [
+      "poverty_reduction", "education_access", "healthcare_improvement",
+      "environmental_protection", "food_security", "mental_health_wellbeing",
+      "community_building", "disaster_response", "digital_inclusion",
+      "human_rights", "clean_water_sanitation", "sustainable_energy",
+      "gender_equality", "biodiversity_conservation", "elder_care",
+    ];
+    const citySlugs = ["portland", "chicago", "denver"];
+    const milestoneConfig: Record<string, number[]> = {
+      missions_completed: [10, 25, 50, 100, 250],
+      problems_resolved: [5, 10, 25, 50, 100],
+      members_joined: [10, 25, 50, 100],
+      perfect_week: [1, 5, 10, 25],
+      cross_city_solution: [1, 5, 10],
+    };
+
+    const milestoneRows: Array<{
+      groupType: "domain" | "city";
+      groupValue: string;
+      milestoneType: "missions_completed" | "problems_resolved" | "members_joined" | "perfect_week" | "cross_city_solution";
+      targetValue: number;
+      currentValue: number;
+    }> = [];
+
+    for (const slug of [...domainSlugs, ...citySlugs]) {
+      const groupType = domainSlugs.includes(slug) ? "domain" as const : "city" as const;
+      for (const [type, tiers] of Object.entries(milestoneConfig)) {
+        for (const target of tiers) {
+          milestoneRows.push({
+            groupType,
+            groupValue: slug,
+            milestoneType: type as "missions_completed" | "problems_resolved" | "members_joined" | "perfect_week" | "cross_city_solution",
+            targetValue: target,
+            currentValue: 0,
+          });
+        }
+      }
+    }
+
+    // Insert in batches of 100 to avoid query length limits
+    for (let i = 0; i < milestoneRows.length; i += 100) {
+      const batch = milestoneRows.slice(i, i + 100);
+      await tx
+        .insert(groupMilestones)
+        .values(batch)
+        .onConflictDoNothing();
+    }
+
+    console.log(`  Inserted ${milestoneRows.length} group milestones`);
   });
 
   console.log("Seeding complete!");

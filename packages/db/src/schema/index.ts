@@ -61,3 +61,8 @@ export * from "./connections";
 export * from "./discussionThreads";
 export * from "./discussionReplies";
 export * from "./notifications";
+
+// Sprint 17: Community Identity & Visible Growth schemas
+export * from "./groupMilestones";
+export * from "./reviewFeedback";
+export * from "./intelligenceReports";

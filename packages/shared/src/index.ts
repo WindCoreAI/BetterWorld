@@ -311,6 +311,44 @@ export type {
   SubmitEvidenceReviewInput,
 } from "./types/phase3.js";
 
+// Sprint 16: Social Fabric Foundation types
+export {
+  SUPPORTED_CITIES,
+  SUPPORTED_CITY_MAP,
+} from "./constants/cities.js";
+export type { SupportedCity } from "./constants/cities.js";
+
+// Sprint 17: Community Identity & Visible Growth
+export {
+  APPROVED_DOMAIN_NAMES,
+} from "./constants/approved-domains.js";
+export type { ApprovedDomainKey } from "./constants/approved-domains.js";
+export {
+  MILESTONE_TYPES,
+  MILESTONE_THRESHOLDS,
+  MILESTONE_LABELS,
+} from "./constants/milestones.js";
+export {
+  motivationSchema,
+  approachPhilosophySchema,
+  contributorNoteSchema,
+  improvementTipSchema,
+  feedbackReadSchema,
+  feedbackListQuerySchema,
+  reportMonthSchema,
+  reportDataSchema,
+  collectiveProgressSchema,
+} from "./schemas/index.js";
+export type {
+  MotivationInput,
+  ApproachPhilosophyInput,
+  ContributorNoteInput,
+  ImprovementTip,
+  FeedbackReadInput,
+  FeedbackListQuery,
+  ReportData,
+} from "./schemas/index.js";
+
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";
 export type { EnvConfig } from "./config.js";
