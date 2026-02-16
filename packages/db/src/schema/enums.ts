@@ -62,6 +62,9 @@ export const contentTypeEnum = pgEnum("content_type", [
   "solution",
   "debate",
   "mission",
+  // Sprint 16: Discussion content types for guardrail routing
+  "discussion_thread",
+  "discussion_reply",
 ]);
 
 export const guardrailDecisionEnum = pgEnum("guardrail_decision", [
@@ -129,6 +132,9 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "spend_circle",
   "spend_analytics",
   "spend_custom",
+  // Sprint 16: Social Fabric care moment gifts
+  "spend_cheer",
+  "spend_celebrate",
 ]);
 
 // Sprint 8: Evidence verification enums
@@ -286,4 +292,33 @@ export const rateDirectionEnum = pgEnum("rate_direction", [
   "increase",
   "decrease",
   "none",
+]);
+
+// Sprint 16: Social Fabric Foundation enums
+export const connectionStatusEnum = pgEnum("connection_status", [
+  "pending",
+  "accepted",
+  "declined",
+]);
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "streak_warning",
+  "milestone",
+  "cheer",
+  "celebration",
+  "comeback",
+  "reply",
+  "connection_request",
+  "connection_accepted",
+  "follow",
+]);
+
+export const discussionScopeTypeEnum = pgEnum("discussion_scope_type", [
+  "domain",
+  "city",
+]);
+
+export const careMomentTypeEnum = pgEnum("care_moment_type", [
+  "cheer",
+  "celebrate",
 ]);

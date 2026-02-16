@@ -342,18 +342,21 @@ The agent-to-agent messaging system (AES-256-GCM encrypted) exists but is scoped
 
 ## Synthesis: Scorecard
 
-| # | Social Suite Trait | BetterWorld Strength | Grade | Notes |
-|---|---|---|---|---|
-| 1 | Individual Identity | Strong foundation, functionally rich | **B+** | Needs more personal narrative and distinctive voice |
-| 2 | Care Bonds (Love) | Minimal | **D** | Largest gap; no lasting interpersonal bonds |
-| 3 | Friendship | Structurally prevented | **D+** | Fraud prevention actively routes away from repeated interaction |
-| 4 | Social Networks | Powerful backend, invisible frontend | **C** | Network intelligence exists but participants can't see or use it |
-| 5 | Cooperation | Exceptional | **A** | Core design strength; credit economy, peer validation, debate |
-| 6 | In-Group Preference | Good categories, weak emotional belonging | **B-** | Domains and cities exist but lack felt group identity |
-| 7 | Mild Hierarchy | Excellent | **A** | Progressive tiers, transparent, functional, bounded |
-| 8 | Social Learning | Good implicit, weak explicit | **B** | Platform learns; participants don't experience learning |
+| # | Social Suite Trait | BetterWorld Strength | Pre-Spec 1 Grade | Post-Spec 1 Grade | Notes |
+|---|---|---|---|---|---|
+| 1 | Individual Identity | Strong foundation, functionally rich | **B+** | **B+** | Needs more personal narrative and distinctive voice (Spec 2) |
+| 2 | Care Bonds (Love) | Follow system + care moments + token gifts | **D** | **C+** | Follow system, streak cheers, milestone celebrations, comeback welcome. Still needs mentorship + buddies (Spec 3) |
+| 3 | Friendship | Connection graph + discussion spaces | **D+** | **B-** | Mutual connections, suggestion algorithm, domain/city discussions with guardrails. Still needs circle enrichment (Spec 3) |
+| 4 | Social Networks | Network dashboard + ripple effect | **C** | **B** | Personal network view, interaction history, impact chain visualization. Still needs personalized feed (Spec 3) |
+| 5 | Cooperation | Exceptional | **A** | **A** | Core design strength; credit economy, peer validation, debate |
+| 6 | In-Group Preference | Domain/city discussion boards | **B-** | **B** | Discussion spaces create community interaction. Still needs domain pages + city chapters (Spec 2) |
+| 7 | Mild Hierarchy | Excellent | **A** | **A** | Progressive tiers, transparent, functional, bounded |
+| 8 | Social Learning | Good implicit, weak explicit | **B** | **B** | Platform learns; participants don't experience learning (Spec 2) |
 
-**Overall: B- (Strong institutional design, weak social fabric)**
+**Pre-Spec 1: B- (Strong institutional design, weak social fabric)**
+**Post-Spec 1: B+ (Social fabric foundation established, community features emerging)**
+
+> **Update 2026-02-16**: Sprint 16 (Social Fabric Foundation) delivered Spec 1 from the implementation roadmap. The three most critical gaps (Care Bonds, Friendship, Social Networks) have been addressed with foundational infrastructure. Specs 2 and 3 will further strengthen these and the remaining traits.
 
 ---
 

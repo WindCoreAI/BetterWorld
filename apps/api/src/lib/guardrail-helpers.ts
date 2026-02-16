@@ -10,6 +10,8 @@ export interface EnqueueParams {
   contentType: ContentType;
   content: string;
   agentId: string;
+  /** For discussion content: the human author ID (no agentId) */
+  humanAuthorId?: string;
 }
 
 // Type alias for database or transaction object
@@ -25,7 +27,7 @@ export async function enqueueForEvaluation(
   db: DbOrTransaction,
   params: EnqueueParams,
 ): Promise<string> {
-  const { contentId, contentType, content, agentId } = params;
+  const { contentId, contentType, content, agentId, humanAuthorId } = params;
 
   const rows = await db
     .insert(guardrailEvaluations)
@@ -52,6 +54,7 @@ export async function enqueueForEvaluation(
     content,
     agentId,
     trustTier: "new",
+    ...(humanAuthorId ? { humanAuthorId } : {}),
   };
 
   const queue = getGuardrailEvaluationQueue();

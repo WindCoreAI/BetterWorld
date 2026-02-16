@@ -20,6 +20,9 @@ export const QUEUE_NAMES = {
   PRIVACY_PROCESSING: "privacy-processing",
   // Sprint 13: Phase 3 Integration
   PATTERN_AGGREGATION: "pattern-aggregation",
+  // Sprint 16: Social Fabric Foundation
+  CARE_MOMENTS: "care-moments",
+  NOTIFICATION_RETENTION: "notification-retention",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

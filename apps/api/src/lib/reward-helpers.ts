@@ -4,10 +4,14 @@
  * Double-entry accounting with SELECT FOR UPDATE and idempotency keys.
  */
 
-import { evidence, humans, tokenTransactions, missions } from "@betterworld/db";
+import { evidence, humans, humanProfiles, tokenTransactions, missions } from "@betterworld/db";
+import { QUEUE_NAMES } from "@betterworld/shared";
+import { Queue } from "bullmq";
 import { eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import pino from "pino";
+
+import { getRedis } from "./container.js";
 
 const logger = pino({ name: "reward-helpers" });
 
@@ -112,8 +116,55 @@ export async function distributeEvidenceReward(
       .where(eq(evidence.id, evidenceId));
 
     logger.info({ evidenceId, rewardAmount, humanId: evidenceRow.submittedByHumanId }, "Evidence reward distributed");
+
+    // Sprint 16: Check mission count milestones and emit care-moment event
+    try {
+      await checkMissionMilestone(tx, evidenceRow.submittedByHumanId);
+    } catch (milestoneErr) {
+      // Non-fatal: milestone check should not break reward distribution
+      logger.warn({ error: (milestoneErr as Error).message }, "Milestone check failed");
+    }
+
     return { rewardAmount, transactionId: txn!.id };
   });
+}
+
+/**
+ * Sprint 16: Check if a human has hit a mission count milestone (10, 25, 50, 100)
+ * and emit a milestone event to the care-moment worker.
+ */
+async function checkMissionMilestone(
+  db: PostgresJsDatabase,
+  humanId: string,
+): Promise<void> {
+  const [profile] = await db
+    .select({ totalMissionsCompleted: humanProfiles.totalMissionsCompleted })
+    .from(humanProfiles)
+    .where(eq(humanProfiles.humanId, humanId))
+    .limit(1);
+
+  if (!profile) return;
+
+  const milestones = [10, 25, 50, 100];
+  const missionCount = profile.totalMissionsCompleted;
+
+  if (milestones.includes(missionCount)) {
+    try {
+      const redis = getRedis();
+      if (redis) {
+        const queue = new Queue(QUEUE_NAMES.CARE_MOMENTS, { connection: redis });
+        await queue.add("milestone-notification", {
+          type: "milestone_notification",
+          humanId,
+          milestoneType: "mission_count",
+          milestoneValue: String(missionCount),
+        });
+        await queue.close();
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
 }
 
 /**

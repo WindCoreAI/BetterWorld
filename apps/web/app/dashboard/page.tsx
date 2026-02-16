@@ -13,6 +13,8 @@ import {
   RecentActivityCard,
   TokenBalanceCard,
 } from "../../src/components/dashboard/DashboardCards";
+import { ImpactRippleCard } from "../../src/components/dashboard/ImpactRippleCard";
+import { YourNetworkCard } from "../../src/components/dashboard/YourNetworkCard";
 import { ReputationScore } from "../../src/components/reputation/ReputationScore";
 import { TierBadge } from "../../src/components/reputation/TierBadge";
 import { TierProgress } from "../../src/components/reputation/TierProgress";
@@ -216,6 +218,9 @@ export default function DashboardPage() {
           {dashboard.peerReviews && (
             <PeerReviewsCard peerReviews={dashboard.peerReviews} />
           )}
+          {/* Sprint 16: Social Fabric cards */}
+          <YourNetworkCard />
+          <ImpactRippleCard />
         </div>
       </div>
     </main>

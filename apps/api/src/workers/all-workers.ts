@@ -32,6 +32,8 @@ async function main() {
   const { createPatternAggregationWorker } = await import("./pattern-aggregation-worker.js");
   const { createRateAdjustmentWorker } = await import("./rate-adjustment-worker.js");
   const { createTokenReconciliationWorker } = await import("./token-reconciliation.js");
+  const { createCareMomentWorker } = await import("./care-moment-worker.js");
+  const { createNotificationRetentionWorker } = await import("./notification-retention-worker.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -54,6 +56,9 @@ async function main() {
     { name: "rate-adjustment", create: createRateAdjustmentWorker },
     // P0-D2: Token balance reconciliation (hourly)
     { name: "token-reconciliation", create: createTokenReconciliationWorker },
+    // Sprint 16: Social Fabric Foundation
+    { name: "care-moments", create: createCareMomentWorker },
+    { name: "notification-retention", create: createNotificationRetentionWorker },
   ];
 
   for (const { name, create } of workers) {

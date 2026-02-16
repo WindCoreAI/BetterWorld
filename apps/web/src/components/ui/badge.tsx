@@ -1,6 +1,6 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 
-type BadgeVariant = "domain" | "difficulty" | "status" | "reputation";
+export type BadgeVariant = "domain" | "difficulty" | "status" | "reputation" | "secondary";
 type BadgeSize = "sm" | "md" | "lg";
 type DifficultyLevel = "easy" | "medium" | "hard" | "expert";
 type StatusLevel = "pending" | "approved" | "rejected" | "flagged";
@@ -43,6 +43,8 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       variantClass = statusClasses[status];
     } else if (variant === "reputation") {
       variantClass = "bg-gradient-to-r from-terracotta/10 to-terracotta/20 text-terracotta-dark";
+    } else if (variant === "secondary") {
+      variantClass = "bg-charcoal/10 text-charcoal-light";
     }
 
     return (

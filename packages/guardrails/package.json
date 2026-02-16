@@ -2,6 +2,7 @@
   "name": "@betterworld/guardrails",
   "version": "1.0.0",
   "description": "Constitutional guardrails package - 3-layer content evaluation pipeline",
+  "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {

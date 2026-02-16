@@ -207,3 +207,149 @@ export const dashboardApi = {
     return humanFetch("/dashboard");
   },
 };
+
+// ── Sprint 16: Social Fabric API ──
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Any = any;
+
+export const followsApi = {
+  async follow(humanId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/follows/${humanId}`, { method: "POST" });
+  },
+  async unfollow(humanId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/follows/${humanId}`, { method: "DELETE" });
+  },
+  async getFollowing(cursor?: string, limit = 20): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    return humanFetch(`/follows/following?${params}`);
+  },
+  async getFollowers(cursor?: string, limit = 20): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    return humanFetch(`/follows/followers?${params}`);
+  },
+  async getStatus(humanId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/follows/status/${humanId}`);
+  },
+  async getCounts(humanId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/follows/counts/${humanId}`);
+  },
+};
+
+export const connectionsApi = {
+  async sendRequest(humanId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/connections/${humanId}`, { method: "POST" });
+  },
+  async accept(connectionId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/connections/${connectionId}/accept`, { method: "POST" });
+  },
+  async decline(connectionId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/connections/${connectionId}/decline`, { method: "POST" });
+  },
+  async remove(connectionId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/connections/${connectionId}`, { method: "DELETE" });
+  },
+  async list(cursor?: string, limit = 20, domain?: string): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    if (domain) params.set("domain", domain);
+    return humanFetch(`/connections?${params}`);
+  },
+  async listPending(cursor?: string, limit = 20): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    return humanFetch(`/connections/pending?${params}`);
+  },
+  async getSuggestions(): Promise<ApiResponse<Any>> {
+    return humanFetch("/connections/suggestions");
+  },
+  async getStatus(humanId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/connections/status/${humanId}`);
+  },
+};
+
+export const discussionsApi = {
+  async createThread(data: { scopeType: string; scopeValue: string; title: string; content: string }): Promise<ApiResponse<Any>> {
+    return humanFetch("/discussions/threads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+  async listThreads(scopeType: string, scopeValue: string, cursor?: string, limit = 20, sort = "activity"): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ scopeType, scopeValue, limit: String(limit), sort });
+    if (cursor) params.set("cursor", cursor);
+    return humanFetch(`/discussions/threads?${params}`);
+  },
+  async getThread(threadId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/discussions/threads/${threadId}`);
+  },
+  async createReply(threadId: string, content: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/discussions/threads/${threadId}/replies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+  },
+  async listReplies(threadId: string, cursor?: string, limit = 50): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    return humanFetch(`/discussions/threads/${threadId}/replies?${params}`);
+  },
+};
+
+export const notificationsApi = {
+  async list(cursor?: string, limit = 20, unreadOnly = false, type?: string): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    if (unreadOnly) params.set("unreadOnly", "true");
+    if (type) params.set("type", type);
+    return humanFetch(`/notifications?${params}`);
+  },
+  async getUnreadCount(): Promise<ApiResponse<Any>> {
+    return humanFetch("/notifications/unread-count");
+  },
+  async markRead(notificationId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/notifications/${notificationId}/read`, { method: "PATCH" });
+  },
+  async markAllRead(): Promise<ApiResponse<Any>> {
+    return humanFetch("/notifications/read-all", { method: "POST" });
+  },
+};
+
+export const networkApi = {
+  async getSummary(): Promise<ApiResponse<Any>> {
+    return humanFetch("/network/me");
+  },
+  async getInteractionHistory(partnerId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/network/me/interactions?partnerId=${partnerId}`);
+  },
+};
+
+export const careApi = {
+  async sendCheer(data: { targetHumanId: string; notificationId?: string; includeGift?: boolean }): Promise<ApiResponse<Any>> {
+    return humanFetch("/care/cheer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+  async sendCelebrate(data: { targetHumanId: string; milestoneType: string; notificationId?: string; includeGift?: boolean }): Promise<ApiResponse<Any>> {
+    return humanFetch("/care/celebrate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+export const impactApi = {
+  async getChain(problemId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/impact/chain/${problemId}`);
+  },
+  async getMyRipple(): Promise<ApiResponse<Any>> {
+    return humanFetch("/impact/my-ripple");
+  },
+};

@@ -54,3 +54,10 @@ export * from "./economicHealthSnapshots";
 // Sprint 13: Phase 3 Integration schemas
 export * from "./rateAdjustments";
 export * from "./evidenceReviews";
+
+// Sprint 16: Social Fabric Foundation schemas
+export * from "./follows";
+export * from "./connections";
+export * from "./discussionThreads";
+export * from "./discussionReplies";
+export * from "./notifications";

@@ -1,6 +1,7 @@
 "use client";
 
 import { TierBadge } from "../reputation/TierBadge";
+import { FollowButton } from "../social/FollowButton";
 
 interface LeaderboardEntry {
   rank: number;
@@ -41,6 +42,7 @@ export function LeaderboardTable({ entries, type, loading }: LeaderboardTablePro
             <th className="text-left py-3 px-4">Human</th>
             <th className="text-right py-3 px-4">Score</th>
             {type === "reputation" && <th className="text-right py-3 px-4">Tier</th>}
+            <th className="text-right py-3 px-4 w-24"></th>
           </tr>
         </thead>
         <tbody>
@@ -65,6 +67,9 @@ export function LeaderboardTable({ entries, type, loading }: LeaderboardTablePro
                   {entry.tier && <TierBadge tier={entry.tier} size="sm" />}
                 </td>
               )}
+              <td className="py-3 px-4 text-right">
+                <FollowButton targetHumanId={entry.humanId} compact />
+              </td>
             </tr>
           ))}
         </tbody>

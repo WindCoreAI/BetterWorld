@@ -122,4 +122,5 @@ export interface ApiResponse<T> {
   data?: T;
   error?: { code: string; message: string };
   requestId: string;
+  meta?: { hasMore: boolean; nextCursor: string | null; count: number };
 }

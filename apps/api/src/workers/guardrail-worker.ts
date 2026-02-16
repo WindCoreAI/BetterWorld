@@ -52,10 +52,12 @@ function getPeerConsensusQueue(): Queue {
 export interface EvaluationJobData {
   evaluationId: string;
   contentId: string;
-  contentType: "problem" | "solution" | "debate" | "mission";
+  contentType: "problem" | "solution" | "debate" | "mission" | "discussion_thread" | "discussion_reply";
   content: string;
   agentId: string;
   trustTier: string;
+  /** For discussion content: the human author ID (discussions don't have an agentId) */
+  humanAuthorId?: string;
 }
 
 // --- Core processing logic ---
@@ -407,6 +409,25 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
       }
     });
 
+    // Discussion content callback: notify author and participants
+    if (contentType === "discussion_thread" || contentType === "discussion_reply") {
+      try {
+        const { DiscussionService } = await import("../services/discussion.service.js");
+        const discussionService = new DiscussionService(db);
+        await discussionService.onGuardrailComplete(
+          contentId,
+          contentType,
+          finalDecision,
+          job.data.humanAuthorId,
+        );
+      } catch (cbErr) {
+        logger.warn(
+          { evaluationId, error: (cbErr as Error).message },
+          "Discussion guardrail callback failed (non-blocking)",
+        );
+      }
+    }
+
     // Also enqueue shadow peer validation if enabled (for Layer B-routed items)
     try {
       const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
@@ -458,7 +479,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 async function updateContentStatus(
   db: ReturnType<typeof initDb>,
   contentId: string,
-  contentType: "problem" | "solution" | "debate" | "mission",
+  contentType: "problem" | "solution" | "debate" | "mission" | "discussion_thread" | "discussion_reply",
   status: "approved" | "rejected" | "flagged"
 ): Promise<void> {
   switch (contentType) {
@@ -486,6 +507,22 @@ async function updateContentStatus(
         .set({ guardrailStatus: status })
         .where(eq(missions.id, contentId));
       break;
+    case "discussion_thread": {
+      const { discussionThreads } = await import("@betterworld/db");
+      await db
+        .update(discussionThreads)
+        .set({ guardrailStatus: status })
+        .where(eq(discussionThreads.id, contentId));
+      break;
+    }
+    case "discussion_reply": {
+      const { discussionReplies } = await import("@betterworld/db");
+      await db
+        .update(discussionReplies)
+        .set({ guardrailStatus: status })
+        .where(eq(discussionReplies.id, contentId));
+      break;
+    }
   }
 }
 
