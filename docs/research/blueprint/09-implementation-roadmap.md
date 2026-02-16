@@ -1,7 +1,7 @@
 # Blueprint Implementation Roadmap
 
 > **Date**: 2026-02-15
-> **Last Updated**: 2026-02-16 (Spec 1 complete)
+> **Last Updated**: 2026-02-16 (Spec 1 + Spec 2 complete)
 > **Source**: Blueprint Deep-Dive Documents 01-08
 > **Purpose**: Development plan to raise BetterWorld's Social Suite score from B- to A-
 
@@ -9,18 +9,18 @@
 
 ## Current State
 
-| # | Trait | Grade (Pre-Spec 1) | Post-Spec 1 | Target | Gap Severity |
-|---|-------|---------------------|-------------|--------|-------------|
-| 1 | Individual Identity | B+ | B+ | A | Low |
-| 2 | Care Bonds | D | C+ | B | Medium (was Critical) |
-| 3 | Friendship | D+ | B- | B+ | Low (was Critical) |
-| 4 | Social Networks | C | B | A- | Medium (was High) |
-| 5 | Cooperation | A | A | A+ | Low |
-| 6 | In-Group Preference | B- | B | A- | Medium |
-| 7 | Mild Hierarchy | A | A | A+ | Low |
-| 8 | Social Learning | B | B | A | Medium |
+| # | Trait | Grade (Pre-Spec 1) | Post-Spec 1 | Post-Spec 2 | Target | Gap Severity |
+|---|-------|---------------------|-------------|-------------|--------|-------------|
+| 1 | Individual Identity | B+ | B+ | A- | A | Low |
+| 2 | Care Bonds | D | C+ | C+ | B | Medium (was Critical) |
+| 3 | Friendship | D+ | B- | B- | B+ | Low (was Critical) |
+| 4 | Social Networks | C | B | B | A- | Medium (was High) |
+| 5 | Cooperation | A | A | A | A+ | Low |
+| 6 | In-Group Preference | B- | B | A- | A- | Low (was Medium) |
+| 7 | Mild Hierarchy | A | A | A | A+ | Low |
+| 8 | Social Learning | B | B | B+ | A | Low (was Medium) |
 
-**Overall: B- → Post-Spec 1: B+ → Target: A-**
+**Overall: B- → Post-Spec 1: B+ → Post-Spec 2: A- → Target: A-**
 
 ### Spec 1 Grade Impact Notes
 
@@ -28,6 +28,12 @@
 - **Friendship (D+ → B-)**: Connection graph with suggestions algorithm, low-stakes discussion spaces (domain + city boards), mutual connection model with shared history. Still needs circle enrichment and mission buddies (Spec 3) for B+.
 - **Social Networks (C → B)**: Personal network dashboard, interaction history, contribution ripple effect visualization, connection/follower counts on profiles. Still needs personalized feed and people discovery (Spec 3) for A-.
 - **In-Group Preference (B- → B)**: City and domain discussion boards create community interaction spaces. Still needs domain community pages, city chapters, and group milestones (Spec 2) for A-.
+
+### Spec 2 Grade Impact Notes
+
+- **Individual Identity (B+ → A-)**: Motivation fields, primaryDomain, localContext, contributorNote on profiles/content; approachPhilosophy for agents; identity-rich content cards with tier/specializations/streak; growth journey dashboard. Still needs agent fingerprint computation and full narrative visibility (Spec 3) for A.
+- **In-Group Preference (B → A-)**: Domain community pages (15 domains with metrics, contributors, highlights), city chapter identity (3 cities with taglines, chapter metrics, heatmap), group milestones (5 types with celebrations, 7-day banners, member notifications). Still needs cross-group challenges and welcome ambassadors (Spec 3) for A.
+- **Social Learning (B → B+)**: Skill progression dashboard (90-day trend, tier progress, domain expertise, auto-generated goals), review feedback loop (consensus-triggered feedback with improvement tips), visible community intelligence (monthly reports with domain trends, collective progress). Still needs learning pathways and case study library (Spec 3) for A.
 
 ---
 
@@ -182,17 +188,31 @@ contribution ripple ──→ standalone (uses existing problem/solution/mission
 
 ---
 
-## Spec 2: Community Identity & Visible Growth
+## Spec 2: Community Identity & Visible Growth — COMPLETE
 
+> **Status**: **COMPLETE** (Sprint 17, 2026-02-16) — 76 tasks, 8/8 user stories, 1484 tests passing
+> **Branch**: `017-community-identity-growth`
 > **Traits**: 6 (In-Group Preference) + 8 (Social Learning) + 1 (Individual Identity)
 > **Priority**: High — addresses the "emotional home" and "visible learning" gaps
-> **Estimated scope**: 50-60 tasks, ~2-3 weeks
+> **Actual scope**: 76 tasks across 11 phases
 > **Assessment Priority**: #2 + #3 + #4
 > **Depends on**: Spec 1 (domain discussions + city boards integrated into community pages)
 
 ### Objective
 
 Give domains and cities emotional identity (not just functional categories), make participant growth visible and celebrated, and deepen individual identity expression.
+
+### What Was Delivered
+
+- **3 DB tables**: group_milestones, review_feedback, intelligence_reports (migration 0016_community_identity_growth)
+- **7 services**: domain-community, city-chapter, growth-journey, feedback, contributor-metadata, intelligence, consensus engine hook
+- **6 route groups**: domains, cities/chapter, milestones, growth, feedback, intelligence
+- **2 BullMQ workers**: milestone-detection (daily 4AM UTC), intelligence-report (monthly 1st 5AM UTC)
+- **13 frontend components**: DomainCard, DomainMetrics, DomainContributors, DomainHighlights, MilestoneBanner, MilestoneTimeline, ReputationTrend, SkillMetrics, DomainExpertise, NextGoals, FeedbackList, ContributorIdentity, CommunityIntelligence
+- **4 pages**: domain directory, domain community, growth dashboard, feedback inbox
+- **4 React Query hooks**: useDomainCommunity, useGrowthJourney, useFeedback, useIntelligence
+- **55 new tests** (7 test files): 42 API + 13 frontend
+- **1484 total tests passing** (up from 1429)
 
 ### Core Deliverables
 
@@ -510,14 +530,14 @@ Week 0       Quick Wins PR (soulSummary, ActivityFeed badges, public cross-city)
 2026-02-16   ✅ Spec 1: Social Fabric Foundation — COMPLETE (85 tasks, 1429 tests)
              (follows, connections, discussions, network view, care moments, ripple effect)
              ↓
-Next         Spec 2: Community Identity & Visible Growth
+2026-02-16   ✅ Spec 2: Community Identity & Visible Growth — COMPLETE (76 tasks, 1484 tests)
              (domain pages, city chapters, milestones, skill dashboard, feedback, identity cards)
              ↓
-After Spec 2 Spec 3: Cooperative Depth & Governance
+Next         Spec 3: Cooperative Depth & Governance
              (mentorship, buddies, help system, moderators, human agency, pathways, case studies)
 ```
 
-**Progress**: Spec 1 complete (85 tasks). ~100-120 tasks remaining across Specs 2-3.
+**Progress**: Specs 1 + 2 complete (161 tasks). ~50-60 tasks remaining for Spec 3.
 
 ---
 

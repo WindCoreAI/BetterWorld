@@ -69,14 +69,14 @@
 
 ### Implementation
 
-- [ ] T019 [P] [US1] Create `domain-community.service.ts` — aggregate member count (primaryDomain OR 3+ missions), missions completed, problems resolved, active missions, total solutions; top contributors (JOIN humans/agents with reputationHistory, ORDER BY score, LIMIT param); monthly highlights (current month aggregation); Redis 5-min cache per domain slug — in `apps/api/src/services/domain-community.service.ts`
-- [ ] T020 [US1] Create domain routes — `GET /domains` (list all 15 with basic metrics) and `GET /domains/:slug` (full community page data with metrics, topContributors, monthlyHighlights, activeMilestones, recentMilestones, intelligence) with Zod validation and standard envelope. No auth middleware — these are public read endpoints per FR-003. Domain discussions and interactions require auth but are handled by existing Sprint 16 discussion system — in `apps/api/src/routes/domains/index.ts`
-- [ ] T021 [P] [US1] Create `useDomainCommunity` React Query hook for domain list and domain detail endpoints in `apps/web/src/hooks/useDomainCommunity.ts`
-- [ ] T022 [P] [US1] Create `DomainCard` component (domain name, color, icon, member count, missions, problems; links to domain page) in `apps/web/src/components/domains/DomainCard.tsx`
-- [ ] T023 [P] [US1] Create `DomainMetrics`, `DomainContributors`, and `DomainHighlights` components (metrics panel with counts, top contributors list with TierBadge/StreakCounter, monthly highlights summary) in `apps/web/src/components/domains/`
-- [ ] T024 [US1] Create domain directory page — grid of all 15 DomainCards with domain colors/icons, browsable from main nav — in `apps/web/app/domains/page.tsx`
-- [ ] T025 [US1] Create domain community page — domain header with color/icon, DomainMetrics, DomainContributors, DomainHighlights, existing ThreadList for domain discussions (scopeType='domain'), existing leaderboard for domain (verify existing leaderboard endpoint supports domain filter param; if not, add domain parameter to leaderboard route), zero-state messaging for inactive domains — in `apps/web/app/domains/[slug]/page.tsx`
-- [ ] T026 [US1] Add domain navigation links (link to `/domains` directory) in `apps/web/src/components/Navigation.tsx`
+- [X] T019 [P] [US1] Create `domain-community.service.ts` — aggregate member count (primaryDomain OR 3+ missions), missions completed, problems resolved, active missions, total solutions; top contributors (JOIN humans/agents with reputationHistory, ORDER BY score, LIMIT param); monthly highlights (current month aggregation); Redis 5-min cache per domain slug — in `apps/api/src/services/domain-community.service.ts`
+- [X] T020 [US1] Create domain routes — `GET /domains` (list all 15 with basic metrics) and `GET /domains/:slug` (full community page data with metrics, topContributors, monthlyHighlights, activeMilestones, recentMilestones, intelligence) with Zod validation and standard envelope. No auth middleware — these are public read endpoints per FR-003. Domain discussions and interactions require auth but are handled by existing Sprint 16 discussion system — in `apps/api/src/routes/domains/index.ts`
+- [X] T021 [P] [US1] Create `useDomainCommunity` React Query hook for domain list and domain detail endpoints in `apps/web/src/hooks/useDomainCommunity.ts`
+- [X] T022 [P] [US1] Create `DomainCard` component (domain name, color, icon, member count, missions, problems; links to domain page) in `apps/web/src/components/domains/DomainCard.tsx`
+- [X] T023 [P] [US1] Create `DomainMetrics`, `DomainContributors`, and `DomainHighlights` components (metrics panel with counts, top contributors list with TierBadge/StreakCounter, monthly highlights summary) in `apps/web/src/components/domains/`
+- [X] T024 [US1] Create domain directory page — grid of all 15 DomainCards with domain colors/icons, browsable from main nav — in `apps/web/app/domains/page.tsx`
+- [X] T025 [US1] Create domain community page — domain header with color/icon, DomainMetrics, DomainContributors, DomainHighlights, existing ThreadList for domain discussions (scopeType='domain'), existing leaderboard for domain (verify existing leaderboard endpoint supports domain filter param; if not, add domain parameter to leaderboard route), zero-state messaging for inactive domains — in `apps/web/app/domains/[slug]/page.tsx`
+- [X] T026 [US1] Add domain navigation links (link to `/domains` directory) in `apps/web/src/components/Navigation.tsx`
 
 **Checkpoint**: Domain community pages fully functional — users can browse all 15 domains and view community data
 
@@ -92,9 +92,9 @@
 
 ### Implementation
 
-- [ ] T027 [P] [US2] Create `city-chapter.service.ts` — aggregate chapter metrics (totalProblems, totalObservations, activeLocalValidators, missionsCompleted, activeParticipants), heatmap data (existing pattern), milestones for city group, Redis 5-min cache per city slug — in `apps/api/src/services/city-chapter.service.ts`
-- [ ] T028 [US2] Create city chapter route — `GET /cities/:citySlug/chapter` with city slug validation against config, standard envelope, 404 for unknown cities — in `apps/api/src/routes/cities/chapter.ts`
-- [ ] T029 [US2] Enhance city page with chapter identity sections — add tagline display from city config, chapter milestones timeline, city discussion board (ThreadList with scopeType='city'), integrate existing CityHeatmap — in `apps/web/app/city/[city]/page.tsx`
+- [X] T027 [P] [US2] Create `city-chapter.service.ts` — aggregate chapter metrics (totalProblems, totalObservations, activeLocalValidators, missionsCompleted, activeParticipants), heatmap data (existing pattern), milestones for city group, Redis 5-min cache per city slug — in `apps/api/src/services/city-chapter.service.ts`
+- [X] T028 [US2] Create city chapter route — `GET /cities/:citySlug/chapter` with city slug validation against config, standard envelope, 404 for unknown cities — in `apps/api/src/routes/cities/chapter.ts`
+- [X] T029 [US2] Enhance city page with chapter identity sections — add tagline display from city config, chapter milestones timeline, city discussion board (ThreadList with scopeType='city'), integrate existing CityHeatmap — in `apps/web/app/city/[city]/page.tsx`
 
 **Checkpoint**: City chapter pages have community identity — tagline, milestones, discussions alongside existing metrics/heatmap
 
@@ -110,12 +110,12 @@
 
 ### Implementation
 
-- [ ] T030 [P] [US3] Create milestone detection worker — daily cron 4 AM UTC, for each domain + city: count current metrics (missions completed, problems resolved, members joined, perfect weeks using rolling 7-day window from scan date, cross-city solutions), compare against unfilled milestones, set reachedAt + bannerExpiresAt on threshold. On milestone reached: create milestone_celebration notifications filtered to members who had qualifying activity (mission completion, evidence submission, peer review, or discussion thread/reply) within 30 days before milestone date. If multiple milestones reached in single run, leverage existing Sprint 16 notification aggregation. Per-item error isolation — in `apps/api/src/workers/milestone-detection-worker.ts`
-- [ ] T031 [P] [US3] Create milestones route — `GET /milestones` with required query params (groupType: 'domain'|'city', groupValue: string) and optional status filter ('reached'|'unreached'|'all'), compute bannerActive from bannerExpiresAt > now(), standard envelope — in `apps/api/src/routes/milestones/index.ts`
-- [ ] T032 [US3] Register `milestone-detection-worker` via dynamic import in `apps/api/src/workers/all-workers.ts`
-- [ ] T033 [P] [US3] Create `MilestoneBanner` component — celebration banner for recently reached milestones (shows milestone type, target achieved, days remaining), auto-hides after banner period — in `apps/web/src/components/milestones/MilestoneBanner.tsx`
-- [ ] T034 [P] [US3] Create `MilestoneTimeline` component — vertical timeline of reached and upcoming milestones with progress bars, reached dates, active member recognition — in `apps/web/src/components/milestones/MilestoneTimeline.tsx`
-- [ ] T035 [US3] Integrate MilestoneBanner (top of page, visible during banner period) and MilestoneTimeline (dedicated section) into domain community page (`apps/web/app/domains/[slug]/page.tsx`) and city chapter page (`apps/web/app/city/[city]/page.tsx`)
+- [X] T030 [P] [US3] Create milestone detection worker — daily cron 4 AM UTC, for each domain + city: count current metrics (missions completed, problems resolved, members joined, perfect weeks using rolling 7-day window from scan date, cross-city solutions), compare against unfilled milestones, set reachedAt + bannerExpiresAt on threshold. On milestone reached: create milestone_celebration notifications filtered to members who had qualifying activity (mission completion, evidence submission, peer review, or discussion thread/reply) within 30 days before milestone date. If multiple milestones reached in single run, leverage existing Sprint 16 notification aggregation. Per-item error isolation — in `apps/api/src/workers/milestone-detection-worker.ts`
+- [X] T031 [P] [US3] Create milestones route — `GET /milestones` with required query params (groupType: 'domain'|'city', groupValue: string) and optional status filter ('reached'|'unreached'|'all'), compute bannerActive from bannerExpiresAt > now(), standard envelope — in `apps/api/src/routes/milestones/index.ts`
+- [X] T032 [US3] Register `milestone-detection-worker` via dynamic import in `apps/api/src/workers/all-workers.ts`
+- [X] T033 [P] [US3] Create `MilestoneBanner` component — celebration banner for recently reached milestones (shows milestone type, target achieved, days remaining), auto-hides after banner period — in `apps/web/src/components/milestones/MilestoneBanner.tsx`
+- [X] T034 [P] [US3] Create `MilestoneTimeline` component — vertical timeline of reached and upcoming milestones with progress bars, reached dates, active member recognition — in `apps/web/src/components/milestones/MilestoneTimeline.tsx`
+- [X] T035 [US3] Integrate MilestoneBanner (top of page, visible during banner period) and MilestoneTimeline (dedicated section) into domain community page (`apps/web/app/domains/[slug]/page.tsx`) and city chapter page (`apps/web/app/city/[city]/page.tsx`)
 
 **Checkpoint**: Group milestones are tracked, celebrated with 7-day banners, and notifications sent to community members
 
@@ -131,11 +131,11 @@
 
 ### Implementation
 
-- [ ] T036 [P] [US4] Create `growth-journey.service.ts` — aggregate reputation trend (90-day from reputationHistory), current tier + next tier progress (from reputation engine getNextTierInfo), skills (evidence quality AVG confidence, review accuracy from peer reviews/consensus, mission completion rate from missionClaims), domain expertise (GROUP BY domain from missions), personal milestones (tier promotions + streak records), auto-generated next goals (closest to: next tier, accuracy target, domain breadth, streak record), Redis 5-min cache per humanId — in `apps/api/src/services/growth-journey.service.ts`
-- [ ] T037 [US4] Create growth route — `GET /growth/me` with humanAuth(), returns full growth journey data per api-contracts.md Section 4, standard envelope — in `apps/api/src/routes/growth/index.ts`
-- [ ] T038 [P] [US4] Create `useGrowthJourney` React Query hook for growth endpoint in `apps/web/src/hooks/useGrowthJourney.ts`
-- [ ] T039 [P] [US4] Create growth components — `ReputationTrend` (90-day line chart), `SkillMetrics` (3 skill cards with current/previous/trend arrow), `DomainExpertise` (domain breakdown with mission counts), `NextGoals` (2-3 auto-generated goal cards with progress bars) — in `apps/web/src/components/growth/`
-- [ ] T040 [US4] Create growth dashboard page — "Your Growth Journey" header, current tier with progress to next, ReputationTrend chart, SkillMetrics cards, DomainExpertise breakdown, personal milestones timeline, NextGoals section, welcome zero-state for new participants — in `apps/web/app/dashboard/growth/page.tsx`
+- [X] T036 [P] [US4] Create `growth-journey.service.ts` — aggregate reputation trend (90-day from reputationHistory), current tier + next tier progress (from reputation engine getNextTierInfo), skills (evidence quality AVG confidence, review accuracy from peer reviews/consensus, mission completion rate from missionClaims), domain expertise (GROUP BY domain from missions), personal milestones (tier promotions + streak records), auto-generated next goals (closest to: next tier, accuracy target, domain breadth, streak record), Redis 5-min cache per humanId — in `apps/api/src/services/growth-journey.service.ts`
+- [X] T037 [US4] Create growth route — `GET /growth/me` with humanAuth(), returns full growth journey data per api-contracts.md Section 4, standard envelope — in `apps/api/src/routes/growth/index.ts`
+- [X] T038 [P] [US4] Create `useGrowthJourney` React Query hook for growth endpoint in `apps/web/src/hooks/useGrowthJourney.ts`
+- [X] T039 [P] [US4] Create growth components — `ReputationTrend` (90-day line chart), `SkillMetrics` (3 skill cards with current/previous/trend arrow), `DomainExpertise` (domain breakdown with mission counts), `NextGoals` (2-3 auto-generated goal cards with progress bars) — in `apps/web/src/components/growth/`
+- [X] T040 [US4] Create growth dashboard page — "Your Growth Journey" header, current tier with progress to next, ReputationTrend chart, SkillMetrics cards, DomainExpertise breakdown, personal milestones timeline, NextGoals section, welcome zero-state for new participants — in `apps/web/app/dashboard/growth/page.tsx`
 
 **Checkpoint**: Participants can view their complete growth journey and understand their progression path
 
@@ -151,12 +151,12 @@
 
 ### Implementation
 
-- [ ] T041 [P] [US5] Create `feedback.service.ts` — generate feedback from consensus decisions (evidence_rejection with improvement tips by rejection reason, review_disagreement explaining gap, high_performer_recognition for 10+ accuracy streak), inbox queries (cursor-paginated, unreadOnly filter, type filter), mark read with ownership check, unread count with Redis 1-min cache — in `apps/api/src/services/feedback.service.ts`
-- [ ] T042 [US5] Create feedback routes — `GET /feedback` (cursor-paginated, humanAuth() or requireAgent(), unreadOnly/type/cursor/limit query params), `PATCH /feedback/:id/read` (ownership check, 403 if not recipient), `GET /feedback/unread-count` — in `apps/api/src/routes/feedback/index.ts`
-- [ ] T043 [US5] Add feedback generation hook to consensus engine post-actions — non-blocking try-catch after consensus decision, call `feedbackService.generateFeedback(tx, submissionId, submissionType, decision, completedEvals)`, also create notification of type `feedback` — in `apps/api/src/services/consensus-engine.ts`
-- [ ] T044 [P] [US5] Create `useFeedback` React Query hook for feedback list, mark-read mutation, and unread count in `apps/web/src/hooks/useFeedback.ts`
-- [ ] T045 [P] [US5] Create `FeedbackList` (inbox list with unread indicator, type filter) and `FeedbackItem` (feedback card with type icon, message, improvement tips, reference link, read/unread state) components in `apps/web/src/components/feedback/`
-- [ ] T046 [US5] Create feedback inbox page — header with unread count badge, FeedbackList with infinite scroll, filter by type, mark-as-read on open, empty state messaging — in `apps/web/app/dashboard/feedback/page.tsx`
+- [X] T041 [P] [US5] Create `feedback.service.ts` — generate feedback from consensus decisions (evidence_rejection with improvement tips by rejection reason, review_disagreement explaining gap, high_performer_recognition for 10+ accuracy streak), inbox queries (cursor-paginated, unreadOnly filter, type filter), mark read with ownership check, unread count with Redis 1-min cache — in `apps/api/src/services/feedback.service.ts`
+- [X] T042 [US5] Create feedback routes — `GET /feedback` (cursor-paginated, humanAuth() or requireAgent(), unreadOnly/type/cursor/limit query params), `PATCH /feedback/:id/read` (ownership check, 403 if not recipient), `GET /feedback/unread-count` — in `apps/api/src/routes/feedback/index.ts`
+- [X] T043 [US5] Add feedback generation hook to consensus engine post-actions — non-blocking try-catch after consensus decision, call `feedbackService.generateFeedback(tx, submissionId, submissionType, decision, completedEvals)`, also create notification of type `feedback` — in `apps/api/src/services/consensus-engine.ts`
+- [X] T044 [P] [US5] Create `useFeedback` React Query hook for feedback list, mark-read mutation, and unread count in `apps/web/src/hooks/useFeedback.ts`
+- [X] T045 [P] [US5] Create `FeedbackList` (inbox list with unread indicator, type filter) and `FeedbackItem` (feedback card with type icon, message, improvement tips, reference link, read/unread state) components in `apps/web/src/components/feedback/`
+- [X] T046 [US5] Create feedback inbox page — header with unread count badge, FeedbackList with infinite scroll, filter by type, mark-as-read on open, empty state messaging — in `apps/web/app/dashboard/feedback/page.tsx`
 
 **Checkpoint**: Feedback loop operational — consensus decisions generate actionable feedback, participants can read and learn from it
 
@@ -172,10 +172,10 @@
 
 ### Implementation
 
-- [ ] T047 [P] [US6] Create `contributor-metadata.service.ts` — batch fetch contributor identity for a list of contributor IDs, no N+1 queries. Data sources by entity type: **Agents**: tier from `validatorPool.currentTier`, specializations from `validatorPool.domainSpecializations` JSONB, streakDays from `streaks`, isSpecialist=true if domainSpecializations includes the content's domain. **Humans**: tier from reputation engine (reputationScore → tier mapping), specializations = domains with 3+ completed missions (GROUP BY domain from missionClaims), streakDays from `streaks`. Single batch query with UNION approach — in `apps/api/src/services/contributor-metadata.service.ts`
-- [ ] T048 [US6] Enrich `GET /problems`, `GET /solutions`, and activity feed event responses with contributor metadata — collect unique contributor IDs from results, batch fetch via contributor-metadata service, merge `contributor` object into each item. For activity feed: enrich `actor` object in WebSocket events and any activity feed list endpoint with tier, specializations, and streakDays — in `apps/api/src/routes/problems.routes.ts`, `apps/api/src/routes/solutions.routes.ts`, and activity feed event construction
-- [ ] T049 [P] [US6] Create `ContributorIdentity` component — displays TierBadge, top 3 SpecialistBadges, StreakCounter, specialist-in-domain indicator alongside username; gracefully handles missing fields — in `apps/web/src/components/identity/ContributorIdentity.tsx`
-- [ ] T050 [US6] Update `ProblemCard`, `SolutionCard`, and `ActivityFeed` components to render ContributorIdentity alongside contributor username, replacing bare username display — in `apps/web/src/components/ProblemCard.tsx`, `apps/web/src/components/SolutionCard.tsx`, `apps/web/src/components/ActivityFeed.tsx`
+- [X] T047 [P] [US6] Create `contributor-metadata.service.ts` — batch fetch contributor identity for a list of contributor IDs, no N+1 queries. Data sources by entity type: **Agents**: tier from `validatorPool.currentTier`, specializations from `validatorPool.domainSpecializations` JSONB, streakDays from `streaks`, isSpecialist=true if domainSpecializations includes the content's domain. **Humans**: tier from reputation engine (reputationScore → tier mapping), specializations = domains with 3+ completed missions (GROUP BY domain from missionClaims), streakDays from `streaks`. Single batch query with UNION approach — in `apps/api/src/services/contributor-metadata.service.ts`
+- [X] T048 [US6] Enrich `GET /problems`, `GET /solutions`, and activity feed event responses with contributor metadata — collect unique contributor IDs from results, batch fetch via contributor-metadata service, merge `contributor` object into each item. For activity feed: enrich `actor` object in WebSocket events and any activity feed list endpoint with tier, specializations, and streakDays — in `apps/api/src/routes/problems.routes.ts`, `apps/api/src/routes/solutions.routes.ts`, and activity feed event construction
+- [X] T049 [P] [US6] Create `ContributorIdentity` component — displays TierBadge, top 3 SpecialistBadges, StreakCounter, specialist-in-domain indicator alongside username; gracefully handles missing fields — in `apps/web/src/components/identity/ContributorIdentity.tsx`
+- [X] T050 [US6] Update `ProblemCard`, `SolutionCard`, and `ActivityFeed` components to render ContributorIdentity alongside contributor username, replacing bare username display — in `apps/web/src/components/ProblemCard.tsx`, `apps/web/src/components/SolutionCard.tsx`, `apps/web/src/components/ActivityFeed.tsx`
 
 **Checkpoint**: Content cards throughout the platform show rich contributor identity, building recognition and trust
 
@@ -191,11 +191,11 @@
 
 ### Implementation
 
-- [ ] T051 [P] [US7] Enhance human profile route to accept `motivation` (max 500, guardrail pipeline), `primaryDomain` (problemDomainEnum), and `localContext` (max 300, guardrail pipeline) fields in `PATCH /profile` — in `apps/api/src/routes/profile/index.ts`
-- [ ] T052 [P] [US7] Enhance agent routes — accept `approachPhilosophy` (max 1000, guardrail pipeline) in `PATCH /agents/me`, add `approachPhilosophy` to `toPublicProfile()` in `GET /agents/:id` (note: `soulSummary` is already exposed in toPublicProfile) — in `apps/api/src/services/agent.service.ts` and relevant agent routes
-- [ ] T053 [P] [US7] Enhance `POST /problems` and `POST /solutions` to accept optional `contributorNote` (max 200, included in parent content guardrail evaluation) — in `apps/api/src/routes/problems.routes.ts` and `apps/api/src/routes/solutions.routes.ts`
-- [ ] T054 [US7] Update profile completeness scoring — add `motivation` to ProfileInput interface, adjust weights so bio (10 pts) + motivation (10 pts) = 20 pts total (current bio = 10 pts out of 100; add 10 new points for motivation and renormalize other categories to keep total at 100, or expand to 110 total). Note: spec says "up from 15%" but actual current bio weight is 10% — in the profile completeness service/utility
-- [ ] T055 [US7] Add optional motivation step to onboarding wizard — motivation textarea (500 chars), primaryDomain dropdown (15 domains), localContext textarea (300 chars), skip button, submit via existing `PATCH /profile` — in `apps/web/src/components/onboarding/OrientationSteps.tsx` and `apps/web/app/onboarding/page.tsx`
+- [X] T051 [P] [US7] Enhance human profile route to accept `motivation` (max 500, guardrail pipeline), `primaryDomain` (problemDomainEnum), and `localContext` (max 300, guardrail pipeline) fields in `PATCH /profile` — in `apps/api/src/routes/profile/index.ts`
+- [X] T052 [P] [US7] Enhance agent routes — accept `approachPhilosophy` (max 1000, guardrail pipeline) in `PATCH /agents/me`, add `approachPhilosophy` to `toPublicProfile()` in `GET /agents/:id` (note: `soulSummary` is already exposed in toPublicProfile) — in `apps/api/src/services/agent.service.ts` and relevant agent routes
+- [X] T053 [P] [US7] Enhance `POST /problems` and `POST /solutions` to accept optional `contributorNote` (max 200, included in parent content guardrail evaluation) — in `apps/api/src/routes/problems.routes.ts` and `apps/api/src/routes/solutions.routes.ts`
+- [X] T054 [US7] Update profile completeness scoring — add `motivation` to ProfileInput interface, adjust weights so bio (10 pts) + motivation (10 pts) = 20 pts total (current bio = 10 pts out of 100; add 10 new points for motivation and renormalize other categories to keep total at 100, or expand to 110 total). Note: spec says "up from 15%" but actual current bio weight is 10% — in the profile completeness service/utility
+- [X] T055 [US7] Add optional motivation step to onboarding wizard — motivation textarea (500 chars), primaryDomain dropdown (15 domains), localContext textarea (300 chars), skip button, submit via existing `PATCH /profile` — in `apps/web/src/components/onboarding/OrientationSteps.tsx` and `apps/web/app/onboarding/page.tsx`
 
 **Checkpoint**: Participants can express their personal narrative, agents show approach philosophy, profile completeness reflects motivation
 
@@ -211,13 +211,13 @@
 
 ### Implementation
 
-- [ ] T056 [P] [US8] Create `intelligence.service.ts` — aggregate monthly report from existing pattern aggregation data: systemic issues (problem clusters), cross-city solution adoptions, domain trends (problems/missions/members deltas), top patterns by urgency, collective progress metrics (total missions, problems resolved, new members, active participants), domain-filtered view — in `apps/api/src/services/intelligence.service.ts`
-- [ ] T057 [P] [US8] Create intelligence report worker — monthly cron (1st of month, 5 AM UTC), deterministic jobId based on month (prevent duplicates), calls intelligence service to generate report, stores in intelligence_reports table, creates intelligence_report notification — in `apps/api/src/workers/intelligence-report-worker.ts`
-- [ ] T058 [US8] Create intelligence routes — `GET /intelligence/latest` (public, latest report, Redis 1-hour cache), `GET /intelligence/domain/:domain` (public, domain-filtered, Redis 1-hour cache), graceful 404 zero-state if no report exists — in `apps/api/src/routes/intelligence/index.ts`
-- [ ] T059 [US8] Register `intelligence-report-worker` via dynamic import in `apps/api/src/workers/all-workers.ts`
-- [ ] T060 [P] [US8] Create `useIntelligence` React Query hook for latest report and domain-filtered report in `apps/web/src/hooks/useIntelligence.ts`
-- [ ] T061 [P] [US8] Create `CommunityIntelligence` component — "What We're Learning Together" section showing systemic issues, cross-city adoptions, domain trends, collective progress metrics, zero-state when no report — in `apps/web/src/components/intelligence/CommunityIntelligence.tsx`
-- [ ] T062 [US8] Integrate CommunityIntelligence into main dashboard and domain community page (domain-filtered view using `GET /intelligence/domain/:domain`) — in dashboard layout and `apps/web/app/domains/[slug]/page.tsx`
+- [X] T056 [P] [US8] Create `intelligence.service.ts` — aggregate monthly report from existing pattern aggregation data: systemic issues (problem clusters), cross-city solution adoptions, domain trends (problems/missions/members deltas), top patterns by urgency, collective progress metrics (total missions, problems resolved, new members, active participants), domain-filtered view — in `apps/api/src/services/intelligence.service.ts`
+- [X] T057 [P] [US8] Create intelligence report worker — monthly cron (1st of month, 5 AM UTC), deterministic jobId based on month (prevent duplicates), calls intelligence service to generate report, stores in intelligence_reports table, creates intelligence_report notification — in `apps/api/src/workers/intelligence-report-worker.ts`
+- [X] T058 [US8] Create intelligence routes — `GET /intelligence/latest` (public, latest report, Redis 1-hour cache), `GET /intelligence/domain/:domain` (public, domain-filtered, Redis 1-hour cache), graceful 404 zero-state if no report exists — in `apps/api/src/routes/intelligence/index.ts`
+- [X] T059 [US8] Register `intelligence-report-worker` via dynamic import in `apps/api/src/workers/all-workers.ts`
+- [X] T060 [P] [US8] Create `useIntelligence` React Query hook for latest report and domain-filtered report in `apps/web/src/hooks/useIntelligence.ts`
+- [X] T061 [P] [US8] Create `CommunityIntelligence` component — "What We're Learning Together" section showing systemic issues, cross-city adoptions, domain trends, collective progress metrics, zero-state when no report — in `apps/web/src/components/intelligence/CommunityIntelligence.tsx`
+- [X] T062 [US8] Integrate CommunityIntelligence into main dashboard and domain community page (domain-filtered view using `GET /intelligence/domain/:domain`) — in dashboard layout and `apps/web/app/domains/[slug]/page.tsx`
 
 **Checkpoint**: Monthly community intelligence is generated and visible across dashboard and domain pages
 
@@ -229,26 +229,26 @@
 
 ### API Integration Tests
 
-- [ ] T063 [P] Write integration tests for domain community endpoints (GET /domains list, GET /domains/:slug detail, 404 for invalid slug, zero-state domain) in `apps/api/tests/domains.test.ts`
-- [ ] T064 [P] Write integration tests for city chapter endpoint (GET /cities/:slug/chapter, 404 for invalid city, tagline + metrics verification) in `apps/api/tests/city-chapter.test.ts`
-- [ ] T065 [P] Write integration tests for milestones endpoint (GET /milestones with groupType/groupValue, status filter, bannerActive computation) in `apps/api/tests/milestones.test.ts`
-- [ ] T066 [P] Write integration tests for growth journey endpoint (GET /growth/me, auth required, reputation trend, tier progress, skills, goals) in `apps/api/tests/growth.test.ts`
-- [ ] T067 [P] Write integration tests for feedback endpoints (GET /feedback cursor pagination, PATCH /feedback/:id/read ownership check, GET /feedback/unread-count, 403 for non-recipient) in `apps/api/tests/feedback.test.ts`
-- [ ] T068 [P] Write integration tests for intelligence endpoints (GET /intelligence/latest, GET /intelligence/domain/:domain, 404 zero-state) in `apps/api/tests/intelligence.test.ts`
-- [ ] T069 [P] Write integration tests for contributor metadata enrichment (batch query, no N+1, problems/solutions responses include contributor object) in `apps/api/tests/contributor-metadata.test.ts`
-- [ ] T070 [P] Write integration tests for motivation fields (PATCH /profile with motivation/primaryDomain/localContext, PATCH /agents/me with approachPhilosophy, POST /problems with contributorNote, guardrail integration) in `apps/api/tests/motivation-fields.test.ts`
+- [X] T063 [P] Write integration tests for domain community endpoints (GET /domains list, GET /domains/:slug detail, 404 for invalid slug, zero-state domain) in `apps/api/tests/domains.test.ts`
+- [X] T064 [P] Write integration tests for city chapter endpoint (GET /cities/:slug/chapter, 404 for invalid city, tagline + metrics verification) in `apps/api/tests/city-chapter.test.ts`
+- [X] T065 [P] Write integration tests for milestones endpoint (GET /milestones with groupType/groupValue, status filter, bannerActive computation) in `apps/api/tests/milestones.test.ts`
+- [X] T066 [P] Write integration tests for growth journey endpoint (GET /growth/me, auth required, reputation trend, tier progress, skills, goals) in `apps/api/tests/growth.test.ts`
+- [X] T067 [P] Write integration tests for feedback endpoints (GET /feedback cursor pagination, PATCH /feedback/:id/read ownership check, GET /feedback/unread-count, 403 for non-recipient) in `apps/api/tests/feedback.test.ts`
+- [X] T068 [P] Write integration tests for intelligence endpoints (GET /intelligence/latest, GET /intelligence/domain/:domain, 404 zero-state) in `apps/api/tests/intelligence.test.ts`
+- [X] T069 [P] Write integration tests for contributor metadata enrichment (batch query, no N+1, problems/solutions responses include contributor object) in `apps/api/tests/contributor-metadata.test.ts`
+- [X] T070 [P] Write integration tests for motivation fields (PATCH /profile with motivation/primaryDomain/localContext, PATCH /agents/me with approachPhilosophy, POST /problems with contributorNote, guardrail integration) in `apps/api/tests/motivation-fields.test.ts`
 
 ### Frontend Component Tests
 
-- [ ] T071 [P] Write component tests for domain community (DomainCard renders, domain directory lists 15 domains, domain page renders sections, zero-state handling) in `apps/web/src/__tests__/DomainCommunity.test.tsx`
-- [ ] T072 [P] Write component tests for growth dashboard (ReputationTrend renders, SkillMetrics shows trends, NextGoals renders goals, welcome state for new users) in `apps/web/src/__tests__/GrowthDashboard.test.tsx`
-- [ ] T073 [P] Write component tests for feedback inbox (FeedbackList renders items, FeedbackItem shows improvement tips, mark-as-read works, empty state) in `apps/web/src/__tests__/FeedbackInbox.test.tsx`
+- [X] T071 [P] Write component tests for domain community (DomainCard renders, domain directory lists 15 domains, domain page renders sections, zero-state handling) in `apps/web/src/__tests__/DomainCommunity.test.tsx`
+- [X] T072 [P] Write component tests for growth dashboard (ReputationTrend renders, SkillMetrics shows trends, NextGoals renders goals, welcome state for new users) in `apps/web/src/__tests__/GrowthDashboard.test.tsx`
+- [X] T073 [P] Write component tests for feedback inbox (FeedbackList renders items, FeedbackItem shows improvement tips, mark-as-read works, empty state) in `apps/web/src/__tests__/FeedbackInbox.test.tsx`
 
 ### Verification
 
-- [ ] T074 Verify edge cases — zero-state domains/cities (graceful messaging), new participant growth dashboard (welcome state), missing contributor metadata (fields hidden not "N/A"), simultaneous milestones (each triggers independently), guardrail rejection flow for motivation/contributorNote
-- [ ] T075 Verify performance — no N+1 queries in contributor metadata (batch query), Redis cache hit rates for domain/city/growth endpoints, API p95 < 500ms for all new endpoints, milestone worker completes within reasonable time for 450 rows
-- [ ] T076 Run `pnpm typecheck` and `pnpm lint` to ensure zero TypeScript and linting errors across all new and modified files
+- [X] T074 Verify edge cases — zero-state domains/cities (graceful messaging), new participant growth dashboard (welcome state), missing contributor metadata (fields hidden not "N/A"), simultaneous milestones (each triggers independently), guardrail rejection flow for motivation/contributorNote
+- [X] T075 Verify performance — no N+1 queries in contributor metadata (batch query), Redis cache hit rates for domain/city/growth endpoints, API p95 < 500ms for all new endpoints, milestone worker completes within reasonable time for 450 rows
+- [X] T076 Run `pnpm typecheck` and `pnpm lint` to ensure zero TypeScript and linting errors across all new and modified files
 
 ---
 

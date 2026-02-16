@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-16 (v26.0 — Social Fabric Foundation Complete, Sprint 16 delivered)
-> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 + MVP Production Readiness + Social Fabric. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks). **Sprint 15 (MVP Production Readiness) complete** — 78/78 tasks, 35/35 functional requirements. **Sprint 16 (Social Fabric Foundation) complete** — 85/85 tasks, 6 user stories: follow system, connection graph, discussion spaces, network dashboard, care moments, contribution ripple effect. Blueprint Spec 1 delivered. 1,429 total tests (354 guardrails + 233 shared + 842 API + 43 frontend).
+> **Last Review**: 2026-02-16 (v27.0 — Community Identity & Visible Growth Complete, Sprint 17 delivered)
+> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 + MVP Production Readiness + Social Fabric + Community Identity. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks). **Sprint 15 (MVP Production Readiness) complete** — 78/78 tasks, 35/35 functional requirements. **Sprint 16 (Social Fabric Foundation) complete** — 85/85 tasks, 6 user stories. Blueprint Spec 1 delivered. **Sprint 17 (Community Identity & Visible Growth) complete** — 76 tasks, 8 user stories: domain community pages, city chapter identity, group milestones, skill progression, review feedback, identity-rich cards, motivation fields, community intelligence. Blueprint Spec 2 delivered. 1,484 total tests (354 guardrails + 233 shared + 824 API + 73 frontend).
 
 ---
 
@@ -142,7 +142,7 @@ Deep research documents for each of the 7 core technical challenges identified i
 
 ## Blueprint Social Suite Research (research/blueprint/)
 
-Research assessment of BetterWorld against Christakis' 8 evolutionary social traits, with implementation roadmap. **Spec 1 (Social Fabric Foundation) complete** — Sprint 16 delivered.
+Research assessment of BetterWorld against Christakis' 8 evolutionary social traits, with implementation roadmap. **Spec 1 (Social Fabric Foundation) complete** — Sprint 16 delivered. **Spec 2 (Community Identity & Visible Growth) complete** — Sprint 17 delivered.
 
 | # | Document | Description | Status |
 |---|----------|-------------|--------|
