@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-13 (v25.0 — MVP Production Readiness Complete, Sprint 15 delivered)
-> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 + MVP Production Readiness. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks). **Sprint 15 (MVP Production Readiness) complete** — 78/78 tasks, 35/35 functional requirements: guardrail worker fix, performance optimizations, worker reliability, privacy pipeline (real face/plate detection), Sentry monitoring, security hardening, E2E testing, CI hardening. 1,254 total tests (354 guardrails + 233 shared + 667 API + 43 frontend).
+> **Last Review**: 2026-02-16 (v26.0 — Social Fabric Foundation Complete, Sprint 16 delivered)
+> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 + MVP Production Readiness + Social Fabric. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks). **Sprint 15 (MVP Production Readiness) complete** — 78/78 tasks, 35/35 functional requirements. **Sprint 16 (Social Fabric Foundation) complete** — 85/85 tasks, 6 user stories: follow system, connection graph, discussion spaces, network dashboard, care moments, contribution ripple effect. Blueprint Spec 1 delivered. 1,429 total tests (354 guardrails + 233 shared + 842 API + 43 frontend).
 
 ---
 
@@ -139,6 +139,25 @@ Deep research documents for each of the 7 core technical challenges identified i
 | T7 | [Progressive Trust Model](challenges/T7-progressive-trust-model.md) | Trust tiers, Sybil prevention, patient attacker detection, reputation scoring | 5-tier state machine, reputation starts at 0, asymmetric decay, registration deposit |
 
 > **Note**: Additional challenge documents may be added as new technical risks are identified during implementation.
+
+## Blueprint Social Suite Research (research/blueprint/)
+
+Research assessment of BetterWorld against Christakis' 8 evolutionary social traits, with implementation roadmap. **Spec 1 (Social Fabric Foundation) complete** — Sprint 16 delivered.
+
+| # | Document | Description | Status |
+|---|----------|-------------|--------|
+| 0 | [Blueprint Assessment](research/blueprint/00-blueprint-assessment.md) | Overall Social Suite scorecard, critical gaps, recommendations | Reference |
+| 1 | [Individual Identity](research/blueprint/01-individual-identity.md) | Trait 1 deep-dive: identity expression gaps | Reference |
+| 2 | [Care Bonds](research/blueprint/02-care-bonds.md) | Trait 2 deep-dive: interpersonal bond gaps | Reference |
+| 3 | [Friendship](research/blueprint/03-friendship.md) | Trait 3 deep-dive: friendship formation gaps | Reference |
+| 4 | [Social Networks](research/blueprint/04-social-networks.md) | Trait 4 deep-dive: network visibility gaps | Reference |
+| 5 | [Cooperation](research/blueprint/05-cooperation.md) | Trait 5 deep-dive: cooperation depth | Reference |
+| 6 | [In-Group Preference](research/blueprint/06-in-group-preference.md) | Trait 6 deep-dive: group identity gaps | Reference |
+| 7 | [Mild Hierarchy](research/blueprint/07-mild-hierarchy.md) | Trait 7 deep-dive: governance | Reference |
+| 8 | [Social Learning](research/blueprint/08-social-learning.md) | Trait 8 deep-dive: learning visibility gaps | Reference |
+| 9 | [Implementation Roadmap](research/blueprint/09-implementation-roadmap.md) | 3-spec development plan (Spec 1 ✅, Specs 2-3 planned) | Active |
+
+---
 
 ## Implementation Plans (plans/)
 

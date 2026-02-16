@@ -1,6 +1,6 @@
 // Guardrail evaluation types
 
-export type ContentType = "problem" | "solution" | "debate" | "mission";
+export type ContentType = "problem" | "solution" | "debate" | "mission" | "discussion_thread" | "discussion_reply";
 
 export type GuardrailDecision = "approved" | "flagged" | "rejected";
 

@@ -18,8 +18,19 @@ interface ConnectedClient {
 
 const clients = new Map<WSContext, ConnectedClient>();
 
+// Sprint 16: Human WebSocket client tracking
+interface HumanConnectedClient {
+  ws: WSContext;
+  humanId: string;
+  missedPongs: number;
+  pingTimer?: ReturnType<typeof setInterval>;
+  pongTimer?: ReturnType<typeof setTimeout>;
+}
+
+const humanClients = new Map<WSContext, HumanConnectedClient>();
+
 export function getConnectedClientCount(): number {
-  return clients.size;
+  return clients.size + humanClients.size;
 }
 
 export function addClient(
@@ -133,6 +144,101 @@ export function broadcast(event: { type: string; data: unknown }): void {
       ws.send(message);
     } catch {
       removeClient(ws);
+    }
+  }
+}
+
+// Sprint 16: Human WebSocket client management
+
+export function addHumanClient(ws: WSContext, humanId: string): void {
+  const client: HumanConnectedClient = {
+    ws,
+    humanId,
+    missedPongs: 0,
+  };
+
+  humanClients.set(ws, client);
+
+  // Send connected event
+  sendToClient(ws, {
+    type: "connected",
+    data: { humanId },
+    timestamp: new Date().toISOString(),
+  });
+
+  // Start ping/pong heartbeat
+  client.pingTimer = setInterval(() => {
+    sendToClient(ws, {
+      type: "ping",
+      data: {},
+      timestamp: new Date().toISOString(),
+    });
+
+    client.pongTimer = setTimeout(() => {
+      client.missedPongs++;
+      if (client.missedPongs >= MAX_MISSED_PONGS) {
+        logger.info({ humanId }, "Human client removed after missed pongs");
+        removeHumanClient(ws);
+        try {
+          ws.close(1001, "Missed pong responses");
+        } catch {
+          // Already closed
+        }
+      }
+    }, PONG_TIMEOUT_MS);
+  }, PING_INTERVAL_MS);
+
+  logger.info({ humanId, connectedHumanClients: humanClients.size }, "Human client connected");
+}
+
+export function removeHumanClient(ws: WSContext): void {
+  const client = humanClients.get(ws);
+  if (client) {
+    if (client.pingTimer) clearInterval(client.pingTimer);
+    if (client.pongTimer) clearTimeout(client.pongTimer);
+    humanClients.delete(ws);
+    logger.info(
+      { humanId: client.humanId, connectedHumanClients: humanClients.size },
+      "Human client disconnected",
+    );
+  }
+}
+
+export function handleHumanMessage(ws: WSContext, raw: string): void {
+  try {
+    const message = JSON.parse(raw);
+    if (message.type === "pong") {
+      const client = humanClients.get(ws);
+      if (client) {
+        client.missedPongs = 0;
+        if (client.pongTimer) {
+          clearTimeout(client.pongTimer);
+          client.pongTimer = undefined;
+        }
+      }
+    }
+  } catch {
+    // Ignore malformed messages
+  }
+}
+
+/**
+ * Send an event to a specific human by humanId.
+ * Iterates connected human clients and sends to matching humanId.
+ */
+export function sendToHuman(humanId: string, event: { type: string; data: unknown }): void {
+  const message = JSON.stringify({
+    ...event,
+    timestamp: new Date().toISOString(),
+  });
+
+  for (const [ws, client] of humanClients) {
+    if (client.humanId === humanId) {
+      try {
+        ws.send(message);
+      } catch {
+        removeHumanClient(ws);
+      }
     }
   }
 }

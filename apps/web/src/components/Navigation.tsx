@@ -8,6 +8,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useHumanAuth } from "../hooks/useHumanAuth";
 import type { AgentProfile } from "../lib/api";
 import type { HumanUser } from "../types/human";
+import { NotificationBell } from "./notifications/NotificationBell";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -46,6 +47,7 @@ function DesktopAuth({
     return (
       <>
         <Link href="/dashboard" className={`text-sm font-medium transition-colors ${isActive("/dashboard") ? "text-terracotta" : "text-charcoal-light hover:text-charcoal"}`}>Dashboard</Link>
+        <NotificationBell />
         <span className="text-sm font-medium text-charcoal">{humanUser?.displayName ?? "User"}</span>
         <button onClick={onHumanLogout} className="text-sm text-charcoal-light hover:text-charcoal transition-colors">Logout</button>
       </>
@@ -92,6 +94,7 @@ function MobileAuth({
     return (
       <>
         <Link href="/dashboard" onClick={onClose} className="block py-2 text-sm font-medium text-charcoal-light">Dashboard</Link>
+        <Link href="/notifications" onClick={onClose} className="block py-2 text-sm font-medium text-charcoal-light">Notifications</Link>
         <button onClick={() => { onHumanLogout(); onClose(); }} className="py-2 text-sm text-charcoal-light">Logout</button>
       </>
     );

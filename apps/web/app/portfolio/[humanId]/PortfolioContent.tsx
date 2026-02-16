@@ -47,6 +47,7 @@ export default function PortfolioContent() {
     <main className="min-h-screen px-4 py-16">
       <div className="max-w-3xl mx-auto space-y-6">
         <PortfolioHeader
+          humanId={humanId}
           displayName={portfolio.displayName}
           avatarUrl={portfolio.avatarUrl}
           tier={portfolio.reputation.tier}

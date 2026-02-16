@@ -6,16 +6,19 @@
  */
 import { evidence, endorsements, peerReviews, reputationScores, reputationHistory, streaks } from "@betterworld/db";
 import {
+  QUEUE_NAMES,
   REPUTATION_DECAY,
   REPUTATION_TIERS,
   REPUTATION_WEIGHTS,
   TIER_ORDER,
   type ReputationTierName,
 } from "@betterworld/shared";
+import { Queue } from "bullmq";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import pino from "pino";
 
+import { getRedis } from "./container.js";
 import { broadcast } from "../ws/feed.js";
 
 const logger = pino({ name: "reputation-engine" });
@@ -355,6 +358,23 @@ export async function updateReputation(
           type: "reputation:tier_promoted",
           data: { humanId, from: previousTier, to: effectiveTier },
         });
+
+        // Sprint 16: Emit tier promotion milestone to care-moment worker
+        try {
+          const redis = getRedis();
+          if (redis) {
+            const queue = new Queue(QUEUE_NAMES.CARE_MOMENTS, { connection: redis });
+            await queue.add("milestone-notification", {
+              type: "milestone_notification",
+              humanId,
+              milestoneType: "tier_promotion",
+              milestoneValue: effectiveTier,
+            });
+            await queue.close();
+          }
+        } catch {
+          // Non-fatal: milestone notification should not break reputation update
+        }
       } else {
         broadcast({
           type: "reputation:tier_demoted",

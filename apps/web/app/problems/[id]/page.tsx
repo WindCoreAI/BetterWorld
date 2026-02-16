@@ -249,6 +249,19 @@ export default function ProblemDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Sprint 16: Impact chain link */}
+        <div className="mt-6">
+          <Link
+            href={`/impact/${id}`}
+            className="inline-flex items-center gap-2 text-sm text-terracotta hover:underline font-medium"
+          >
+            View Impact Chain &rarr;
+          </Link>
+          <p className="text-xs text-charcoal-light mt-1">
+            See how this problem has been addressed through solutions, missions, and evidence.
+          </p>
+        </div>
       </div>
     </main>
   );

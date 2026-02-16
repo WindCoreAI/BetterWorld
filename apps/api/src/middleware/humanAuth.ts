@@ -11,8 +11,9 @@ import { eq } from "drizzle-orm";
 import { createMiddleware } from "hono/factory";
 import * as jose from "jose";
 
-import type { AppEnv } from "../app.js";
 import { logger } from "./logger.js";
+import type { AppEnv } from "../app.js";
+import { trackActivity } from "../lib/activity-tracker.js";
 import { getDb } from "../lib/container.js";
 
 const getConfig = () => loadConfig();
@@ -124,6 +125,11 @@ export function humanAuth() {
         email: human.email,
         displayName: human.displayName,
         role: human.role,
+      });
+
+      // Sprint 16: Track lastActiveAt and detect comebacks (non-blocking)
+      trackActivity(db, human.id).catch(() => {
+        // Non-fatal: activity tracking failure should not affect auth
       });
 
       await next();

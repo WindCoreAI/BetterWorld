@@ -62,3 +62,9 @@ export { missionTemplates } from "./schema/missionTemplates";
 // Sprint 13: Phase 3 Integration tables
 export { rateAdjustments } from "./schema/rateAdjustments";
 export { evidenceReviewAssignments } from "./schema/evidenceReviews";
+// Sprint 16: Social Fabric Foundation tables
+export { follows } from "./schema/follows";
+export { connections } from "./schema/connections";
+export { discussionThreads } from "./schema/discussionThreads";
+export { discussionReplies } from "./schema/discussionReplies";
+export { notifications } from "./schema/notifications";

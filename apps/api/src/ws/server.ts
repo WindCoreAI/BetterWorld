@@ -1,11 +1,13 @@
+import { loadConfig } from "@betterworld/shared";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
+import * as jose from "jose";
 import pino from "pino";
 
-import { addClient, removeClient, handleMessage } from "./feed.js";
+import { addClient, removeClient, handleMessage, addHumanClient, removeHumanClient, handleHumanMessage } from "./feed.js";
 import { initDb, initRedis, getDb } from "../lib/container.js";
 
 const logger = pino({ name: "ws-server" });
@@ -84,6 +86,60 @@ app.get(
       },
       onError(_evt, ws) {
         removeClient(ws);
+      },
+    };
+  }),
+);
+
+// Sprint 16: Human WebSocket endpoint with JWT auth
+app.get(
+  "/ws/human",
+  upgradeWebSocket(async (c) => {
+    const token = c.req.query("token");
+
+    if (!token) {
+      return {
+        onOpen(_evt, ws) {
+          ws.close(1008, "Missing authentication token");
+        },
+      };
+    }
+
+    // Authenticate human via JWT
+    let humanId: string;
+    try {
+      const config = loadConfig();
+      const secret = new TextEncoder().encode(config.JWT_SECRET);
+      const { payload } = await jose.jwtVerify(token, secret);
+      humanId = payload.userId as string;
+      if (!humanId) {
+        return {
+          onOpen(_evt, ws) {
+            ws.close(1008, "Invalid token payload");
+          },
+        };
+      }
+    } catch {
+      return {
+        onOpen(_evt, ws) {
+          ws.close(1008, "Invalid credentials");
+        },
+      };
+    }
+
+    return {
+      onOpen(_evt, ws) {
+        addHumanClient(ws, humanId);
+      },
+      onMessage(evt, ws) {
+        const data = typeof evt.data === "string" ? evt.data : evt.data.toString();
+        handleHumanMessage(ws, data);
+      },
+      onClose(_evt, ws) {
+        removeHumanClient(ws);
+      },
+      onError(_evt, ws) {
+        removeHumanClient(ws);
       },
     };
   }),

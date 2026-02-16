@@ -3,6 +3,10 @@
   "private": true,
   "scripts": {
     "dev": "turbo dev",
+    "dev:app": "turbo dev --filter=@betterworld/api --filter=@betterworld/web",
+    "dev:landing": "turbo dev --filter=landing-page",
+    "dev:api": "turbo dev --filter=@betterworld/api",
+    "dev:web": "turbo dev --filter=@betterworld/web",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
