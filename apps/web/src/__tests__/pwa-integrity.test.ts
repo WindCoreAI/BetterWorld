@@ -7,6 +7,7 @@
  */
 import fs from "fs";
 import path from "path";
+
 import { describe, it, expect } from "vitest";
 
 const PUBLIC_DIR = path.resolve(__dirname, "../../public");
