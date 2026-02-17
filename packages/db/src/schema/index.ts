@@ -66,3 +66,18 @@ export * from "./notifications";
 export * from "./groupMilestones";
 export * from "./reviewFeedback";
 export * from "./intelligenceReports";
+
+// Sprint 18: Cooperative Depth & Governance schemas
+export * from "./mentorships";
+export * from "./missionHelpOffers";
+export * from "./circles";
+export * from "./cooperativeAchievements";
+export * from "./moderatorActions";
+export * from "./learningPathways";
+export * from "./caseStudies";
+export * from "./groupChallenges";
+export * from "./powerAudit";
+export * from "./agentFingerprints";
+export * from "./feedEvents";
+export * from "./missionEndorsements";
+export * from "./ambassadorAssignments";

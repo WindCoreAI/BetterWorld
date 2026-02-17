@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   integer,
@@ -10,7 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { missionClaimStatusEnum } from "./enums";
+import { buddyStatusEnum, missionClaimStatusEnum } from "./enums";
 import { humans } from "./humans";
 import { missions } from "./missions";
 
@@ -30,6 +31,12 @@ export const missionClaims = pgTable(
     progressPercent: integer("progress_percent").default(0),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     notes: text("notes"),
+    // Sprint 18: Buddy co-claim and help request fields
+    buddyHumanId: uuid("buddy_human_id").references(() => humans.id),
+    buddyStatus: buddyStatusEnum("buddy_status"),
+    isBuddy: boolean("is_buddy").notNull().default(false),
+    helpRequested: boolean("help_requested").notNull().default(false),
+    helpRequestNote: text("help_request_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

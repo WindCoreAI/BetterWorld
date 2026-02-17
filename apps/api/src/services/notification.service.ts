@@ -27,7 +27,29 @@ type NotificationType =
   // Sprint 17: Community Identity & Visible Growth
   | "feedback"
   | "milestone_celebration"
-  | "intelligence_report";
+  | "intelligence_report"
+  // Sprint 18: Cooperative Depth & Governance
+  | "mentorship_request"
+  | "mentorship_accepted"
+  | "mentorship_completed"
+  | "mentorship_rating_prompt"
+  | "mentee_mission_completed"
+  | "buddy_invitation"
+  | "buddy_accepted"
+  | "buddy_declined"
+  | "help_offer_received"
+  | "help_offer_accepted"
+  | "help_offer_declined"
+  | "moderator_approved"
+  | "moderator_decision"
+  | "pathway_level_up"
+  | "challenge_started"
+  | "challenge_completed"
+  | "achievement_earned"
+  | "ambassador_assigned"
+  | "ambassador_welcome"
+  | "moderator_revoked"
+  | "mission_endorsed";
 
 interface CreateNotificationParams {
   recipientHumanId: string;
@@ -116,7 +138,7 @@ export class NotificationService {
       .insert(notifications)
       .values({
         recipientHumanId,
-        type,
+        type: type as never,
         message,
         actorHumanId,
         referenceId,
@@ -281,7 +303,7 @@ export class NotificationService {
     }
 
     if (options.type) {
-      conditions.push(eq(notifications.type, options.type));
+      conditions.push(eq(notifications.type, options.type as never));
     }
 
     if (options.cursor) {

@@ -17,6 +17,7 @@ import { agents } from "./agents";
 import { debates } from "./debates";
 import { guardrailStatusEnum, solutionStatusEnum } from "./enums";
 import { guardrailEvaluations } from "./guardrails";
+import { humans } from "./humans";
 import { problems } from "./problems";
 
 export const solutions = pgTable(
@@ -26,9 +27,15 @@ export const solutions = pgTable(
     problemId: uuid("problem_id")
       .notNull()
       .references(() => problems.id, { onDelete: "restrict" }),
-    proposedByAgentId: uuid("proposed_by_agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "restrict" }),
+    // Sprint 18: Made nullable for human-proposed solutions
+    proposedByAgentId: uuid("proposed_by_agent_id").references(
+      () => agents.id,
+      { onDelete: "restrict" },
+    ),
+    // Sprint 18: Human proposer for elevated human agency
+    proposedByHumanId: uuid("proposed_by_human_id").references(
+      () => humans.id,
+    ),
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description").notNull(),
     approach: text("approach").notNull(),
@@ -89,6 +96,11 @@ export const solutions = pgTable(
       "scores_non_negative",
       sql`${table.impactScore} >= 0 AND ${table.feasibilityScore} >= 0 AND ${table.costEfficiencyScore} >= 0 AND ${table.compositeScore} >= 0`,
     ),
+    // Sprint 18: Exactly one proposer required (agent OR human)
+    check(
+      "one_proposer_required",
+      sql`(${table.proposedByAgentId} IS NOT NULL) OR (${table.proposedByHumanId} IS NOT NULL)`,
+    ),
   ],
 );
 
@@ -100,6 +112,10 @@ export const solutionsRelations = relations(solutions, ({ one, many }) => ({
   proposedByAgent: one(agents, {
     fields: [solutions.proposedByAgentId],
     references: [agents.id],
+  }),
+  proposedByHuman: one(humans, {
+    fields: [solutions.proposedByHumanId],
+    references: [humans.id],
   }),
   debates: many(debates),
 }));

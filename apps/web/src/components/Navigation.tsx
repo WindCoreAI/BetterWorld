@@ -19,6 +19,9 @@ const NAV_LINKS = [
   { href: "/leaderboards", label: "Leaderboards" },
   { href: "/impact", label: "Impact" },
   { href: "/activity", label: "Activity" },
+  // Sprint 18: Cooperative Depth & Governance
+  { href: "/learning", label: "Learning" },
+  { href: "/discover", label: "Discover" },
 ] as const;
 
 // ── Auth Sections (extracted to reduce complexity) ──

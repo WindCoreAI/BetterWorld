@@ -144,6 +144,13 @@ export const featureFlagSchema = z.object({
   RATE_ADJUSTMENT_PAUSED: z.boolean().default(false),
   VALIDATION_REWARD_MULTIPLIER: z.number().min(0).max(5).default(1.0),
   OFFLINE_PWA_ENABLED: z.boolean().default(false),
+  // Sprint 18: Cooperative Depth & Governance
+  MENTORSHIP_ENABLED: z.boolean().default(false),
+  MISSION_BUDDIES_ENABLED: z.boolean().default(false),
+  MODERATOR_ROLE_ENABLED: z.boolean().default(false),
+  LEARNING_PATHWAYS_ENABLED: z.boolean().default(false),
+  HUMAN_AGENCY_ENABLED: z.boolean().default(false),
+  PERSONALIZED_FEED_ENABLED: z.boolean().default(false),
 });
 
 export type FeatureFlags = z.infer<typeof featureFlagSchema>;
@@ -165,6 +172,13 @@ export const FEATURE_FLAG_NAMES: FeatureFlagName[] = [
   "RATE_ADJUSTMENT_PAUSED",
   "VALIDATION_REWARD_MULTIPLIER",
   "OFFLINE_PWA_ENABLED",
+  // Sprint 18: Cooperative Depth & Governance
+  "MENTORSHIP_ENABLED",
+  "MISSION_BUDDIES_ENABLED",
+  "MODERATOR_ROLE_ENABLED",
+  "LEARNING_PATHWAYS_ENABLED",
+  "HUMAN_AGENCY_ENABLED",
+  "PERSONALIZED_FEED_ENABLED",
 ];
 
 export const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
@@ -183,6 +197,13 @@ export const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
   RATE_ADJUSTMENT_PAUSED: false,
   VALIDATION_REWARD_MULTIPLIER: 1.0,
   OFFLINE_PWA_ENABLED: false,
+  // Sprint 18: Cooperative Depth & Governance
+  MENTORSHIP_ENABLED: false,
+  MISSION_BUDDIES_ENABLED: false,
+  MODERATOR_ROLE_ENABLED: false,
+  LEARNING_PATHWAYS_ENABLED: false,
+  HUMAN_AGENCY_ENABLED: false,
+  PERSONALIZED_FEED_ENABLED: false,
 };
 
 // ============================================================================

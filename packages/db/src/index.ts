@@ -72,3 +72,28 @@ export { notifications } from "./schema/notifications";
 export { groupMilestones } from "./schema/groupMilestones";
 export { reviewFeedback } from "./schema/reviewFeedback";
 export { intelligenceReports } from "./schema/intelligenceReports";
+// Sprint 18: Cooperative Depth & Governance tables
+export { mentorships } from "./schema/mentorships";
+export { missionHelpOffers } from "./schema/missionHelpOffers";
+export {
+  circles,
+  circleMembers,
+  circlePosts,
+  circleMissions,
+} from "./schema/circles";
+export {
+  cooperativeAchievements,
+  cooperativeAchievementEarners,
+} from "./schema/cooperativeAchievements";
+export { moderatorActions } from "./schema/moderatorActions";
+export { learningPathways } from "./schema/learningPathways";
+export { caseStudies } from "./schema/caseStudies";
+export {
+  groupChallenges,
+  challengeParticipants,
+} from "./schema/groupChallenges";
+export { powerDistributionSnapshots } from "./schema/powerAudit";
+export { agentFingerprints } from "./schema/agentFingerprints";
+export { feedEvents } from "./schema/feedEvents";
+export { missionEndorsements } from "./schema/missionEndorsements";
+export { ambassadorAssignments } from "./schema/ambassadorAssignments";

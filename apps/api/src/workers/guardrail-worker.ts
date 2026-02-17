@@ -52,7 +52,7 @@ function getPeerConsensusQueue(): Queue {
 export interface EvaluationJobData {
   evaluationId: string;
   contentId: string;
-  contentType: "problem" | "solution" | "debate" | "mission" | "discussion_thread" | "discussion_reply";
+  contentType: "problem" | "solution" | "debate" | "mission" | "discussion_thread" | "discussion_reply" | "circle_post" | "help_offer_message" | "help_request_note" | "gratitude_narrative" | "human_solution" | "human_mission_proposal";
   content: string;
   agentId: string;
   trustTier: string;
@@ -479,7 +479,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 async function updateContentStatus(
   db: ReturnType<typeof initDb>,
   contentId: string,
-  contentType: "problem" | "solution" | "debate" | "mission" | "discussion_thread" | "discussion_reply",
+  contentType: string,
   status: "approved" | "rejected" | "flagged"
 ): Promise<void> {
   switch (contentType) {
@@ -490,6 +490,7 @@ async function updateContentStatus(
         .where(eq(problems.id, contentId));
       break;
     case "solution":
+    case "human_solution":
       await db
         .update(solutions)
         .set({ guardrailStatus: status })
@@ -502,6 +503,7 @@ async function updateContentStatus(
         .where(eq(debates.id, contentId));
       break;
     case "mission":
+    case "human_mission_proposal":
       await db
         .update(missions)
         .set({ guardrailStatus: status })
@@ -523,6 +525,30 @@ async function updateContentStatus(
         .where(eq(discussionReplies.id, contentId));
       break;
     }
+    // Sprint 18: Cooperative Depth & Governance content types
+    case "circle_post": {
+      const { circlePosts } = await import("@betterworld/db");
+      await db
+        .update(circlePosts)
+        .set({ guardrailStatus: status })
+        .where(eq(circlePosts.id, contentId));
+      break;
+    }
+    case "help_offer_message": {
+      const { missionHelpOffers } = await import("@betterworld/db");
+      await db
+        .update(missionHelpOffers)
+        .set({ guardrailStatus: status })
+        .where(eq(missionHelpOffers.id, contentId));
+      break;
+    }
+    case "help_request_note":
+      // Help request notes are stored inline on mission_claims — no separate status update needed
+      // The guardrail check is purely for content moderation; the note is already stored
+      break;
+    case "gratitude_narrative":
+      // Narratives are stored on endorsements — status update handled by the calling route
+      break;
   }
 }
 
