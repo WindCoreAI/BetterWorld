@@ -127,6 +127,13 @@
       "when": 1771300000000,
       "tag": "0017_cooperative_depth_governance",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1771400000000,
+      "tag": "0018_fix_verification_token_length",
+      "breakpoints": true
     }
   ]
 }

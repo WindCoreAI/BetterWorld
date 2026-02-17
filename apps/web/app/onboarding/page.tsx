@@ -52,12 +52,13 @@ export default function OnboardingPage() {
 
     if (res.ok) {
       setClaimed(true);
-      setTimeout(() => router.push("/dashboard"), 2000);
+      // Hard navigation to bypass stale client-side cache in onboarding guard
+      setTimeout(() => { window.location.href = "/dashboard"; }, 2000);
     }
     // If already claimed, also redirect
     if (res.error?.code === "REWARD_ALREADY_CLAIMED") {
       setClaimed(true);
-      setTimeout(() => router.push("/dashboard"), 1500);
+      setTimeout(() => { window.location.href = "/dashboard"; }, 1500);
     }
   };
 

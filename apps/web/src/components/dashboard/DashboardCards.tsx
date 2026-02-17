@@ -75,14 +75,12 @@ export function ProfileCompletenessCard({
           </div>
         )}
 
-        {percentage < 100 && (
-          <Link
-            href="/auth/human/profile"
-            className="block mt-3 text-xs text-terracotta hover:underline"
-          >
-            Edit profile
-          </Link>
-        )}
+        <Link
+          href="/auth/human/profile"
+          className="block mt-3 text-xs text-terracotta hover:underline"
+        >
+          Edit profile
+        </Link>
       </CardBody>
     </Card>
   );

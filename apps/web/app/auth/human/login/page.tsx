@@ -14,6 +14,7 @@ export default function HumanLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleOAuth = (provider: "google" | "github") => {
@@ -29,6 +30,7 @@ export default function HumanLoginPage() {
 
     setLoading(true);
     setError("");
+    setErrorCode("");
     const result = await login(email, password);
     setLoading(false);
 
@@ -36,6 +38,7 @@ export default function HumanLoginPage() {
       router.push("/dashboard");
     } else {
       setError(result.error ?? "Login failed");
+      setErrorCode(result.errorCode ?? "");
     }
   };
 
@@ -120,11 +123,21 @@ export default function HumanLoginPage() {
                 required
               />
 
-              {error && (
+              {error && errorCode === "EMAIL_NOT_VERIFIED" ? (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                  <p>{error}</p>
+                  <Link
+                    href={`/auth/human/verify?email=${encodeURIComponent(email)}`}
+                    className="mt-1 inline-block font-medium text-terracotta hover:underline"
+                  >
+                    Verify your email &rarr;
+                  </Link>
+                </div>
+              ) : error ? (
                 <div className="p-3 rounded-lg bg-error/10 text-error text-sm">
                   {error}
                 </div>
-              )}
+              ) : null}
 
               <Button
                 type="submit"

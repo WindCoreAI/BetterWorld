@@ -161,6 +161,7 @@ export const profileApi = {
   async create(data: ProfileInput): Promise<ApiResponse<HumanProfile>> {
     return humanFetch("/profile", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   },
@@ -172,6 +173,7 @@ export const profileApi = {
   async update(data: Partial<ProfileInput>): Promise<ApiResponse<HumanProfile>> {
     return humanFetch("/profile", {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   },

@@ -14,7 +14,7 @@ interface UseHumanAuthReturn {
   user: HumanUser | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string; errorCode?: string }>;
   loginWithOAuthCode: (code: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
@@ -58,7 +58,7 @@ export function useHumanAuth(): UseHumanAuthReturn {
   }, [checkAuth]);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+    async (email: string, password: string): Promise<{ ok: boolean; error?: string; errorCode?: string }> => {
       setLoading(true);
       const res = await humanAuthApi.login(email, password);
       if (res.ok && res.data) {
@@ -68,7 +68,7 @@ export function useHumanAuth(): UseHumanAuthReturn {
         return { ok: true };
       }
       setLoading(false);
-      return { ok: false, error: res.error?.message ?? "Login failed" };
+      return { ok: false, error: res.error?.message ?? "Login failed", errorCode: res.error?.code };
     },
     [],
   );
