@@ -44,7 +44,7 @@ export class ImpactChainService {
     missions: Array<{
       id: string;
       title: string;
-      solutionId: string;
+      solutionId: string | null;
       status: string;
       claimedBy: { humanId: string; displayName: string } | null;
       completedAt: string | null;
@@ -107,11 +107,15 @@ export class ImpactChainService {
     // Get agent info for each solution
     const solutionsWithAgent = await Promise.all(
       solutionRows.map(async (sol) => {
-        const [agent] = await this.db
-          .select({ name: agents.displayName })
-          .from(agents)
-          .where(eq(agents.id, sol.agentId))
-          .limit(1);
+        let agentName = "Unknown";
+        if (sol.agentId) {
+          const [agent] = await this.db
+            .select({ name: agents.displayName })
+            .from(agents)
+            .where(eq(agents.id, sol.agentId))
+            .limit(1);
+          agentName = agent?.name ?? "Unknown";
+        }
 
         // Count missions for this solution
         const [missionCountResult] = await this.db
@@ -122,7 +126,7 @@ export class ImpactChainService {
         return {
           id: sol.id,
           title: sol.title,
-          proposedBy: { type: "agent" as const, id: sol.agentId, name: agent?.name ?? "Unknown" },
+          proposedBy: { type: "agent" as const, id: sol.agentId ?? "unknown", name: agentName },
           missionCount: missionCountResult?.count ?? 0,
         };
       }),
@@ -132,7 +136,7 @@ export class ImpactChainService {
     let missionRows: Array<{
       id: string;
       title: string;
-      solutionId: string;
+      solutionId: string | null;
       status: string;
     }> = [];
 
@@ -245,7 +249,7 @@ export class ImpactChainService {
     // Unique participants: problem reporter + solution agents + mission claimers + reviewers
     const participantSet = new Set<string>();
     participantSet.add(problem.agentId); // problem reporter
-    solutionRows.forEach((s) => participantSet.add(s.agentId));
+    solutionRows.forEach((s) => { if (s.agentId) participantSet.add(s.agentId); });
     missionsWithClaims.forEach((m) => {
       if (m.claimedBy) participantSet.add(m.claimedBy.humanId);
     });

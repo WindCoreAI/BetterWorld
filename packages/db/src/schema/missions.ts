@@ -21,6 +21,7 @@ import {
   problemDomainEnum,
 } from "./enums";
 import { guardrailEvaluations } from "./guardrails";
+import { humans } from "./humans";
 import { missionTemplates } from "./missionTemplates";
 import { solutions } from "./solutions";
 import { geographyPoint } from "./types";
@@ -29,12 +30,14 @@ export const missions = pgTable(
   "missions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    solutionId: uuid("solution_id")
-      .notNull()
-      .references(() => solutions.id, { onDelete: "restrict" }),
-    createdByAgentId: uuid("created_by_agent_id")
-      .notNull()
-      .references(() => agents.id, { onDelete: "restrict" }),
+    // Sprint 18: Made nullable for human-proposed missions
+    solutionId: uuid("solution_id").references(() => solutions.id, {
+      onDelete: "restrict",
+    }),
+    createdByAgentId: uuid("created_by_agent_id").references(
+      () => agents.id,
+      { onDelete: "restrict" },
+    ),
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description").notNull(),
     instructions: jsonb("instructions").notNull().default([]),
@@ -78,6 +81,11 @@ export const missions = pgTable(
     templateId: uuid("template_id").references(
       () => missionTemplates.id,
     ),
+    // Sprint 18: Human-proposed missions
+    proposedByHumanId: uuid("proposed_by_human_id").references(
+      () => humans.id,
+    ),
+    endorsementCount: integer("endorsement_count").notNull().default(0),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

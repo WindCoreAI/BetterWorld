@@ -349,6 +349,34 @@ export type {
   ReportData,
 } from "./schemas/index.js";
 
+// Sprint 18: Cooperative Depth & Governance
+export {
+  createMentorshipSchema, rateMentorshipSchema, mentorshipResponseSchema,
+  inviteBuddySchema, helpOfferSchema, helpRequestSchema,
+  moderatorDecisionSchema, moderatorApprovalSchema,
+  enrollPathwaySchema, markCaseStudyReadSchema,
+  createChallengeSchema, joinChallengeSchema,
+  createCircleSchema, circlePostSchema, shareCircleMissionSchema,
+  narrativeSchema, featureEndorsementSchema, humanSolutionSchema,
+  humanMissionProposalSchema, feedQuerySchema, discoverQuerySchema,
+} from "./schemas/index.js";
+export type {
+  CreateMentorshipInput, RateMentorshipInput, MentorshipResponse,
+  InviteBuddyInput, HelpOfferInput, HelpRequestInput,
+  ModeratorDecisionInput, ModeratorApprovalInput,
+  EnrollPathwayInput, MarkCaseStudyReadInput,
+  CreateChallengeInput, JoinChallengeInput,
+  CreateCircleInput, CirclePostInput, ShareCircleMissionInput,
+  NarrativeInput, FeatureEndorsementInput, HumanSolutionInput,
+  HumanMissionProposalInput, FeedQueryInput, DiscoverQueryInput,
+} from "./schemas/index.js";
+export type {
+  MentorSuggestion, BuddyInvitation, HelpOffer, ModeratorQueueItem,
+  PathwayProgress, CaseStudySummary, ChallengeLeaderboard,
+  CircleDetail, CooperativeAchievement, FeedItem, DiscoverPerson,
+  PowerAuditSnapshot, AgentFingerprintProfile,
+} from "./types/cooperative.js";
+
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";
 export type { EnvConfig } from "./config.js";

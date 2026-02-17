@@ -3,6 +3,7 @@
  */
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   pgTable,
@@ -27,6 +28,9 @@ export const endorsements = pgTable(
       .references(() => humans.id),
     reason: text("reason").notNull(),
     status: endorsementStatusEnum("status").notNull().default("active"),
+    // Sprint 18: Gratitude narrative and featuring
+    narrative: text("narrative"),
+    isFeatured: boolean("is_featured").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

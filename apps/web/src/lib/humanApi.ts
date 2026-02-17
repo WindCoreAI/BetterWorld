@@ -353,3 +353,45 @@ export const impactApi = {
     return humanFetch("/impact/my-ripple");
   },
 };
+
+// Sprint 18: Mentorship API
+export const mentorshipsApi = {
+  async getSuggestions(): Promise<ApiResponse<Any>> {
+    return humanFetch("/mentorships/suggestions");
+  },
+  async create(mentorHumanId: string): Promise<ApiResponse<Any>> {
+    return humanFetch("/mentorships", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mentorHumanId }),
+    });
+  },
+  async accept(id: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/mentorships/${id}/accept`, { method: "POST" });
+  },
+  async decline(id: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/mentorships/${id}/decline`, { method: "POST" });
+  },
+  async end(id: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/mentorships/${id}/end`, { method: "POST" });
+  },
+  async rate(id: string, rating: number): Promise<ApiResponse<Any>> {
+    return humanFetch(`/mentorships/${id}/rate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating }),
+    });
+  },
+  async list(params?: { status?: string; role?: string; cursor?: string; limit?: number }): Promise<ApiResponse<Any>> {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set("status", params.status);
+    if (params?.role) searchParams.set("role", params.role);
+    if (params?.cursor) searchParams.set("cursor", params.cursor);
+    if (params?.limit) searchParams.set("limit", String(params.limit));
+    const qs = searchParams.toString();
+    return humanFetch(`/mentorships/me${qs ? `?${qs}` : ""}`);
+  },
+  async getDetail(id: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/mentorships/${id}`);
+  },
+};

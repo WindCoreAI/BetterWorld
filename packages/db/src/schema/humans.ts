@@ -3,6 +3,7 @@ import {
   decimal,
   index,
   pgTable,
+  text,
   timestamp,
   uniqueIndex,
   uuid,
@@ -37,6 +38,11 @@ export const humans = pgTable(
     portfolioVisibility: portfolioVisibilityEnum("portfolio_visibility")
       .notNull()
       .default("public"),
+
+    // Sprint 18: Moderator role fields
+    isModerator: boolean("is_moderator").notNull().default(false),
+    moderatorSince: timestamp("moderator_since", { withTimezone: true }),
+    moderatorDomains: text("moderator_domains").array().default([]),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

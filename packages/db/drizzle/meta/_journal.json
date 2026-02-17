@@ -120,6 +120,13 @@
       "when": 1771200000001,
       "tag": "0016_community_identity_growth",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1771300000000,
+      "tag": "0017_cooperative_depth_governance",
+      "breakpoints": true
     }
   ]
 }

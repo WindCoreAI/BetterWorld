@@ -26,6 +26,14 @@ export const QUEUE_NAMES = {
   // Sprint 17: Community Identity & Visible Growth
   MILESTONE_DETECTION: "milestone-detection",
   INTELLIGENCE_REPORT: "intelligence-report",
+  // Sprint 18: Cooperative Depth & Governance
+  MENTORSHIP_EXPIRY: "mentorship-expiry",
+  MODERATOR_ELIGIBILITY: "moderator-eligibility",
+  CASE_STUDY_CURATION: "case-study-curation",
+  ACHIEVEMENT_DETECTION: "achievement-detection",
+  POWER_AUDIT: "power-audit",
+  AGENT_FINGERPRINT: "agent-fingerprint",
+  FEED_EVENT_PROCESSOR: "feed-event-processor",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

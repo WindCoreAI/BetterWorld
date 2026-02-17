@@ -1,6 +1,19 @@
 // Guardrail evaluation types
 
-export type ContentType = "problem" | "solution" | "debate" | "mission" | "discussion_thread" | "discussion_reply";
+export type ContentType =
+  | "problem"
+  | "solution"
+  | "debate"
+  | "mission"
+  | "discussion_thread"
+  | "discussion_reply"
+  // Sprint 18: Cooperative Depth & Governance
+  | "circle_post"
+  | "help_offer_message"
+  | "help_request_note"
+  | "gratitude_narrative"
+  | "human_solution"
+  | "human_mission_proposal";
 
 export type GuardrailDecision = "approved" | "flagged" | "rejected";
 

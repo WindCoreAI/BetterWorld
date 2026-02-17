@@ -65,6 +65,13 @@ export const contentTypeEnum = pgEnum("content_type", [
   // Sprint 16: Discussion content types for guardrail routing
   "discussion_thread",
   "discussion_reply",
+  // Sprint 18: Cooperative Depth & Governance content types
+  "circle_post",
+  "help_offer_message",
+  "help_request_note",
+  "gratitude_narrative",
+  "human_solution",
+  "human_mission_proposal",
 ]);
 
 export const guardrailDecisionEnum = pgEnum("guardrail_decision", [
@@ -98,6 +105,8 @@ export const missionStatusEnum = pgEnum("mission_status", [
   "verified",
   "expired",
   "archived",
+  // Sprint 18: Human-proposed missions start in pending_endorsement
+  "pending_endorsement",
 ]);
 
 export const difficultyLevelEnum = pgEnum("difficulty_level", [
@@ -135,6 +144,17 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   // Sprint 16: Social Fabric care moment gifts
   "spend_cheer",
   "spend_celebrate",
+  // Sprint 18: Cooperative Depth & Governance
+  "earn_mentorship_bonus",
+  "earn_mentee_first_mission",
+  "earn_mentorship_completion",
+  "earn_buddy_split",
+  "earn_helper_reward",
+  "spend_buddy_share",
+  "spend_helper_share",
+  "earn_teaching_reward",
+  "earn_ambassador_welcome",
+  "earn_case_study_contribution",
 ]);
 
 // Sprint 8: Evidence verification enums
@@ -315,6 +335,28 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "feedback",
   "milestone_celebration",
   "intelligence_report",
+  // Sprint 18: Cooperative Depth & Governance
+  "mentorship_request",
+  "mentorship_accepted",
+  "mentorship_completed",
+  "mentorship_rating_prompt",
+  "mentee_mission_completed",
+  "buddy_invitation",
+  "buddy_accepted",
+  "buddy_declined",
+  "help_offer_received",
+  "help_offer_accepted",
+  "help_offer_declined",
+  "moderator_approved",
+  "moderator_decision",
+  "pathway_level_up",
+  "challenge_started",
+  "challenge_completed",
+  "achievement_earned",
+  "ambassador_assigned",
+  "ambassador_welcome",
+  "moderator_revoked",
+  "mission_endorsed",
 ]);
 
 export const discussionScopeTypeEnum = pgEnum("discussion_scope_type", [
@@ -342,4 +384,93 @@ export const feedbackTypeEnum = pgEnum("feedback_type", [
   "evidence_rejection",
   "review_disagreement",
   "high_performer_recognition",
+]);
+
+// Sprint 18: Cooperative Depth & Governance enums
+export const mentorshipStatusEnum = pgEnum("mentorship_status", [
+  "pending",
+  "active",
+  "completed",
+  "terminated",
+]);
+
+export const buddyStatusEnum = pgEnum("buddy_status", [
+  "pending",
+  "accepted",
+  "declined",
+  "expired",
+]);
+
+export const helpOfferStatusEnum = pgEnum("help_offer_status", [
+  "pending",
+  "accepted",
+  "declined",
+]);
+
+export const moderatorActionTypeEnum = pgEnum("moderator_action_type", [
+  "content_approved",
+  "content_rejected",
+  "content_escalated",
+  "help_response",
+  "newcomer_welcome",
+]);
+
+export const circleRoleEnum = pgEnum("circle_role", [
+  "founder",
+  "moderator",
+  "member",
+]);
+
+export const circlePostTypeEnum = pgEnum("circle_post_type", [
+  "discussion",
+  "mission_share",
+  "celebration",
+]);
+
+export const caseStudyStatusEnum = pgEnum("case_study_status", [
+  "draft",
+  "published",
+  "archived",
+]);
+
+export const challengeTypeEnum = pgEnum("challenge_type", [
+  "city_vs_city",
+  "domain_sprint",
+  "cross_pollination",
+]);
+
+export const challengeStatusEnum = pgEnum("challenge_status", [
+  "upcoming",
+  "active",
+  "completed",
+  "cancelled",
+]);
+
+export const pathwayLevelEnum = pgEnum("pathway_level", [
+  "observer",
+  "practitioner",
+  "specialist_candidate",
+  "specialist",
+]);
+
+export const cooperativeAchievementTypeEnum = pgEnum("cooperative_achievement_type", [
+  "first_responders",
+  "cross_city_bridge",
+  "perfect_consensus",
+  "domain_sweep",
+  "growth_partners",
+]);
+
+export const feedEventTypeEnum = pgEnum("feed_event_type", [
+  "problem_created",
+  "solution_proposed",
+  "mission_claimed",
+  "evidence_submitted",
+  "thread_created",
+  "reply_created",
+  "achievement_earned",
+  "milestone_reached",
+  "help_requested",
+  "case_study_published",
+  "challenge_started",
 ]);

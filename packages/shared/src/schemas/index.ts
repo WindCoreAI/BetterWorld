@@ -84,3 +84,25 @@ export type {
   EvaluationPendingQuery,
   HomeRegionsInput,
 } from "./evaluation.js";
+
+// Sprint 18: Cooperative Depth & Governance schemas
+export { createMentorshipSchema, rateMentorshipSchema, mentorshipResponseSchema } from "./mentorship.js";
+export type { CreateMentorshipInput, RateMentorshipInput, MentorshipResponse } from "./mentorship.js";
+export { inviteBuddySchema, helpOfferSchema, helpRequestSchema } from "./buddy.js";
+export type { InviteBuddyInput, HelpOfferInput, HelpRequestInput } from "./buddy.js";
+export { moderatorDecisionSchema, moderatorApprovalSchema } from "./moderator.js";
+export type { ModeratorDecisionInput, ModeratorApprovalInput } from "./moderator.js";
+export { enrollPathwaySchema, markCaseStudyReadSchema } from "./pathway.js";
+export type { EnrollPathwayInput, MarkCaseStudyReadInput } from "./pathway.js";
+export { createChallengeSchema, joinChallengeSchema } from "./challenge.js";
+export type { CreateChallengeInput, JoinChallengeInput } from "./challenge.js";
+export { createCircleSchema, circlePostSchema, shareCircleMissionSchema } from "./circle.js";
+export type { CreateCircleInput, CirclePostInput, ShareCircleMissionInput } from "./circle.js";
+export {
+  narrativeSchema, featureEndorsementSchema, humanSolutionSchema,
+  humanMissionProposalSchema, feedQuerySchema, discoverQuerySchema,
+} from "./enhancements.js";
+export type {
+  NarrativeInput, FeatureEndorsementInput, HumanSolutionInput,
+  HumanMissionProposalInput, FeedQueryInput, DiscoverQueryInput,
+} from "./enhancements.js";

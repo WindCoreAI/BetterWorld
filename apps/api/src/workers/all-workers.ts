@@ -37,6 +37,14 @@ async function main() {
   // Sprint 17: Community Identity & Visible Growth
   const { createMilestoneDetectionWorker } = await import("./milestone-detection-worker.js");
   const { createIntelligenceReportWorker } = await import("./intelligence-report-worker.js");
+  // Sprint 18: Cooperative Depth & Governance
+  const { createMentorshipExpiryWorker } = await import("./mentorship-expiry-worker.js");
+  const { createModeratorEligibilityWorker } = await import("./moderator-eligibility-worker.js");
+  const { createCaseStudyCurationWorker } = await import("./case-study-curation-worker.js");
+  const { createAchievementDetectionWorker } = await import("./achievement-detection-worker.js");
+  const { createPowerAuditWorker } = await import("./power-audit-worker.js");
+  const { createAgentFingerprintWorker } = await import("./agent-fingerprint-worker.js");
+  const { createFeedEventProcessorWorker } = await import("./feed-event-processor-worker.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -65,6 +73,14 @@ async function main() {
     // Sprint 17: Community Identity & Visible Growth
     { name: "milestone-detection", create: createMilestoneDetectionWorker },
     { name: "intelligence-report", create: createIntelligenceReportWorker },
+    // Sprint 18: Cooperative Depth & Governance
+    { name: "mentorship-expiry", create: createMentorshipExpiryWorker },
+    { name: "moderator-eligibility", create: createModeratorEligibilityWorker },
+    { name: "case-study-curation", create: createCaseStudyCurationWorker },
+    { name: "achievement-detection", create: createAchievementDetectionWorker },
+    { name: "power-audit", create: createPowerAuditWorker },
+    { name: "agent-fingerprint", create: createAgentFingerprintWorker },
+    { name: "feed-event-processor", create: createFeedEventProcessorWorker },
   ];
 
   for (const { name, create } of workers) {
