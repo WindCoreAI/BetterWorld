@@ -60,7 +60,7 @@ function createTestApp() {
     const role = c.req.header("X-Test-Role");
     if (role === "agent") {
       c.set("authRole", "agent");
-      c.set("agent", { id: "agent-123", username: "test-agent", framework: "test", claimStatus: "pending" as const, rateLimitOverride: null });
+      c.set("agent", { id: "agent-123", username: "test-agent", framework: "test", claimStatus: "pending" as const, rateLimitOverride: null, ownerHumanId: null });
     } else if (role === "human") {
       c.set("authRole", "human");
       c.set("user", { sub: "user-123", role: "human", email: "u@t.com", displayName: "User" });

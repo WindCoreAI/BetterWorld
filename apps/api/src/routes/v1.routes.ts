@@ -57,6 +57,7 @@ import missionTemplateRoutes from "./mission-templates.routes.js";
 import decomposeRoutes from "./missions/decompose.js";
 import missionRoutes from "./missions/index.js";
 import moderatorRoutes from "./moderator/index.js";
+import myAgentsRoutes from "./my-agents.routes.js";
 import networkRoutes from "./network.routes.js";
 import notificationRoutes from "./notifications.routes.js";
 import observationRoutes from "./observations.routes.js";
@@ -181,3 +182,6 @@ v1Routes.route("/endorsements", endorsementEnhancementRoutes);
 v1Routes.route("/teaching", teachingRoutes);
 v1Routes.route("/ambassador", ambassadorRoutes);
 v1Routes.route("/admin/moderator", adminModeratorRoutes);
+
+// Sprint 19 routes — Human-First Agent Onboarding
+v1Routes.route("/my-agents", myAgentsRoutes);

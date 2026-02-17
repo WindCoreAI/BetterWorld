@@ -5,6 +5,7 @@ import {
   teardownTestInfra,
   cleanupTestData,
   registerTestAgent,
+  createTestHuman,
 } from "./helpers.js";
 
 describe("Edge Cases and Negative Tests", () => {
@@ -24,9 +25,13 @@ describe("Edge Cases and Negative Tests", () => {
 
   describe("Registration Edge Cases", () => {
     it("rejects username with consecutive underscores", async () => {
-      const res = await app.request("/api/v1/auth/agents/register", {
+      const { token } = await createTestHuman();
+      const res = await app.request("/api/v1/my-agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           username: "test__agent",
           framework: "custom",
@@ -40,9 +45,13 @@ describe("Edge Cases and Negative Tests", () => {
     });
 
     it("rejects more than 5 specializations", async () => {
-      const res = await app.request("/api/v1/auth/agents/register", {
+      const { token } = await createTestHuman();
+      const res = await app.request("/api/v1/my-agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           username: "too_many_specs",
           framework: "custom",
@@ -61,9 +70,13 @@ describe("Edge Cases and Negative Tests", () => {
     });
 
     it("rejects 0 specializations", async () => {
-      const res = await app.request("/api/v1/auth/agents/register", {
+      const { token } = await createTestHuman();
+      const res = await app.request("/api/v1/my-agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           username: "no_specs",
           framework: "custom",
@@ -76,10 +89,14 @@ describe("Edge Cases and Negative Tests", () => {
 
     it("rejects very long soulSummary (>2000 chars)", async () => {
       const longSummary = "a".repeat(2001);
+      const { token } = await createTestHuman();
 
-      const res = await app.request("/api/v1/auth/agents/register", {
+      const res = await app.request("/api/v1/my-agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           username: "long_summary_agent",
           framework: "custom",
@@ -174,7 +191,10 @@ describe("Edge Cases and Negative Tests", () => {
       expect(res.status).toBeGreaterThanOrEqual(400);
     });
 
-    it("enforces resend throttle (max 3/hour)", async () => {
+    // Skipped: agents created via human-first flow (Sprint 19) inherit email
+    // verification from the human owner and do not receive a claimVerificationCode,
+    // so the /auth/agents/verify/resend endpoint is not applicable.
+    it.skip("enforces resend throttle (max 3/hour)", async () => {
       const { data: regData } = await registerTestAgent(app, {
         username: "throttle_test",
         email: "throttle@test.com",
@@ -302,15 +322,21 @@ describe("Edge Cases and Negative Tests", () => {
   });
 
   describe("Input Validation Edge Cases", () => {
-    it("rejects email with invalid format", async () => {
-      const res = await app.request("/api/v1/auth/agents/register", {
+    // Note: email is no longer part of agent creation (Sprint 19 human-first flow).
+    // Agents inherit verification from the human owner. Instead, test that an
+    // invalid framework value is correctly rejected by the createAgentSchema.
+    it("rejects invalid framework value", async () => {
+      const { token } = await createTestHuman();
+      const res = await app.request("/api/v1/my-agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          username: "invalid_email_test",
-          framework: "custom",
+          username: "invalid_fw_test",
+          framework: "not_a_real_framework",
           specializations: ["climate_action"],
-          email: "not-an-email",
         }),
       });
 
@@ -339,9 +365,13 @@ describe("Edge Cases and Negative Tests", () => {
     });
 
     it("rejects null values in required fields", async () => {
-      const res = await app.request("/api/v1/auth/agents/register", {
+      const { token } = await createTestHuman();
+      const res = await app.request("/api/v1/my-agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           username: null,
           framework: "custom",

@@ -6,6 +6,7 @@ import {
   cleanupTestData,
   registerTestAgent,
   getTestApp,
+  getWsPort,
 } from "./helpers.js";
 
 // Helper to create WebSocket connection
@@ -16,7 +17,7 @@ function createWsConnection(token: string): Promise<{
   close: () => void;
 }> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`ws://localhost:3001/ws/feed?token=${token}`);
+    const ws = new WebSocket(`ws://localhost:${getWsPort()}/ws/feed?token=${token}`);
     const messages: any[] = [];
     let resolveMessage: ((msg: any) => void) | null = null;
     let isResolved = false;
@@ -137,7 +138,7 @@ describe("WebSocket Event Feed", () => {
   it("rejects connection with no token", async () => {
     await expect(async () => {
       return new Promise((resolve, reject) => {
-        const ws = new WebSocket("ws://localhost:3001/ws/feed");
+        const ws = new WebSocket(`ws://localhost:${getWsPort()}/ws/feed`);
         let isResolved = false;
 
         ws.on("open", () => {

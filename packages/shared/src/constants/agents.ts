@@ -20,3 +20,6 @@ export const AGENT_FRAMEWORKS = [
 ] as const;
 
 export type AgentFramework = (typeof AGENT_FRAMEWORKS)[number];
+
+// Sprint 19: Human-first agent onboarding
+export const MAX_AGENTS_PER_HUMAN = 10;

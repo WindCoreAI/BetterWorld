@@ -4,7 +4,7 @@
  * Uses humans.tokenBalance as authoritative balance source.
  */
 
-import { humanProfiles, humans, tokenTransactions } from "@betterworld/db";
+import { agents, humanProfiles, humans, tokenTransactions } from "@betterworld/db";
 import { parsePostGISPoint } from "@betterworld/shared/utils/geocode";
 import { calculateProfileCompleteness, type ProfileInput } from "@betterworld/shared/utils/profileCompleteness";
 import { desc, eq, sql } from "drizzle-orm";
@@ -25,7 +25,7 @@ app.get("/", humanAuth(), async (c) => {
     const db = getDb();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
 
-    const [userResult, profileResult, spentResult] = await Promise.all([
+    const [userResult, profileResult, spentResult, agentCountResult] = await Promise.all([
       db.select({
         id: humans.id,
         email: humans.email,
@@ -39,6 +39,10 @@ app.get("/", humanAuth(), async (c) => {
       db.select({ total: sql<number>`COALESCE(SUM(ABS(${tokenTransactions.amount})), 0)` })
         .from(tokenTransactions)
         .where(sql`${tokenTransactions.humanId} = ${human.id} AND ${tokenTransactions.amount} < 0`),
+      // Sprint 19: Agent count for dashboard card
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(agents)
+        .where(eq(agents.ownerHumanId, human.id)),
     ]);
     const [user] = userResult;
     const [profile] = profileResult;
@@ -109,6 +113,9 @@ app.get("/", humanAuth(), async (c) => {
           active: 0,
           completed: profile?.totalMissionsCompleted || 0,
           streakDays: profile?.streakDays || 0,
+        },
+        agents: {
+          count: agentCountResult[0]?.count ?? 0,
         },
         recentActivity: recentActivity.map((tx) => ({
           id: tx.id,

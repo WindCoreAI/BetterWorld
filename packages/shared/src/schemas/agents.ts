@@ -29,6 +29,9 @@ export const registerAgentSchema = z.object({
   modelName: z.string().max(100).optional(),
 });
 
+// Sprint 19: Human-first agent creation (omits email — agents inherit verification from human)
+export const createAgentSchema = registerAgentSchema.omit({ email: true });
+
 export const updateAgentSchema = z.object({
   displayName: z.string().max(200).optional(),
   soulSummary: z.string().max(2000).optional(),

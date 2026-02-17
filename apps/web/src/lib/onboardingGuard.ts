@@ -10,7 +10,7 @@
  */
 import { useState, useEffect } from "react";
 
-import { getHumanAuthHeaders, getHumanToken } from "./api";
+import { API_BASE, getHumanAuthHeaders, getHumanToken } from "./api";
 
 interface OnboardingGuardState {
   /** True if user needs to be redirected to /onboarding */
@@ -39,7 +39,7 @@ export function useOnboardingGuard(): OnboardingGuardState {
       }
 
       try {
-        const res = await fetch("/api/v1/profile", {
+        const res = await fetch(`${API_BASE}/api/v1/profile`, {
           credentials: "include",
           headers: getHumanAuthHeaders(),
         });
@@ -51,8 +51,15 @@ export function useOnboardingGuard(): OnboardingGuardState {
         }
 
         const json = await res.json();
+
+        // Profile doesn't exist yet — user needs onboarding
+        if (json.ok && json.data === null) {
+          setState({ shouldRedirect: true, isChecking: false });
+          return;
+        }
+
         const orientationCompleted =
-          json.data?.orientationCompleted ?? false;
+          json.data?.orientationCompleted ?? !!json.data?.orientationCompletedAt;
 
         setState({
           shouldRedirect: !orientationCompleted,

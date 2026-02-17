@@ -43,14 +43,17 @@ app.post("/orientation-reward", humanAuth(), async (c) => {
         .for("update")
         .limit(1);
 
-      if (!profile) {
-        return c.json(
-          { ok: false, error: { code: "PROFILE_NOT_FOUND" as const, message: "Profile not found" }, requestId: c.get("requestId") },
-          404,
-        );
+      // Auto-create minimal profile if missing (new users completing orientation before profile setup)
+      let activeProfile = profile;
+      if (!activeProfile) {
+        const [created] = await tx
+          .insert(humanProfiles)
+          .values({ humanId: human.id, skills: [], languages: [] })
+          .returning();
+        activeProfile = created;
       }
 
-      if (profile.orientationCompletedAt) {
+      if (activeProfile.orientationCompletedAt) {
         return c.json(
           { ok: false, error: { code: "REWARD_ALREADY_CLAIMED" as const, message: "Orientation reward already claimed" }, requestId: c.get("requestId") },
           400,
@@ -92,7 +95,7 @@ app.post("/orientation-reward", humanAuth(), async (c) => {
         .update(humanProfiles)
         .set({
           orientationCompletedAt: new Date(),
-          totalTokensEarned: profile.totalTokensEarned + rewardAmount,
+          totalTokensEarned: activeProfile.totalTokensEarned + rewardAmount,
         })
         .where(eq(humanProfiles.humanId, human.id));
 

@@ -22,7 +22,7 @@ async function checkLoginRateLimit(redis: RedisLike | null, rateKey: string): Pr
   if (!redis) return false;
   try {
     const attempts = await redis.get(rateKey);
-    return !!(attempts && parseInt(attempts, 10) >= 5);
+    return !!(attempts && parseInt(attempts, 10) >= 20);
   } catch {
     return false; // Fail open
   }

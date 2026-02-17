@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   decimal,
+  foreignKey,
   index,
   integer,
   pgTable,
@@ -14,6 +15,7 @@ import {
 
 import { debates } from "./debates";
 import { claimStatusEnum } from "./enums";
+import { humans } from "./humans";
 import { problems } from "./problems";
 import { solutions } from "./solutions";
 import { geographyPoint } from "./types";
@@ -80,10 +82,18 @@ export const agents = pgTable(
     index("agents_email_idx").on(table.email),
     // Sprint 10: Phase 3 indexes
     index("agents_credit_balance_idx").on(table.creditBalance),
+    // Sprint 19: Human-first agent onboarding
+    index("agents_owner_human_id_idx").on(table.ownerHumanId),
+    foreignKey({
+      columns: [table.ownerHumanId],
+      foreignColumns: [humans.id],
+      name: "agents_owner_human_id_fk",
+    }).onDelete("restrict"),
   ],
 );
 
-export const agentsRelations = relations(agents, ({ many }) => ({
+export const agentsRelations = relations(agents, ({ one, many }) => ({
+  owner: one(humans, { fields: [agents.ownerHumanId], references: [humans.id] }),
   problems: many(problems),
   solutions: many(solutions),
   debates: many(debates),

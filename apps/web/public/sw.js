@@ -15,13 +15,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: network-first for navigation, stale-while-revalidate for API reads
+// Fetch: network-first for navigation, stale-while-revalidate for API GET reads
+// Non-GET requests (POST/PATCH/DELETE) are NOT intercepted — the browser handles them natively
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
+      fetch(request).catch(() =>
+        caches.match(request).then(cached =>
+          cached || new Response('Offline', { status: 503, statusText: 'Service Unavailable', headers: { 'Content-Type': 'text/html' } })
+        )
+      )
     );
     return;
   }
@@ -41,7 +46,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(fetch(request));
+  // Let non-GET requests pass through to the browser without interception.
+  // Wrapping them in respondWith(fetch(request)) converts network errors into
+  // opaque FetchEvent failures, hiding the real error from the application.
 });
 
 // Background sync for queued observations

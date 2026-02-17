@@ -61,8 +61,8 @@ function authRateLimit(opts: { limit: number; windowSec: number; prefix: string 
 }
 
 // Apply rate limits to sensitive endpoints
-// Login: 5 attempts per 5 minutes per IP
-auth.use("/login/*", authRateLimit({ limit: 5, windowSec: 300, prefix: "login" }));
+// Login: 20 attempts per 5 minutes per IP
+auth.use("/login/*", authRateLimit({ limit: 20, windowSec: 300, prefix: "login" }));
 // Register: 3 accounts per 5 minutes per IP
 auth.use("/register/*", authRateLimit({ limit: 3, windowSec: 300, prefix: "register" }));
 // Verify email: 10 attempts per 5 minutes per IP (6-digit brute-force protection)

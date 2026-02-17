@@ -1,8 +1,8 @@
 # BetterWorld Documentation Index
 
 > **Generated**: 2026-02-06
-> **Last Review**: 2026-02-16 (v28.0 — Cooperative Depth & Governance Complete, Sprint 18 delivered)
-> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 + MVP Production Readiness + Social Fabric + Community Identity + Cooperative Depth. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks). **Sprint 15 (MVP Production Readiness) complete** — 78/78 tasks, 35/35 functional requirements. **Sprint 16 (Social Fabric Foundation) complete** — 85/85 tasks, 6 user stories. Blueprint Spec 1 delivered. **Sprint 17 (Community Identity & Visible Growth) complete** — 76 tasks, 8 user stories. Blueprint Spec 2 delivered. **Sprint 18 (Cooperative Depth & Governance) complete** — 160 tasks, 11 user stories: mentorship pairing, mission buddies, community moderators, informal help, human agency, learning pathways, case studies, cross-group challenges, circle enrichment, cooperative achievements, governance enhancements. Blueprint Spec 3 delivered. 1,521 total tests (354 guardrails + 233 shared + 851 API + 83 frontend).
+> **Last Review**: 2026-02-17 (v29.0 — Human-First Agent Onboarding Complete, Sprint 19 delivered)
+> **Status**: Complete documentation suite for Phase 1 + Phase 2 + Phase 3 + MVP Production Readiness + Social Fabric + Community Identity + Cooperative Depth + Human-First Agent Onboarding. **Phase 1 complete**. **Phase 2 complete** — Sprints 6-9 delivered, evaluation Round 2 all 20 issues resolved (19 fixed + 1 N/A). **Phase 3 complete** — Sprint 10 (Foundation) complete (51/51 tasks). Sprint 11 (Shadow Mode) complete (53/53 tasks). Sprint 12 (Production Shift) complete (85/85 tasks). Sprint 13 (Integration) complete (110/110 tasks). **Sprint 15 (MVP Production Readiness) complete** — 78/78 tasks, 35/35 functional requirements. **Sprint 16 (Social Fabric Foundation) complete** — 85/85 tasks, 6 user stories. Blueprint Spec 1 delivered. **Sprint 17 (Community Identity & Visible Growth) complete** — 76 tasks, 8 user stories. Blueprint Spec 2 delivered. **Sprint 18 (Cooperative Depth & Governance) complete** — 160 tasks, 11 user stories. Blueprint Spec 3 delivered. **Sprint 19 (Human-First Agent Onboarding) complete** — 30/30 tasks, 21/21 functional requirements, 7 user stories: human-first agent creation, API key management, agent CRUD, ownership enforcement, verification inheritance, deprecated old registration. 1,521+ total tests (354 guardrails + 233 shared + 851 API + 83 frontend).
 
 ---
 
@@ -140,6 +140,12 @@ Deep research documents for each of the 7 core technical challenges identified i
 
 > **Note**: Additional challenge documents may be added as new technical risks are identified during implementation.
 
+## Sprint Specifications (specs/)
+
+| # | Spec | Description | Status |
+|---|------|-------------|--------|
+| 19 | [Human-First Agent Onboarding](../specs/019-human-first-agent-onboarding/spec.md) | Human-first agent creation, API key management, ownership enforcement, deprecated self-registration | COMPLETE |
+
 ## Blueprint Social Suite Research (research/blueprint/)
 
 Research assessment of BetterWorld against Christakis' 8 evolutionary social traits, with implementation roadmap. **Spec 1 (Social Fabric Foundation) complete** — Sprint 16 delivered. **Spec 2 (Community Identity & Visible Growth) complete** — Sprint 17 delivered. **Spec 3 (Cooperative Depth & Governance) complete** — Sprint 18 delivered. All 3 specs complete — Social Suite score raised from B- to A-.
@@ -166,6 +172,7 @@ Detailed integration designs and implementation plans for upcoming features.
 | # | Document | Description |
 |---|----------|-------------|
 | 1 | [Phase 3 Integration Design](plans/2026-02-11-phase3-integration-design.md) | Full technical design: dual-ledger credits, Layer B' peer validation, hyperlocal system, schema (8 new tables, 8 enums), migration strategy, sprint sequencing |
+| 2 | [Human-First Agent Onboarding](plans/2026-02-17-human-first-agent-onboarding.md) | Sprint 19: refactor agent onboarding so humans register first, then create/manage AI agents from dashboard. 6 phases, 7 endpoints, DB schema changes |
 
 ---
 

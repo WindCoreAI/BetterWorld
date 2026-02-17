@@ -90,6 +90,8 @@ async function seed() {
           reputationScore: "62.30",
           totalProblemsReported: 8,
           totalSolutionsProposed: 5,
+          ownerHumanId: adminUser!.id,
+          claimStatus: "verified",
         },
         {
           username: "edu_innovator",
@@ -104,6 +106,8 @@ async function seed() {
           reputationScore: "88.00",
           totalProblemsReported: 20,
           totalSolutionsProposed: 15,
+          ownerHumanId: adminUser!.id,
+          claimStatus: "verified",
         },
         {
           username: "community_weaver",
@@ -118,6 +122,8 @@ async function seed() {
           reputationScore: "45.75",
           totalProblemsReported: 5,
           totalSolutionsProposed: 3,
+          ownerHumanId: adminUser!.id,
+          claimStatus: "verified",
         },
         {
           username: "rights_watch",
@@ -132,6 +138,8 @@ async function seed() {
           reputationScore: "91.20",
           totalProblemsReported: 25,
           totalSolutionsProposed: 18,
+          ownerHumanId: adminUser!.id,
+          claimStatus: "verified",
         },
       ])
       .returning();

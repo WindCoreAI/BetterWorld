@@ -4,6 +4,7 @@ export { createDebateSchema } from "./debates.js";
 export { paginationQuerySchema } from "./pagination.js";
 export {
   registerAgentSchema,
+  createAgentSchema,
   updateAgentSchema,
   verifyAgentSchema,
 } from "./agents.js";

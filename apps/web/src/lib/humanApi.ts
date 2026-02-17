@@ -22,15 +22,39 @@ async function humanFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<ApiResponse<T>> {
-  const res = await fetch(`${API_BASE}/api/v1${path}`, {
-    ...options,
-    headers: {
-      ...getHumanAuthHeaders(),
-      ...(options.headers ?? {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/v1${path}`, {
+      ...options,
+      cache: "no-store",
+      headers: {
+        ...getHumanAuthHeaders(),
+        ...(options.headers ?? {}),
+      },
+    });
+  } catch {
+    // Network error (server down, no connectivity, CORS preflight failure)
+    return {
+      ok: false,
+      error: {
+        code: "NETWORK_ERROR",
+        message: "Unable to connect to the server. Please check your connection and try again.",
+      },
+    } as ApiResponse<T>;
+  }
 
-  const json = await res.json();
+  let json: ApiResponse<T>;
+  try {
+    json = await res.json();
+  } catch {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_RESPONSE",
+        message: "The server returned an unexpected response. Please try again.",
+      },
+    } as ApiResponse<T>;
+  }
 
   // Auto-refresh on 401 if we have a refresh token
   if (res.status === 401 && getHumanRefreshToken()) {
@@ -40,14 +64,25 @@ async function humanFetch<T>(
       // POST/PUT/PATCH/DELETE are NOT retried to prevent duplicate operations.
       const method = (options.method ?? "GET").toUpperCase();
       if (method === "GET" || method === "HEAD") {
-        const retryRes = await fetch(`${API_BASE}/api/v1${path}`, {
-          ...options,
-          headers: {
-            ...getHumanAuthHeaders(),
-            ...(options.headers ?? {}),
-          },
-        });
-        return retryRes.json();
+        try {
+          const retryRes = await fetch(`${API_BASE}/api/v1${path}`, {
+            ...options,
+            cache: "no-store",
+            headers: {
+              ...getHumanAuthHeaders(),
+              ...(options.headers ?? {}),
+            },
+          });
+          return retryRes.json();
+        } catch {
+          return {
+            ok: false,
+            error: {
+              code: "NETWORK_ERROR",
+              message: "Unable to connect to the server. Please check your connection and try again.",
+            },
+          } as ApiResponse<T>;
+        }
       }
       // Non-idempotent request: return error indicating user must retry manually
       return {
@@ -353,6 +388,55 @@ export const impactApi = {
   },
   async getMyRipple(): Promise<ApiResponse<Any>> {
     return humanFetch("/impact/my-ripple");
+  },
+};
+
+// Sprint 19: My Agents API
+export const myAgentsApi = {
+  async create(data: {
+    username: string;
+    framework: string;
+    specializations: string[];
+    displayName?: string;
+    soulSummary?: string;
+    modelProvider?: string;
+    modelName?: string;
+  }): Promise<ApiResponse<{ agentId: string; username: string; apiKey: string; claimStatus: string; creditBalance: number }>> {
+    return humanFetch("/my-agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+  async list(cursor?: string, limit = 20): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set("cursor", cursor);
+    return humanFetch(`/my-agents?${params}`);
+  },
+  async get(agentId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/my-agents/${agentId}`);
+  },
+  async update(agentId: string, data: {
+    displayName?: string;
+    soulSummary?: string;
+    specializations?: string[];
+    modelProvider?: string;
+    modelName?: string;
+  }): Promise<ApiResponse<Any>> {
+    return humanFetch(`/my-agents/${agentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+  async rotateKey(agentId: string): Promise<ApiResponse<{ apiKey: string; previousKeyExpiresAt: string; warning: string }>> {
+    return humanFetch(`/my-agents/${agentId}/rotate-key`, { method: "POST" });
+  },
+  async deactivate(agentId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/my-agents/${agentId}/deactivate`, { method: "POST" });
+  },
+  async reactivate(agentId: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/my-agents/${agentId}/reactivate`, { method: "POST" });
   },
 };
 

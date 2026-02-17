@@ -2,7 +2,7 @@
 import crypto from "crypto";
 
 import { agents } from "@betterworld/db";
-import { AppError, RESERVED_USERNAMES, ALLOWED_DOMAINS } from "@betterworld/shared";
+import { AppError, RESERVED_USERNAMES, ALLOWED_DOMAINS, MAX_AGENTS_PER_HUMAN } from "@betterworld/shared";
 import type { ClaimStatus } from "@betterworld/shared";
 import bcrypt from "bcrypt";
 import { eq, and, sql, desc, asc } from "drizzle-orm";
@@ -488,6 +488,357 @@ export class AgentService {
     await this.invalidateAuthCache(agentId);
 
     return { agentId, claimStatus, previousStatus };
+  }
+
+  // ── Sprint 19: Human-first agent ownership methods ──
+
+  async createForHuman(
+    ownerHumanId: string,
+    humanEmailVerified: boolean,
+    input: Omit<RegisterInput, "email">,
+  ) {
+    // Validate username is not reserved
+    if ((RESERVED_USERNAMES as readonly string[]).includes(input.username)) {
+      throw new AppError("VALIDATION_ERROR", "This username is reserved");
+    }
+
+    // Check max agents per human
+    const [countResult] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agents)
+      .where(eq(agents.ownerHumanId, ownerHumanId));
+
+    if ((countResult?.count ?? 0) >= MAX_AGENTS_PER_HUMAN) {
+      throw new AppError("MAX_AGENTS_REACHED", `Maximum of ${MAX_AGENTS_PER_HUMAN} agents per account`);
+    }
+
+    // Check username uniqueness (case-insensitive)
+    const [existing] = await this.db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(sql`lower(${agents.username})`, input.username.toLowerCase()))
+      .limit(1);
+
+    if (existing) {
+      throw new AppError("USERNAME_TAKEN", "Username is already taken");
+    }
+
+    // Validate specializations
+    for (const spec of input.specializations) {
+      if (!(ALLOWED_DOMAINS as readonly string[]).includes(spec)) {
+        throw new AppError("VALIDATION_ERROR", `Invalid specialization: ${spec}`);
+      }
+    }
+
+    // Generate API key
+    const apiKey = crypto.randomBytes(API_KEY_BYTES).toString("hex");
+    const prefix = apiKey.slice(0, PREFIX_LENGTH);
+    const apiKeyHash = await bcrypt.hash(apiKey, BCRYPT_ROUNDS);
+
+    // FR-005: Inherit verification from human
+    const claimStatus: ClaimStatus = humanEmailVerified ? "verified" : "pending";
+
+    // Insert agent
+    let agent: { id: string; username: string; claimStatus: string } | undefined;
+    try {
+      const [inserted] = await this.db
+        .insert(agents)
+        .values({
+          username: input.username,
+          framework: input.framework,
+          specializations: input.specializations,
+          apiKeyHash,
+          apiKeyPrefix: prefix,
+          displayName: input.displayName ?? null,
+          soulSummary: input.soulSummary ?? null,
+          modelProvider: input.modelProvider ?? null,
+          modelName: input.modelName ?? null,
+          ownerHumanId: ownerHumanId,
+          claimStatus,
+        })
+        .returning({ id: agents.id, username: agents.username, claimStatus: agents.claimStatus });
+      agent = inserted;
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "code" in err && err.code === "23505") {
+        throw new AppError("USERNAME_TAKEN", "Username is already taken");
+      }
+      throw err;
+    }
+
+    if (!agent) {
+      throw new AppError("INTERNAL_ERROR", "Failed to create agent");
+    }
+
+    return {
+      agentId: agent.id,
+      apiKey,
+      username: agent.username,
+      claimStatus: agent.claimStatus,
+    };
+  }
+
+  async listByOwner(ownerHumanId: string, cursor?: string, limit = 20) {
+    const conditions = [eq(agents.ownerHumanId, ownerHumanId)];
+
+    if (cursor) {
+      const decoded = Buffer.from(cursor, "base64").toString("utf-8");
+      const [cursorDate, cursorId] = decoded.split("::");
+      if (cursorDate && cursorId) {
+        conditions.push(
+          sql`(${agents.createdAt}, ${agents.id}) < (${cursorDate}, ${cursorId})`,
+        );
+      }
+    }
+
+    const results = await this.db
+      .select()
+      .from(agents)
+      .where(and(...conditions))
+      .orderBy(desc(agents.createdAt), desc(agents.id))
+      .limit(limit + 1);
+
+    const hasMore = results.length > limit;
+    const items = hasMore ? results.slice(0, limit) : results;
+
+    let nextCursor: string | null = null;
+    if (hasMore && items.length > 0) {
+      const last = items[items.length - 1]!;
+      nextCursor = Buffer.from(
+        `${last.createdAt.toISOString()}::${last.id}`,
+      ).toString("base64");
+    }
+
+    return {
+      agents: items.map((a) => this.toOwnedAgentSummary(a)),
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  async getOwnedAgent(agentId: string, ownerHumanId: string) {
+    const [agent] = await this.db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
+
+    if (!agent) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    if (agent.ownerHumanId !== ownerHumanId) {
+      throw new AppError("FORBIDDEN", "You do not own this agent");
+    }
+
+    return this.toOwnedAgentDetail(agent);
+  }
+
+  async updateOwnedAgent(
+    agentId: string,
+    ownerHumanId: string,
+    input: UpdateProfileInput,
+  ) {
+    // Verify ownership first
+    const [agent] = await this.db
+      .select({ id: agents.id, ownerHumanId: agents.ownerHumanId })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
+
+    if (!agent) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    if (agent.ownerHumanId !== ownerHumanId) {
+      throw new AppError("FORBIDDEN", "You do not own this agent");
+    }
+
+    // Validate specializations if provided
+    if (input.specializations) {
+      for (const spec of input.specializations) {
+        if (!(ALLOWED_DOMAINS as readonly string[]).includes(spec)) {
+          throw new AppError("VALIDATION_ERROR", `Invalid specialization: ${spec}`);
+        }
+      }
+    }
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    if (input.displayName !== undefined) updateData.displayName = input.displayName;
+    if (input.soulSummary !== undefined) updateData.soulSummary = input.soulSummary;
+    if (input.specializations !== undefined) updateData.specializations = input.specializations;
+    if (input.modelProvider !== undefined) updateData.modelProvider = input.modelProvider;
+    if (input.modelName !== undefined) updateData.modelName = input.modelName;
+
+    const [updated] = await this.db
+      .update(agents)
+      .set(updateData)
+      .where(eq(agents.id, agentId))
+      .returning();
+
+    if (!updated) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    return {
+      id: updated.id,
+      username: updated.username,
+      displayName: updated.displayName,
+      soulSummary: updated.soulSummary,
+      specializations: updated.specializations,
+      updatedAt: updated.updatedAt,
+    };
+  }
+
+  async rotateKeyForOwner(agentId: string, ownerHumanId: string) {
+    const [agent] = await this.db
+      .select({
+        id: agents.id,
+        ownerHumanId: agents.ownerHumanId,
+        apiKeyHash: agents.apiKeyHash,
+        apiKeyPrefix: agents.apiKeyPrefix,
+      })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
+
+    if (!agent) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    if (agent.ownerHumanId !== ownerHumanId) {
+      throw new AppError("FORBIDDEN", "You do not own this agent");
+    }
+
+    // Reuse existing rotateKey logic
+    return this.rotateKey(agentId);
+  }
+
+  async deactivateOwnedAgent(agentId: string, ownerHumanId: string) {
+    const [agent] = await this.db
+      .select({ id: agents.id, ownerHumanId: agents.ownerHumanId, isActive: agents.isActive })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
+
+    if (!agent) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    if (agent.ownerHumanId !== ownerHumanId) {
+      throw new AppError("FORBIDDEN", "You do not own this agent");
+    }
+
+    if (!agent.isActive) {
+      throw new AppError("ALREADY_INACTIVE", "Agent is already deactivated");
+    }
+
+    const [updated] = await this.db
+      .update(agents)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(agents.id, agentId))
+      .returning({ id: agents.id, username: agents.username, isActive: agents.isActive, updatedAt: agents.updatedAt });
+
+    if (!updated) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    // Invalidate auth cache so key stops working immediately
+    await this.invalidateAuthCache(agentId);
+
+    return {
+      id: updated.id,
+      username: updated.username,
+      isActive: updated.isActive,
+      deactivatedAt: updated.updatedAt,
+    };
+  }
+
+  async reactivateOwnedAgent(agentId: string, ownerHumanId: string) {
+    const [agent] = await this.db
+      .select({ id: agents.id, ownerHumanId: agents.ownerHumanId, isActive: agents.isActive })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
+
+    if (!agent) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    if (agent.ownerHumanId !== ownerHumanId) {
+      throw new AppError("FORBIDDEN", "You do not own this agent");
+    }
+
+    if (agent.isActive) {
+      throw new AppError("ALREADY_ACTIVE", "Agent is already active");
+    }
+
+    const [updated] = await this.db
+      .update(agents)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(agents.id, agentId))
+      .returning({ id: agents.id, username: agents.username, isActive: agents.isActive, updatedAt: agents.updatedAt });
+
+    if (!updated) {
+      throw new AppError("NOT_FOUND", "Agent not found");
+    }
+
+    // Invalidate cache so key starts working again
+    await this.invalidateAuthCache(agentId);
+
+    return {
+      id: updated.id,
+      username: updated.username,
+      isActive: updated.isActive,
+      reactivatedAt: updated.updatedAt,
+    };
+  }
+
+  async countByOwner(ownerHumanId: string): Promise<number> {
+    const [result] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agents)
+      .where(eq(agents.ownerHumanId, ownerHumanId));
+    return result?.count ?? 0;
+  }
+
+  private toOwnedAgentSummary(agent: typeof agents.$inferSelect) {
+    return {
+      id: agent.id,
+      username: agent.username,
+      displayName: agent.displayName,
+      framework: agent.framework,
+      specializations: agent.specializations,
+      claimStatus: agent.claimStatus,
+      isActive: agent.isActive,
+      creditBalance: agent.creditBalance,
+      reputationScore: agent.reputationScore,
+      lastHeartbeatAt: agent.lastHeartbeatAt,
+      createdAt: agent.createdAt,
+    };
+  }
+
+  private toOwnedAgentDetail(agent: typeof agents.$inferSelect) {
+    return {
+      id: agent.id,
+      username: agent.username,
+      displayName: agent.displayName,
+      soulSummary: agent.soulSummary,
+      framework: agent.framework,
+      specializations: agent.specializations,
+      modelProvider: agent.modelProvider,
+      modelName: agent.modelName,
+      claimStatus: agent.claimStatus,
+      isActive: agent.isActive,
+      creditBalance: agent.creditBalance,
+      reputationScore: agent.reputationScore,
+      apiKeyPrefix: agent.apiKeyPrefix,
+      lastHeartbeatAt: agent.lastHeartbeatAt,
+      createdAt: agent.createdAt,
+      updatedAt: agent.updatedAt,
+    };
   }
 
   private getTierLimit(claimStatus: ClaimStatus): number {
