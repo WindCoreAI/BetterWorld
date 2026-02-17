@@ -150,8 +150,8 @@ app.get("/healthz", (c) => {
   return c.json({ ok: true, service: "ws-feed" });
 });
 
-export function startWsServer() {
-  const wsPort = Number(process.env.WS_PORT) || 3001;
+export function startWsServer(portOverride?: number) {
+  const wsPort = portOverride ?? (Number(process.env.WS_PORT) || 3001);
   const databaseUrl =
     process.env.DATABASE_URL ??
     "postgresql://betterworld:betterworld_dev@localhost:5432/betterworld";

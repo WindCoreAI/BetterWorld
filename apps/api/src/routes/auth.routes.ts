@@ -1,5 +1,4 @@
 import {
-  registerAgentSchema,
   verifyAgentSchema,
 } from "@betterworld/shared";
 import { Hono } from "hono";
@@ -7,67 +6,73 @@ import { Hono } from "hono";
 import { getDb, getRedis } from "../lib/container.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import { requireAgent } from "../middleware/auth.js";
+import { rateLimit } from "../middleware/rate-limit.js";
 import { validate } from "../middleware/validate.js";
 import { AgentService } from "../services/agent.service.js";
 
 export const authRoutes = new Hono<AuthEnv>();
 
-// POST /auth/agents/register — Register a new agent (no auth required)
+// POST /auth/agents/register — DEPRECATED (Sprint 19)
+// Uses custom handler (NOT humanAuth()) so it can return a deprecation message.
+// Unauthenticated: 401 + deprecation message + X-BW-Deprecated header
+// Authenticated human: 410 Gone + redirect hint to /v1/my-agents
 authRoutes.post(
   "/agents/register",
-  validate({ body: registerAgentSchema }),
   async (c) => {
-    const db = getDb();
-    if (!db) {
+    // Check if there's a human Bearer token
+    const authHeader = c.req.header("Authorization");
+    let isHumanAuth = false;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      try {
+        const { loadConfig } = await import("@betterworld/shared");
+        const config = loadConfig();
+        const secret = new TextEncoder().encode(config.JWT_SECRET);
+        const joseModule = await import("jose");
+        const { payload } = await joseModule.jwtVerify(token, secret);
+        if (payload.userId && !payload.type) {
+          // It's a human JWT (not a refresh token and not an agent API key)
+          isHumanAuth = true;
+        }
+      } catch {
+        // Token is invalid or expired — treat as unauthenticated
+      }
+    }
+
+    if (isHumanAuth) {
+      // Authenticated human caller gets 410 Gone
       return c.json(
-        { ok: false, error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" }, requestId: c.get("requestId") },
-        503,
+        {
+          ok: false,
+          error: {
+            code: "DEPRECATED",
+            message: "This endpoint is deprecated. Manage your agents at /v1/my-agents.",
+          },
+          requestId: c.get("requestId"),
+        },
+        410,
+        {
+          "X-BW-Deprecated": "true",
+          Location: "/v1/my-agents",
+        },
       );
     }
 
-    const body = await c.req.json();
-    const parsed = registerAgentSchema.parse(body);
-    const service = new AgentService(db, getRedis());
-
-    const result = await service.register(parsed);
-
-    // Sprint 10: Issue starter grant (fail gracefully)
-    // The credit economy is foundational — always give starter grants
-    try {
-      const { AgentCreditService } = await import("../services/agent-credit.service.js");
-      const creditService = new AgentCreditService(db);
-      await creditService.issueStarterGrant(result.agentId);
-    } catch (err) {
-      // Fail gracefully — agent registration should succeed even if credit system is down
-      const { logger } = await import("../middleware/logger.js");
-      logger.warn(
-        { agentId: result.agentId, error: err instanceof Error ? err.message : "Unknown" },
-        "Failed to issue starter grant during registration",
-      );
-    }
-
-    // If email was provided and verification code generated, log it in dev
-    if (result.verificationCode) {
-      const { getEmailService } = await import("../services/email.service.js");
-      const emailService = getEmailService();
-      await emailService.sendVerificationCode(
-        parsed.email!,
-        result.verificationCode,
-        parsed.username,
-      );
-    }
-
+    // Unauthenticated caller gets 401
     return c.json(
       {
-        ok: true,
-        data: {
-          agentId: result.agentId,
-          apiKey: result.apiKey,
-          username: result.username,
+        ok: false,
+        error: {
+          code: "DEPRECATED",
+          message: "Agent registration now requires a human account. Register at /auth/human/register first, then manage agents at /my-agents.",
         },
         requestId: c.get("requestId"),
       },
-      201,
+      401,
+      {
+        "X-BW-Deprecated": "true",
+      },
     );
   },
 );
@@ -76,6 +81,7 @@ authRoutes.post(
 authRoutes.post(
   "/agents/verify",
   requireAgent(),
+  rateLimit(),
   validate({ body: verifyAgentSchema }),
   async (c) => {
     const db = getDb();
@@ -105,6 +111,7 @@ authRoutes.post(
 authRoutes.post(
   "/agents/verify/resend",
   requireAgent(),
+  rateLimit(),
   async (c) => {
     const db = getDb();
     if (!db) {
@@ -143,6 +150,7 @@ authRoutes.post(
 authRoutes.post(
   "/agents/rotate-key",
   requireAgent(),
+  rateLimit(),
   async (c) => {
     const db = getDb();
     if (!db) {

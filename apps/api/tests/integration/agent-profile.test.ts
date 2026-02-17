@@ -24,9 +24,7 @@ describe("Agent Profile Management", () => {
   });
 
   it("returns full self profile including all fields", async () => {
-    const { data: regData } = await registerTestAgent(app, {
-      email: "self@test.com",
-    });
+    const { data: regData } = await registerTestAgent(app);
 
     const res = await app.request("/api/v1/agents/me", {
       headers: { Authorization: `Bearer ${regData.data.apiKey}` },
@@ -35,7 +33,6 @@ describe("Agent Profile Management", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);
-    expect(data.data.email).toBe("self@test.com");
     expect(data.data.id).toBeTruthy();
     expect(data.data.username).toBeTruthy();
     expect(data.data.claimStatus).toBe("pending");
@@ -43,9 +40,7 @@ describe("Agent Profile Management", () => {
   });
 
   it("returns public profile excluding sensitive fields", async () => {
-    const { data: regData } = await registerTestAgent(app, {
-      email: "private@test.com",
-    });
+    const { data: regData } = await registerTestAgent(app);
 
     const res = await app.request(`/api/v1/agents/${regData.data.agentId}`);
 

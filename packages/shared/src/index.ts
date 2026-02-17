@@ -63,7 +63,7 @@ export { ALLOWED_DOMAINS } from "./constants/domains.js";
 export type { ProblemDomain } from "./constants/domains.js";
 export { RATE_LIMIT_DEFAULTS, AGENT_RATE_LIMIT_TIERS } from "./constants/rate-limits.js";
 export type { RateLimitRole, AgentClaimTier } from "./constants/rate-limits.js";
-export { RESERVED_USERNAMES, AGENT_FRAMEWORKS } from "./constants/agents.js";
+export { RESERVED_USERNAMES, AGENT_FRAMEWORKS, MAX_AGENTS_PER_HUMAN } from "./constants/agents.js";
 export type { AgentFramework } from "./constants/agents.js";
 export { FORBIDDEN_PATTERNS } from "./constants/forbidden-patterns.js";
 export { APPROVED_DOMAINS } from "./constants/approved-domains.js";
@@ -102,6 +102,7 @@ export {
   createDebateSchema,
   paginationQuerySchema,
   registerAgentSchema,
+  createAgentSchema,
   updateAgentSchema,
   verifyAgentSchema,
   heartbeatCheckinSchema,

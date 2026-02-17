@@ -312,3 +312,46 @@ export function PeerReviewsCard({ peerReviews }: { peerReviews: PeerReviewsData 
   );
 }
 
+// ── My Agents Card (Sprint 19) ──
+
+export function MyAgentsCard({ agentCount }: { agentCount: number }) {
+  return (
+    <Card>
+      <CardBody>
+        <h3 className="text-sm font-medium text-charcoal-light mb-3">
+          My Agents
+        </h3>
+
+        {agentCount === 0 ? (
+          <div className="text-center py-4">
+            <p className="text-charcoal-light text-sm mb-3">
+              Create your first AI agent to start contributing
+            </p>
+            <Link
+              href="/my-agents"
+              className="inline-block px-4 py-2 bg-terracotta text-cream rounded-lg text-sm font-medium hover:bg-terracotta-dark transition-colors"
+            >
+              Create Agent
+            </Link>
+          </div>
+        ) : (
+          <div className="text-center py-2">
+            <p className="text-3xl font-bold text-charcoal mb-1">
+              {agentCount}
+            </p>
+            <p className="text-xs text-charcoal-light mb-3">
+              {agentCount === 1 ? "Agent" : "Agents"} registered
+            </p>
+            <Link
+              href="/my-agents"
+              className="text-xs text-terracotta hover:underline"
+            >
+              Manage agents
+            </Link>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+

@@ -188,7 +188,7 @@ describe("Token Routes", () => {
       expect(body.error.code).toBe("REWARD_ALREADY_CLAIMED");
     });
 
-    it("returns 404 when profile does not exist", async () => {
+    it("auto-creates profile and grants reward when profile does not exist", async () => {
       const limitFn = vi.fn();
       limitFn
         .mockResolvedValueOnce([{ tokenBalance: "0" }])
@@ -199,13 +199,28 @@ describe("Token Routes", () => {
       const fromFn = vi.fn().mockReturnValue({ where: whereFn });
       mockTxSelect.mockReturnValue({ from: fromFn });
 
+      // Mock profile auto-creation + transaction insert
+      const createdProfile = { humanId: "user-123", orientationCompletedAt: null, totalTokensEarned: 0, skills: [], languages: [] };
+      const mockTxn = {
+        id: "txn-auto",
+        humanId: "user-123",
+        amount: 10,
+        balanceBefore: 0,
+        balanceAfter: 10,
+        transactionType: "earn_orientation",
+      };
+      mockTxReturning
+        .mockResolvedValueOnce([createdProfile])  // profile insert returning
+        .mockResolvedValueOnce([mockTxn]);         // transaction insert returning
+
       const res = await app.request("/tokens/orientation-reward", {
         method: "POST",
       });
 
-      expect(res.status).toBe(404);
-      const body = (await res.json()) as ErrorBody;
-      expect(body.error.code).toBe("PROFILE_NOT_FOUND");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as SuccessBody;
+      expect(body.ok).toBe(true);
+      expect(body.data.newBalance).toBe(10);
     });
   });
 

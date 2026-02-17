@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { initDb, initRedis } from "./lib/container.js";
 import { logger } from "./middleware/logger.js";
+import { startWsServer } from "./ws/server.js";
 
 // Load and validate environment variables (fails fast on missing/invalid vars)
 const config = loadConfig();
@@ -37,3 +38,14 @@ const app = createApp();
 serve({ fetch: app.fetch, port }, (info) => {
   logger.info({ port: info.port }, "BetterWorld API started");
 });
+
+// Start WebSocket server on separate port (default 3001)
+// DB and Redis are already initialized above (container uses singletons)
+try {
+  startWsServer();
+} catch (err) {
+  logger.warn(
+    { error: err instanceof Error ? err.message : "Unknown error" },
+    "Failed to start WebSocket server",
+  );
+}

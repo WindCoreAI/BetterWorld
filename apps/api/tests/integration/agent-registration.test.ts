@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from "vitest";
 
 import {
   getTestApp,
@@ -6,13 +6,21 @@ import {
   teardownTestInfra,
   cleanupTestData,
   registerTestAgent,
+  createTestHuman,
 } from "./helpers.js";
 
 describe("Agent Registration", () => {
   const app = getTestApp();
+  let humanToken: string;
 
   beforeAll(async () => {
     await setupTestInfra();
+  });
+
+  // Recreate human before each test because afterEach truncates the humans table
+  beforeEach(async () => {
+    const { token } = await createTestHuman({ emailVerified: true });
+    humanToken = token;
   });
 
   afterEach(async () => {
@@ -44,9 +52,12 @@ describe("Agent Registration", () => {
   });
 
   it("returns 422 for invalid specialization", async () => {
-    const res = await app.request("/api/v1/auth/agents/register", {
+    const res = await app.request("/api/v1/my-agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${humanToken}`,
+      },
       body: JSON.stringify({
         username: "invalid_spec_01",
         framework: "custom",
@@ -60,9 +71,12 @@ describe("Agent Registration", () => {
   });
 
   it("returns 422 for missing required fields", async () => {
-    const res = await app.request("/api/v1/auth/agents/register", {
+    const res = await app.request("/api/v1/my-agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${humanToken}`,
+      },
       body: JSON.stringify({ username: "missing_fields_01" }),
     });
 
@@ -70,9 +84,12 @@ describe("Agent Registration", () => {
   });
 
   it("returns 422 for reserved username", async () => {
-    const res = await app.request("/api/v1/auth/agents/register", {
+    const res = await app.request("/api/v1/my-agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${humanToken}`,
+      },
       body: JSON.stringify({
         username: "admin",
         framework: "custom",
@@ -84,9 +101,12 @@ describe("Agent Registration", () => {
   });
 
   it("validates username regex (no uppercase, no special chars)", async () => {
-    const res = await app.request("/api/v1/auth/agents/register", {
+    const res = await app.request("/api/v1/my-agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${humanToken}`,
+      },
       body: JSON.stringify({
         username: "Invalid-Agent!",
         framework: "custom",

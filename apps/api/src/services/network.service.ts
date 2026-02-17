@@ -12,6 +12,7 @@ import {
   reputationScores,
   peerReviews,
   endorsements,
+  evidence,
 } from "@betterworld/db";
 import { and, eq, or, sql, desc, count } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -207,13 +208,13 @@ export class NetworkService {
             SELECT
               CASE
                 WHEN ${peerReviews.reviewerHumanId} = ${humanId}
-                THEN (SELECT submitted_by FROM evidence WHERE id = ${peerReviews.evidenceId})
+                THEN (SELECT submitted_by_human_id FROM evidence WHERE id = ${peerReviews.evidenceId})
                 ELSE ${peerReviews.reviewerHumanId}
               END as partner_id,
               'peer_review' as interaction_type
             FROM ${peerReviews}
             WHERE ${peerReviews.reviewerHumanId} = ${humanId}
-              OR ${peerReviews.evidenceId} IN (SELECT id FROM evidence WHERE submitted_by = ${humanId})
+              OR ${peerReviews.evidenceId} IN (SELECT id FROM evidence WHERE submitted_by_human_id = ${humanId})
             UNION ALL
             SELECT
               CASE
@@ -336,11 +337,11 @@ export class NetworkService {
         createdAt: peerReviews.createdAt,
       })
       .from(peerReviews)
-      .innerJoin(sql`evidence`, sql`evidence.id = ${peerReviews.evidenceId}`)
+      .innerJoin(evidence, eq(evidence.id, peerReviews.evidenceId))
       .where(
         and(
           eq(peerReviews.reviewerHumanId, humanId),
-          sql`evidence.submitted_by = ${partnerId}`,
+          eq(evidence.submittedByHumanId, partnerId),
         ),
       )
       .orderBy(desc(peerReviews.createdAt))
@@ -362,11 +363,11 @@ export class NetworkService {
         createdAt: peerReviews.createdAt,
       })
       .from(peerReviews)
-      .innerJoin(sql`evidence`, sql`evidence.id = ${peerReviews.evidenceId}`)
+      .innerJoin(evidence, eq(evidence.id, peerReviews.evidenceId))
       .where(
         and(
           eq(peerReviews.reviewerHumanId, partnerId),
-          sql`evidence.submitted_by = ${humanId}`,
+          eq(evidence.submittedByHumanId, humanId),
         ),
       )
       .orderBy(desc(peerReviews.createdAt))

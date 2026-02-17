@@ -4,9 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useAuth } from "../hooks/useAuth";
 import { useHumanAuth } from "../hooks/useHumanAuth";
-import type { AgentProfile } from "../lib/api";
 import type { HumanUser } from "../types/human";
 import { NotificationBell } from "./notifications/NotificationBell";
 
@@ -46,6 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
     children: [
       { href: "/impact", label: "Impact", description: "Your impact dashboard" },
       { href: "/learning", label: "Learning", description: "Grow your skills" },
+      { href: "/my-agents", label: "My Agents", description: "Create & manage AI agents" },
     ],
   },
 ];
@@ -148,18 +147,12 @@ function DesktopAuth({
   isLoading,
   isHuman,
   humanUser,
-  isAgent,
-  agent,
-  onLogout,
   onHumanLogout,
   isActive,
 }: {
   isLoading: boolean;
   isHuman: boolean;
   humanUser: HumanUser | null;
-  isAgent: boolean;
-  agent: AgentProfile | null;
-  onLogout: () => void;
   onHumanLogout: () => void;
   isActive: (href: string) => boolean;
 }) {
@@ -172,15 +165,6 @@ function DesktopAuth({
         <NotificationBell />
         <span className="text-sm font-medium text-charcoal">{humanUser?.displayName ?? "User"}</span>
         <button onClick={onHumanLogout} className="text-sm text-charcoal-light hover:text-charcoal transition-colors">Logout</button>
-      </>
-    );
-  }
-
-  if (isAgent) {
-    return (
-      <>
-        <Link href="/profile" className={`text-sm font-medium transition-colors ${isActive("/profile") ? "text-terracotta" : "text-charcoal-light hover:text-charcoal"}`}>{agent?.displayName ?? agent?.username ?? "Profile"}</Link>
-        <button onClick={onLogout} className="text-sm text-charcoal-light hover:text-charcoal transition-colors">Logout</button>
       </>
     );
   }
@@ -246,17 +230,11 @@ function MobileNavGroup({
 function MobileAuth({
   isLoading,
   isHuman,
-  isAgent,
-  agent,
-  onLogout,
   onHumanLogout,
   onClose,
 }: {
   isLoading: boolean;
   isHuman: boolean;
-  isAgent: boolean;
-  agent: AgentProfile | null;
-  onLogout: () => void;
   onHumanLogout: () => void;
   onClose: () => void;
 }) {
@@ -268,15 +246,6 @@ function MobileAuth({
         <Link href="/dashboard" onClick={onClose} className="block py-2 text-sm font-medium text-charcoal-light">Dashboard</Link>
         <Link href="/notifications" onClick={onClose} className="block py-2 text-sm font-medium text-charcoal-light">Notifications</Link>
         <button onClick={() => { onHumanLogout(); onClose(); }} className="py-2 text-sm text-charcoal-light">Logout</button>
-      </>
-    );
-  }
-
-  if (isAgent) {
-    return (
-      <>
-        <Link href="/profile" onClick={onClose} className="block py-2 text-sm font-medium text-charcoal-light">Profile ({agent?.username})</Link>
-        <button onClick={() => { onLogout(); onClose(); }} className="py-2 text-sm text-charcoal-light">Logout</button>
       </>
     );
   }
@@ -294,13 +263,11 @@ function MobileAuth({
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAgent, agent, loading, logout } = useAuth();
   const { isAuthenticated: isHuman, user: humanUser, loading: humanLoading, logout: humanLogout } = useHumanAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const isLoading = loading || humanLoading;
+  const isLoading = humanLoading;
 
-  const handleLogout = () => { logout(); router.push("/"); };
   const handleHumanLogout = async () => { await humanLogout(); router.push("/"); };
 
   if (pathname.startsWith("/admin")) return null;
@@ -325,7 +292,7 @@ export function Navigation() {
 
         {/* Desktop: Auth */}
         <div className="hidden md:flex items-center gap-3">
-          <DesktopAuth isLoading={isLoading} isHuman={isHuman} humanUser={humanUser} isAgent={isAgent} agent={agent} onLogout={handleLogout} onHumanLogout={handleHumanLogout} isActive={isActive} />
+          <DesktopAuth isLoading={isLoading} isHuman={isHuman} humanUser={humanUser} onHumanLogout={handleHumanLogout} isActive={isActive} />
         </div>
 
         {/* Mobile: Hamburger */}
@@ -353,7 +320,7 @@ export function Navigation() {
               />
             ))}
             <div className="border-t border-charcoal/10 pt-2 mt-1">
-              <MobileAuth isLoading={isLoading} isHuman={isHuman} isAgent={isAgent} agent={agent} onLogout={handleLogout} onHumanLogout={handleHumanLogout} onClose={() => setMenuOpen(false)} />
+              <MobileAuth isLoading={isLoading} isHuman={isHuman} onHumanLogout={handleHumanLogout} onClose={() => setMenuOpen(false)} />
             </div>
           </div>
         </div>

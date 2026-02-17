@@ -142,10 +142,11 @@ app.get("/", humanAuth(), async (c) => {
       .limit(1);
 
     if (!profile) {
-      return c.json(
-        { ok: false, error: { code: "PROFILE_NOT_FOUND" as const, message: "Profile not found" }, requestId: c.get("requestId") },
-        404,
-      );
+      return c.json({
+        ok: true,
+        data: null,
+        requestId: c.get("requestId"),
+      });
     }
 
     const coords = profile.location ? parsePostGISPoint(profile.location) : null;

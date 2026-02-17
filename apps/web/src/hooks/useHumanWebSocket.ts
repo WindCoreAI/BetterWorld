@@ -10,11 +10,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 
-import { API_BASE, getHumanToken } from "../lib/api";
+import { getHumanToken } from "../lib/api";
 
 type EventHandler = (data: unknown) => void;
 
-const WS_BASE = API_BASE.replace(/^http/, "ws");
+const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001";
 const MAX_RECONNECT_DELAY = 30000;
 const INITIAL_RECONNECT_DELAY = 1000;
 
@@ -69,7 +69,10 @@ export function useHumanWebSocket() {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      // Normal close (component unmount / page navigation) — don't reconnect
+      if (event.code === 1000) return;
+
       // Exponential backoff reconnection
       const delay = Math.min(
         INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttemptRef.current),
@@ -98,7 +101,7 @@ export function useHumanWebSocket() {
         clearTimeout(reconnectTimerRef.current);
       }
       if (wsRef.current) {
-        wsRef.current.close();
+        wsRef.current.close(1000, "cleanup");
       }
     };
   }, [connect]);

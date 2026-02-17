@@ -21,6 +21,7 @@ export type AuthEnv = AppEnv & {
       framework: string;
       claimStatus: ClaimStatus;
       rateLimitOverride: number | null;
+      ownerHumanId: string | null;
     };
     user?: { sub: string; role: string; email: string; displayName: string };
     authRole?: "public" | "agent" | "human" | "admin";
@@ -33,6 +34,7 @@ interface CachedAgent {
   framework: string;
   claimStatus: ClaimStatus;
   rateLimitOverride: number | null;
+  ownerHumanId: string | null;
 }
 
 const AUTH_CACHE_TTL = 300; // 5 minutes
@@ -104,6 +106,7 @@ export function requireAgent() {
         isActive: agents.isActive,
         claimStatus: agents.claimStatus,
         rateLimitOverride: agents.rateLimitOverride,
+        ownerHumanId: agents.ownerHumanId,
         previousApiKeyHash: agents.previousApiKeyHash,
         previousApiKeyExpiresAt: agents.previousApiKeyExpiresAt,
       })
@@ -150,6 +153,7 @@ export function requireAgent() {
       framework: agent.framework,
       claimStatus: agent.claimStatus as ClaimStatus,
       rateLimitOverride: agent.rateLimitOverride,
+      ownerHumanId: agent.ownerHumanId,
     };
 
     // Cache the result
@@ -281,6 +285,7 @@ export function optionalAuth() {
               isActive: agents.isActive,
               claimStatus: agents.claimStatus,
               rateLimitOverride: agents.rateLimitOverride,
+              ownerHumanId: agents.ownerHumanId,
               previousApiKeyHash: agents.previousApiKeyHash,
               previousApiKeyExpiresAt: agents.previousApiKeyExpiresAt,
             })
@@ -316,6 +321,7 @@ export function optionalAuth() {
                 framework: agent.framework,
                 claimStatus: agent.claimStatus as ClaimStatus,
                 rateLimitOverride: agent.rateLimitOverride,
+                ownerHumanId: agent.ownerHumanId,
               };
 
               // Cache

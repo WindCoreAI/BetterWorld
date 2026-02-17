@@ -26,6 +26,11 @@ export type ErrorCode =
   | "INSUFFICIENT_TOKENS"
   // Rate Limiting
   | "RATE_LIMITED"
+  // Agent Management (Sprint 19)
+  | "MAX_AGENTS_REACHED"
+  | "ALREADY_INACTIVE"
+  | "ALREADY_ACTIVE"
+  | "DEPRECATED"
   // System
   | "INTERNAL_ERROR"
   | "SERVICE_UNAVAILABLE";
@@ -52,6 +57,11 @@ export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
   GUARDRAIL_REJECTED: 422,
   GUARDRAIL_FLAGGED: 422,
   RATE_LIMITED: 429,
+  // Agent Management (Sprint 19)
+  MAX_AGENTS_REACHED: 400,
+  ALREADY_INACTIVE: 400,
+  ALREADY_ACTIVE: 400,
+  DEPRECATED: 410,
   INTERNAL_ERROR: 500,
   SERVICE_UNAVAILABLE: 503,
 };

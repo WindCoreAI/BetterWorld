@@ -641,7 +641,7 @@ describe("Human Onboarding Flow", () => {
     });
 
     it("returns aggregated user data in a single request", async () => {
-      // Dashboard runs 3 parallel db.select() (Promise.all) + 1 sequential (recent activity)
+      // Dashboard runs 4 parallel db.select() (Promise.all) + 1 sequential (recent activity)
       mockDbSelect
         // Query 1: user data — .select({...}).from(humans).where().limit(1)
         .mockReturnValueOnce({
@@ -689,7 +689,13 @@ describe("Human Onboarding Flow", () => {
             where: vi.fn().mockResolvedValue([{ total: 0 }]),
           }),
         })
-        // Query 4: recent activity — .select().from(tokenTransactions).where().orderBy().limit(10)
+        // Query 4: agent count — .select({count}).from(agents).where() (Sprint 19)
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ count: 2 }]),
+          }),
+        })
+        // Query 5: recent activity — .select().from(tokenTransactions).where().orderBy().limit(10)
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
