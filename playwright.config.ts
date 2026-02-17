@@ -25,7 +25,15 @@ export default defineConfig({
 
   projects: [
     {
-      name: "chromium",
+      name: "golden-path",
+      testDir: "./e2e",
+      testMatch: /golden-path\.test\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "suites",
+      testDir: "./e2e/suites",
+      testMatch: /\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"] },
     },
   ],

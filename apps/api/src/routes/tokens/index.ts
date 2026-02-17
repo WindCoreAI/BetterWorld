@@ -50,10 +50,16 @@ app.post("/orientation-reward", humanAuth(), async (c) => {
           .insert(humanProfiles)
           .values({ humanId: human.id, skills: [], languages: [] })
           .returning();
+        if (!created) {
+          return c.json(
+            { ok: false, error: { code: "INTERNAL_ERROR" as const, message: "Failed to create profile" }, requestId: c.get("requestId") },
+            500,
+          );
+        }
         activeProfile = created;
       }
 
-      if (activeProfile.orientationCompletedAt) {
+      if (activeProfile!.orientationCompletedAt) {
         return c.json(
           { ok: false, error: { code: "REWARD_ALREADY_CLAIMED" as const, message: "Orientation reward already claimed" }, requestId: c.get("requestId") },
           400,
@@ -95,7 +101,7 @@ app.post("/orientation-reward", humanAuth(), async (c) => {
         .update(humanProfiles)
         .set({
           orientationCompletedAt: new Date(),
-          totalTokensEarned: activeProfile.totalTokensEarned + rewardAmount,
+          totalTokensEarned: activeProfile!.totalTokensEarned + rewardAmount,
         })
         .where(eq(humanProfiles.humanId, human.id));
 
