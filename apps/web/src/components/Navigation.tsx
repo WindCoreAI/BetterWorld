@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "../hooks/useAuth";
 import { useHumanAuth } from "../hooks/useHumanAuth";
@@ -10,21 +10,139 @@ import type { AgentProfile } from "../lib/api";
 import type { HumanUser } from "../types/human";
 import { NotificationBell } from "./notifications/NotificationBell";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/problems", label: "Problems" },
-  { href: "/solutions", label: "Solutions" },
-  { href: "/missions", label: "Missions" },
-  { href: "/domains", label: "Domains" },
-  { href: "/leaderboards", label: "Leaderboards" },
-  { href: "/impact", label: "Impact" },
-  { href: "/activity", label: "Activity" },
-  // Sprint 18: Cooperative Depth & Governance
-  { href: "/learning", label: "Learning" },
-  { href: "/discover", label: "Discover" },
-] as const;
+// ── Grouped Navigation Structure ──
 
-// ── Auth Sections (extracted to reduce complexity) ──
+interface NavChild {
+  href: string;
+  label: string;
+  description: string;
+}
+
+interface NavGroup {
+  label: string;
+  children: NavChild[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Explore",
+    children: [
+      { href: "/problems", label: "Problems", description: "Discover social issues" },
+      { href: "/solutions", label: "Solutions", description: "Browse proposed solutions" },
+      { href: "/missions", label: "Missions", description: "Find work to do" },
+    ],
+  },
+  {
+    label: "Community",
+    children: [
+      { href: "/domains", label: "Domains", description: "15 impact domains" },
+      { href: "/leaderboards", label: "Leaderboards", description: "Top contributors" },
+      { href: "/activity", label: "Activity", description: "Recent platform activity" },
+      { href: "/discover", label: "Discover", description: "Find people & circles" },
+    ],
+  },
+  {
+    label: "My Journey",
+    children: [
+      { href: "/impact", label: "Impact", description: "Your impact dashboard" },
+      { href: "/learning", label: "Learning", description: "Grow your skills" },
+    ],
+  },
+];
+
+// ── Chevron Icon ──
+
+function ChevronDown({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 1l4 4 4-4" />
+    </svg>
+  );
+}
+
+// ── Desktop Dropdown ──
+
+function NavDropdown({
+  group,
+  isActive,
+}: {
+  group: NavGroup;
+  isActive: (href: string) => boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const groupIsActive = group.children.some((c) => isActive(c.href));
+
+  const handleEnter = useCallback(() => {
+    clearTimeout(timeoutRef.current);
+    setOpen(true);
+  }, []);
+
+  const handleLeave = useCallback(() => {
+    timeoutRef.current = setTimeout(() => setOpen(false), 150);
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+    >
+      <button
+        className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+          groupIsActive
+            ? "text-terracotta"
+            : "text-charcoal-light hover:text-charcoal"
+        }`}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        {group.label}
+        <ChevronDown
+          className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+          <div className="bg-white rounded-xl shadow-lg border border-charcoal/5 py-2 min-w-[200px]">
+            {group.children.map(({ href, label, description }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setOpen(false)}
+                className={`block px-4 py-2.5 transition-colors ${
+                  isActive(href)
+                    ? "bg-terracotta/5 text-terracotta"
+                    : "hover:bg-cream text-charcoal"
+                }`}
+              >
+                <span className="block text-sm font-medium">{label}</span>
+                <span className="block text-xs text-charcoal-light mt-0.5">{description}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Auth Sections ──
 
 function DesktopAuth({
   isLoading,
@@ -72,6 +190,56 @@ function DesktopAuth({
       <Link href="/auth/human/login" className="text-sm font-medium text-charcoal-light hover:text-charcoal transition-colors">Login</Link>
       <Link href="/auth/human/register" className="text-sm font-medium px-4 py-1.5 bg-terracotta text-white rounded-lg hover:bg-terracotta-dark transition-colors">Join</Link>
     </>
+  );
+}
+
+// ── Mobile Accordion Group ──
+
+function MobileNavGroup({
+  group,
+  isActive,
+  onClose,
+}: {
+  group: NavGroup;
+  isActive: (href: string) => boolean;
+  onClose: () => void;
+}) {
+  const groupIsActive = group.children.some((c) => isActive(c.href));
+  const [expanded, setExpanded] = useState(groupIsActive);
+
+  return (
+    <div>
+      <button
+        className={`flex items-center justify-between w-full py-2 text-sm font-medium ${
+          groupIsActive ? "text-terracotta" : "text-charcoal"
+        }`}
+        onClick={() => setExpanded((o) => !o)}
+        aria-expanded={expanded}
+      >
+        {group.label}
+        <ChevronDown
+          className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+        />
+      </button>
+      {expanded && (
+        <div className="pl-4 pb-1">
+          {group.children.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={onClose}
+              className={`block py-1.5 text-sm ${
+                isActive(href)
+                  ? "text-terracotta font-medium"
+                  : "text-charcoal-light"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -143,20 +311,24 @@ export function Navigation() {
   return (
     <nav className="sticky top-0 z-50 bg-cream/95 backdrop-blur shadow-neu-sm" aria-label="Main navigation">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        {/* Logo */}
         <Link href="/" className="font-bold text-lg text-charcoal">
           Better<span className="text-terracotta">World</span>
         </Link>
 
+        {/* Desktop: Grouped dropdowns */}
         <div className="hidden md:flex items-center gap-6">
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link key={href} href={href} className={`text-sm font-medium transition-colors ${isActive(href) ? "text-terracotta" : "text-charcoal-light hover:text-charcoal"}`}>{label}</Link>
+          {NAV_GROUPS.map((group) => (
+            <NavDropdown key={group.label} group={group} isActive={isActive} />
           ))}
         </div>
 
+        {/* Desktop: Auth */}
         <div className="hidden md:flex items-center gap-3">
           <DesktopAuth isLoading={isLoading} isHuman={isHuman} humanUser={humanUser} isAgent={isAgent} agent={agent} onLogout={handleLogout} onHumanLogout={handleHumanLogout} isActive={isActive} />
         </div>
 
+        {/* Mobile: Hamburger */}
         <button className="md:hidden p-2 text-charcoal" onClick={() => setMenuOpen((o) => !o)} aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {menuOpen ? (
@@ -168,11 +340,17 @@ export function Navigation() {
         </button>
       </div>
 
+      {/* Mobile: Accordion menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-charcoal/10 bg-cream px-4 pb-4">
-          <div className="flex flex-col gap-2 pt-2">
-            {NAV_LINKS.map(({ href, label }) => (
-              <Link key={href} href={href} onClick={() => setMenuOpen(false)} className={`py-2 text-sm font-medium ${isActive(href) ? "text-terracotta" : "text-charcoal-light"}`}>{label}</Link>
+          <div className="flex flex-col gap-1 pt-2">
+            {NAV_GROUPS.map((group) => (
+              <MobileNavGroup
+                key={group.label}
+                group={group}
+                isActive={isActive}
+                onClose={() => setMenuOpen(false)}
+              />
             ))}
             <div className="border-t border-charcoal/10 pt-2 mt-1">
               <MobileAuth isLoading={isLoading} isHuman={isHuman} isAgent={isAgent} agent={agent} onLogout={handleLogout} onHumanLogout={handleHumanLogout} onClose={() => setMenuOpen(false)} />
