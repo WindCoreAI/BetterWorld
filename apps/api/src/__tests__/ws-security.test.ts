@@ -4,7 +4,8 @@
  * Tests: Origin validation (allowed/blocked/missing), oversized message rejection
  * with connection kept alive.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Hono } from "hono";
+import { describe, it, expect, vi } from "vitest";
 
 // Mock the CORS module to control ALLOWED_ORIGINS
 vi.mock("../middleware/cors.js", () => ({
@@ -22,11 +23,6 @@ vi.mock("../lib/container.js", () => ({
 vi.mock("../middleware/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
-
-// We test the Origin validation logic by importing the Hono app
-// and making HTTP requests that trigger the pre-upgrade middleware
-
-import { Hono } from "hono";
 
 describe("WebSocket Origin Validation (T032)", () => {
   // Since we can't easily test real WebSocket upgrades in unit tests,
@@ -54,8 +50,8 @@ describe("WebSocket Origin Validation (T032)", () => {
       headers: { Origin: "https://evil.example.com" },
     });
     expect(res.status).toBe(403);
-    const body: any = await res.json();
-    expect(body.error).toBe("Forbidden: invalid Origin");
+    const body = await res.json();
+    expect((body as Record<string, string>).error).toBe("Forbidden: invalid Origin");
   });
 
   it("should reject WebSocket connection with no Origin header", async () => {

@@ -200,12 +200,12 @@ describe("Before/After Verification", () => {
 
   describe("GPS distance calculation", () => {
     it("calculates haversine distance between two GPS points", () => {
-      // Portland coordinates: 45.5152, -122.6784
+      // San Francisco coordinates: 37.7749, -122.4194
       // Nearby point ~1km away
-      const lat1 = 45.5152;
-      const lng1 = -122.6784;
-      const lat2 = 45.5242;
-      const lng2 = -122.6784;
+      const lat1 = 37.7749;
+      const lng1 = -122.4194;
+      const lat2 = 37.7839;
+      const lng2 = -122.4194;
 
       const R = 6371000;
       const dLat = ((lat2 - lat1) * Math.PI) / 180;

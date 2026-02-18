@@ -28,9 +28,9 @@ const DOMAIN_BOARDS = [
 ];
 
 const CITY_BOARDS = [
-  { key: "portland", label: "Portland" },
-  { key: "chicago", label: "Chicago" },
-  { key: "denver", label: "Denver" },
+  { key: "sanfrancisco", label: "San Francisco" },
+  { key: "newyork", label: "New York" },
+  { key: "seattle", label: "Seattle" },
 ];
 
 export default function DiscussionsIndexPage() {

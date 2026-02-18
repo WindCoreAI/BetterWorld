@@ -2,7 +2,7 @@
  * Supported Cities Configuration (Sprint 11 — T040, Sprint 17 — T016)
  *
  * Cities with local dashboards for Phase 3.
- * Sprint 17 adds taglines for city chapter identity and Denver.
+ * Sprint 17 adds taglines for city chapter identity and Seattle.
  */
 
 export interface SupportedCity {
@@ -15,22 +15,22 @@ export interface SupportedCity {
 
 export const SUPPORTED_CITIES: SupportedCity[] = [
   {
-    id: "portland",
-    displayName: "Portland, OR",
-    center: { lat: 45.5152, lng: -122.6784 },
-    tagline: "Keep Portland Better",
+    id: "sanfrancisco",
+    displayName: "San Francisco, CA",
+    center: { lat: 37.7749, lng: -122.4194 },
+    tagline: "Bay Area Builds Better",
   },
   {
-    id: "chicago",
-    displayName: "Chicago, IL",
-    center: { lat: 41.8781, lng: -87.6298 },
-    tagline: "Chicago Cares Forward",
+    id: "newyork",
+    displayName: "New York, NY",
+    center: { lat: 40.7128, lng: -74.006 },
+    tagline: "New York Acts Now",
   },
   {
-    id: "denver",
-    displayName: "Denver, CO",
-    center: { lat: 39.7392, lng: -104.9903 },
-    tagline: "Mile High Impact",
+    id: "seattle",
+    displayName: "Seattle, WA",
+    center: { lat: 47.6062, lng: -122.3321 },
+    tagline: "Seattle Leads Forward",
   },
 ];
 

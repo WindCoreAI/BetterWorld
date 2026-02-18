@@ -88,11 +88,19 @@ export async function getComparativeMetrics(
     GROUP BY home_region_name
   `);
 
+  // Build keyword map: extract city name from displayName for fuzzy matching
+  // e.g. "City of San Francisco" → "san francisco", "City of New York" → "new york"
+  const cityKeywords: Array<{ cityId: string; keywords: string[] }> = cityIds.map((cityId) => {
+    const config = OPEN311_CITY_CONFIGS[cityId]!;
+    const displayLower = config.displayName.toLowerCase().replace("city of ", "");
+    return { cityId, keywords: [cityId, displayLower] };
+  });
+
   const validatorMap = new Map<string, number>();
   for (const row of validatorCounts as Array<Record<string, string>>) {
     const regionName = (row.region ?? "").toLowerCase();
-    for (const cityId of cityIds) {
-      if (regionName.includes(cityId)) {
+    for (const { cityId, keywords } of cityKeywords) {
+      if (keywords.some((kw) => regionName.includes(kw))) {
         validatorMap.set(
           cityId,
           (validatorMap.get(cityId) ?? 0) + Number(row.count ?? 0),

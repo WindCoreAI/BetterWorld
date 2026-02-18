@@ -93,8 +93,8 @@ describe("Validator Affinity (PATCH /validator/affinity)", () => {
 
     const body = {
       homeRegions: [
-        { name: "Portland, OR", lat: 45.5152, lng: -122.6784 },
-        { name: "Chicago, IL", lat: 41.8781, lng: -87.6298 },
+        { name: "San Francisco, CA", lat: 37.7749, lng: -122.4194 },
+        { name: "New York, NY", lat: 40.7128, lng: -74.006 },
       ],
     };
 
@@ -108,16 +108,16 @@ describe("Validator Affinity (PATCH /validator/affinity)", () => {
     const data = (await res.json()) as any;
     expect(data.ok).toBe(true);
     expect(data.data.homeRegions).toHaveLength(2);
-    expect(data.data.primaryRegion).toBe("Portland, OR");
+    expect(data.data.primaryRegion).toBe("San Francisco, CA");
   });
 
   it("should reject 4 regions with 422 validation error", async () => {
     const body = {
       homeRegions: [
-        { name: "Portland, OR", lat: 45.5152, lng: -122.6784 },
-        { name: "Chicago, IL", lat: 41.8781, lng: -87.6298 },
-        { name: "Denver, CO", lat: 39.7392, lng: -104.9903 },
+        { name: "San Francisco, CA", lat: 37.7749, lng: -122.4194 },
+        { name: "New York, NY", lat: 40.7128, lng: -74.006 },
         { name: "Seattle, WA", lat: 47.6062, lng: -122.3321 },
+        { name: "Los Angeles, CA", lat: 34.0522, lng: -118.2437 },
       ],
     };
 
@@ -159,7 +159,7 @@ describe("Validator Affinity (PATCH /validator/affinity)", () => {
 
     const body = {
       homeRegions: [
-        { name: "Portland, OR", lat: 45.5152, lng: -122.6784 },
+        { name: "San Francisco, CA", lat: 37.7749, lng: -122.4194 },
       ],
     };
 
@@ -189,7 +189,7 @@ describe("Validator Stats (GET /validator/stats)", () => {
       correctEvaluations: 67,
       responseRate: "0.9500",
       dailyEvaluationCount: 3,
-      homeRegions: [{ name: "Portland, OR", lat: 45.5152, lng: -122.6784 }],
+      homeRegions: [{ name: "San Francisco, CA", lat: 37.7749, lng: -122.4194 }],
       isActive: true,
       suspendedUntil: null,
     }]);

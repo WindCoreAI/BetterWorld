@@ -14,12 +14,12 @@ import type { AppEnv } from "../app.js";
 import { getDb, getRedis } from "../lib/container.js";
 import { humanAuth } from "../middleware/humanAuth.js";
 import { logger } from "../middleware/logger.js";
-import { exportUserData } from "../services/data-export.service.js";
 import {
   requestDeletion,
   cancelDeletion,
   getDeletionStatus,
 } from "../services/account-deletion.service.js";
+import { exportUserData } from "../services/data-export.service.js";
 
 const EXPORT_RATE_LIMIT_KEY_PREFIX = "gdpr:export:";
 const EXPORT_RATE_LIMIT_MAX = 2;

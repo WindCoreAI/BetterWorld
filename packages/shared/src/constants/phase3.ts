@@ -78,44 +78,47 @@ export const SYSTEM_MUNICIPAL_AGENT_ID = "00000000-0000-0000-0000-000000000311";
 
 /** Open311 city configurations */
 export const OPEN311_CITY_CONFIGS: Record<string, CityConfig> = {
-  chicago: {
-    id: "chicago",
-    displayName: "City of Chicago",
-    endpoint: "http://311api.cityofchicago.org/open311/v2",
+  sanfrancisco: {
+    id: "sanfrancisco",
+    displayName: "City of San Francisco",
+    endpoint: "http://mobile311.sfgov.org/open311/v2",
     serviceCodeMapping: {
       // Infrastructure & Environment
-      "4fd3b167e750846744000005": { domain: "environmental_protection", severity: "medium" }, // Graffiti Removal
-      "4fd3b9bce750846c53000004": { domain: "environmental_protection", severity: "medium" }, // Pothole in Street
-      "4ffa4c69601827691b000018": { domain: "clean_water_sanitation", severity: "high" },      // Water in Street
-      "4fd3b656e750846c5300000b": { domain: "environmental_protection", severity: "low" },     // Tree Debris
-      "4fd3b750e750846c53000010": { domain: "community_building", severity: "medium" },        // Street Light Out
-      "4ffa971e601827691b000019": { domain: "environmental_protection", severity: "medium" },   // Fly Dumping
+      graffiti: { domain: "environmental_protection", severity: "medium" },       // Graffiti
+      pothole: { domain: "environmental_protection", severity: "medium" },        // Pothole
+      streetlight: { domain: "community_building", severity: "medium" },          // Street Light Out
+      dumping: { domain: "environmental_protection", severity: "medium" },        // Illegal Dumping
+      sidewalk: { domain: "community_building", severity: "medium" },             // Sidewalk Defect
       // Public health
-      "4fd3bbf8e750846c53000069": { domain: "healthcare_improvement", severity: "high" },      // Rodent Baiting
-      "4fd3b9bce750846c53000049": { domain: "clean_water_sanitation", severity: "high" },      // Sewer Cave-in
+      needles: { domain: "healthcare_improvement", severity: "high" },            // Needle Cleanup
+      encampment: { domain: "community_building", severity: "high" },             // Homeless Encampment
     },
     pollingIntervalMs: 15 * 60 * 1000, // 15 minutes
     enabled: false,
   },
-  portland: {
-    id: "portland",
-    displayName: "City of Portland",
-    endpoint: "https://www.portlandoregon.gov/shared/cfm/open311.cfm",
+  newyork: {
+    id: "newyork",
+    displayName: "City of New York",
+    endpoint: "https://api.nyc.gov/open311/v2",
     serviceCodeMapping: {
-      // Generic mappings for Portland (service codes TBD once endpoint confirmed)
-      graffiti: { domain: "environmental_protection", severity: "medium" },
+      // Infrastructure & Environment (service codes TBD once endpoint confirmed)
       pothole: { domain: "environmental_protection", severity: "medium" },
       streetlight: { domain: "community_building", severity: "medium" },
-      dumping: { domain: "environmental_protection", severity: "medium" },
+      graffiti: { domain: "environmental_protection", severity: "medium" },
+      noise: { domain: "community_building", severity: "low" },
+      // Public health
+      rodent: { domain: "healthcare_improvement", severity: "high" },
+      water_quality: { domain: "clean_water_sanitation", severity: "high" },
     },
     pollingIntervalMs: 15 * 60 * 1000,
     enabled: false,
   },
-  denver: {
-    id: "denver",
-    displayName: "City of Denver",
-    endpoint: "https://www.denvergov.org/open311/v2",
+  seattle: {
+    id: "seattle",
+    displayName: "City of Seattle",
+    endpoint: "https://data.seattle.gov/open311/v2",
     serviceCodeMapping: {
+      // Infrastructure & Environment (service codes TBD once endpoint confirmed)
       pothole: { domain: "environmental_protection", severity: "medium" },
       streetlight: { domain: "community_building", severity: "medium" },
       graffiti: { domain: "environmental_protection", severity: "medium" },
@@ -128,9 +131,9 @@ export const OPEN311_CITY_CONFIGS: Record<string, CityConfig> = {
 
 /** City population data for per-capita normalization */
 export const CITY_POPULATIONS: Record<string, number> = {
-  chicago: 2_746_388,
-  portland: 652_503,
-  denver: 715_522,
+  sanfrancisco: 873_965,
+  newyork: 8_336_817,
+  seattle: 749_256,
 } as const;
 
 // ============================================================================
@@ -266,7 +269,7 @@ export const CLUSTER_SIMILARITY_THRESHOLD = 0.85;
 export const SYSTEMIC_ISSUE_THRESHOLD = 5;
 
 // ============================================================================
-// Sprint 13: Denver City Configuration
+// Sprint 13: Seattle City Configuration
 // ============================================================================
 
-// Denver is added to OPEN311_CITY_CONFIGS below
+// Seattle is added to OPEN311_CITY_CONFIGS above

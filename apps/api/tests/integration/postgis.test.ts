@@ -55,8 +55,8 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
         domain: "environmental_protection",
         severity: "medium",
         geographicScope: "local",
-        latitude: 41.8781,
-        longitude: -87.6298,
+        latitude: 40.7128,
+        longitude: -74.006,
       }),
     });
 
@@ -84,7 +84,7 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
     const { data: agentData } = await registerTestAgent(app);
     const apiKey = agentData.data.apiKey;
 
-    // Create a problem in Chicago (41.8781, -87.6298)
+    // Create a problem in New York (40.7128, -74.006)
     const createRes = await app.request("/api/v1/problems", {
       method: "POST",
       headers: {
@@ -92,34 +92,34 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        title: "Chicago Problem",
-        description: "A problem in downtown Chicago that needs community attention and local resolution",
+        title: "New York Problem",
+        description: "A problem in downtown New York that needs community attention and local resolution",
         domain: "community_building",
         severity: "medium",
-        latitude: 41.8781,
-        longitude: -87.6298,
+        latitude: 40.7128,
+        longitude: -74.006,
       }),
     });
 
-    const chicagoId = (await createRes.json()).data.id;
+    const newyorkId = (await createRes.json()).data.id;
 
     // Backfill
     await db.execute(sql`
       UPDATE problems
       SET location_point = ST_SetSRID(ST_MakePoint(longitude::float, latitude::float), 4326)::geography
-      WHERE id = ${chicagoId}
+      WHERE id = ${newyorkId}
     `);
 
-    // Query: problems within 10km of Chicago center
+    // Query: problems within 10km of New York center
     const withinResults = await db.execute(sql`
       SELECT id FROM problems
       WHERE location_point IS NOT NULL
       AND ST_DWithin(
         location_point,
-        ST_SetSRID(ST_MakePoint(-87.6298, 41.8781), 4326)::geography,
+        ST_SetSRID(ST_MakePoint(-74.006, 40.7128), 4326)::geography,
         10000
       )
-      AND id = ${chicagoId}
+      AND id = ${newyorkId}
     `);
 
     expect(withinResults.length).toBe(1);
@@ -130,7 +130,7 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
     const { data: agentData } = await registerTestAgent(app);
     const apiKey = agentData.data.apiKey;
 
-    // Create problem in NYC (40.7128, -74.0060)
+    // Create problem in Los Angeles (34.0522, -118.2437)
     const createRes = await app.request("/api/v1/problems", {
       method: "POST",
       headers: {
@@ -138,34 +138,34 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        title: "NYC Problem",
-        description: "A problem in New York City that needs community attention and local resolution efforts",
+        title: "LA Problem",
+        description: "A problem in Los Angeles that needs community attention and local resolution efforts",
         domain: "community_building",
         severity: "medium",
-        latitude: 40.7128,
-        longitude: -74.0060,
+        latitude: 34.0522,
+        longitude: -118.2437,
       }),
     });
 
-    const nycId = (await createRes.json()).data.id;
+    const laId = (await createRes.json()).data.id;
 
     // Backfill
     await db.execute(sql`
       UPDATE problems
       SET location_point = ST_SetSRID(ST_MakePoint(longitude::float, latitude::float), 4326)::geography
-      WHERE id = ${nycId}
+      WHERE id = ${laId}
     `);
 
-    // Query: problems within 10km of Chicago center — NYC should NOT appear
+    // Query: problems within 10km of New York center — LA should NOT appear
     const results = await db.execute(sql`
       SELECT id FROM problems
       WHERE location_point IS NOT NULL
       AND ST_DWithin(
         location_point,
-        ST_SetSRID(ST_MakePoint(-87.6298, 41.8781), 4326)::geography,
+        ST_SetSRID(ST_MakePoint(-74.006, 40.7128), 4326)::geography,
         10000
       )
-      AND id = ${nycId}
+      AND id = ${laId}
     `);
 
     expect(results.length).toBe(0);
@@ -188,8 +188,8 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
         description: "Very close to reference point for proximity testing and spatial queries",
         domain: "community_building",
         severity: "medium",
-        latitude: 41.880,
-        longitude: -87.630,
+        latitude: 40.715,
+        longitude: -74.008,
       }),
     });
 
@@ -204,8 +204,8 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
         description: "Far from reference point for distance ordering and spatial query testing",
         domain: "community_building",
         severity: "medium",
-        latitude: 42.500,
-        longitude: -88.500,
+        latitude: 41.500,
+        longitude: -75.500,
       }),
     });
 
@@ -219,11 +219,11 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
       WHERE id IN (${nearId}, ${farId})
     `);
 
-    // Query distance ordering from reference (41.878, -87.630)
+    // Query distance ordering from reference (40.713, -74.007)
     const results = await db.execute(sql`
       SELECT id, ST_Distance(
         location_point,
-        ST_SetSRID(ST_MakePoint(-87.630, 41.878), 4326)::geography
+        ST_SetSRID(ST_MakePoint(-74.007, 40.713), 4326)::geography
       ) as distance
       FROM problems
       WHERE id IN (${nearId}, ${farId})
@@ -239,7 +239,7 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
 
   it("should parse PostGIS point from hex correctly", () => {
     // This tests the parsePostGISPointFromHex helper
-    // A known point at lon=-87.6298, lat=41.8781 in EWKB hex
+    // A known point at lon=-74.006, lat=40.7128 in EWKB hex
     // We'll test with a null case and the parse function
     expect(parsePostGISPointFromHex(null)).toBeNull();
     expect(parsePostGISPointFromHex("")).toBeNull();
@@ -247,17 +247,17 @@ describe("PostGIS Spatial Infrastructure (US4)", () => {
   });
 
   it("should build PostGIS proximity filter SQL", () => {
-    const filter = buildPostGISProximityFilter("location_point", 41.8781, -87.6298, 10000);
+    const filter = buildPostGISProximityFilter("location_point", 40.7128, -74.006, 10000);
     expect(filter).toBeDefined();
   });
 
   it("should build PostGIS distance select SQL", () => {
-    const distance = buildPostGISDistanceSelect("location_point", 41.8781, -87.6298);
+    const distance = buildPostGISDistanceSelect("location_point", 40.7128, -74.006);
     expect(distance).toBeDefined();
   });
 
   it("should build PostGIS point SQL", () => {
-    const point = buildPostGISPoint(41.8781, -87.6298);
+    const point = buildPostGISPoint(40.7128, -74.006);
     expect(point).toBeDefined();
   });
 });

@@ -27,8 +27,9 @@ interface CityMetrics {
 }
 
 const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
-  portland: { lat: 45.5152, lng: -122.6784 },
-  chicago: { lat: 41.8781, lng: -87.6298 },
+  sanfrancisco: { lat: 37.7749, lng: -122.4194 },
+  newyork: { lat: 40.7128, lng: -74.006 },
+  seattle: { lat: 47.6062, lng: -122.3321 },
 };
 
 export default function CityDashboardPage() {

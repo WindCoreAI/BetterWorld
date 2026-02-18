@@ -18,14 +18,16 @@ const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
 const DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://betterworld:betterworld_dev@localhost:5432/betterworld";
 
 const SUPPORTED_CITIES = [
-  { id: "portland", displayName: "Portland, OR", center: { lat: 45.5152, lng: -122.6784 } },
-  { id: "chicago", displayName: "Chicago, IL", center: { lat: 41.8781, lng: -87.6298 } },
+  { id: "sanfrancisco", displayName: "San Francisco, CA", center: { lat: 37.7749, lng: -122.4194 } },
+  { id: "newyork", displayName: "New York, NY", center: { lat: 40.7128, lng: -74.006 } },
+  { id: "seattle", displayName: "Seattle, WA", center: { lat: 47.6062, lng: -122.3321 } },
 ];
 
 // City bounding boxes (approximate)
 const CITY_BOUNDS: Record<string, { minLat: number; maxLat: number; minLng: number; maxLng: number }> = {
-  portland: { minLat: 45.4, maxLat: 45.7, minLng: -122.9, maxLng: -122.4 },
-  chicago: { minLat: 41.6, maxLat: 42.1, minLng: -87.9, maxLng: -87.4 },
+  sanfrancisco: { minLat: 37.7, maxLat: 37.85, minLng: -122.52, maxLng: -122.35 },
+  newyork: { minLat: 40.49, maxLat: 40.92, minLng: -74.26, maxLng: -73.7 },
+  seattle: { minLat: 47.49, maxLat: 47.74, minLng: -122.44, maxLng: -122.24 },
 };
 
 /**

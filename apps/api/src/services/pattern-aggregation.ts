@@ -58,7 +58,7 @@ interface ProblemRow {
  *
  * @param db - Database connection
  * @param domain - Problem domain to cluster (e.g., "environmental_protection")
- * @param city - City identifier (e.g., "chicago", "portland")
+ * @param city - City identifier (e.g., "newyork", "sanfrancisco")
  * @returns Array of cluster results
  */
 export async function findClusters(

@@ -27,8 +27,8 @@ describe("Connection Suggestion Algorithm", () => {
     });
 
     it("awards 2 points for same city", () => {
-      const userCity = "portland";
-      const candidateCity = "Portland";
+      const userCity = "sanfrancisco";
+      const candidateCity = "SanFrancisco";
 
       const sameCity = userCity.toLowerCase() === candidateCity.toLowerCase();
       const score = sameCity ? 2 : 0;
@@ -38,10 +38,10 @@ describe("Connection Suggestion Algorithm", () => {
 
     it("scores combined domains + city correctly", () => {
       const userSkills = new Set(["clean_water", "healthcare"]);
-      const userCity = "portland";
+      const userCity = "sanfrancisco";
 
       const candidateSkills = ["clean_water"];
-      const candidateCity = "Portland";
+      const candidateCity = "SanFrancisco";
 
       let score = 0;
       const shared = candidateSkills.filter((s) => userSkills.has(s));
@@ -54,10 +54,10 @@ describe("Connection Suggestion Algorithm", () => {
 
     it("returns score 0 for no overlap (no shared domains, different city)", () => {
       const userSkills = new Set(["clean_water"]);
-      const userCity = "portland";
+      const userCity = "sanfrancisco";
 
       const candidateSkills = ["biodiversity"];
-      const candidateCity = "Chicago";
+      const candidateCity = "NewYork";
 
       let score = 0;
       const shared = candidateSkills.filter((s) => userSkills.has(s));
@@ -73,10 +73,10 @@ describe("Connection Suggestion Algorithm", () => {
   describe("Zero-activity fallback", () => {
     it("falls back to same-city suggestions with score 1 for users with no skills", () => {
       const userSkills = new Set<string>([]);
-      const userCity = "portland";
+      const userCity = "sanfrancisco";
 
       const candidateSkills: string[] = [];
-      const candidateCity = "Portland";
+      const candidateCity = "SanFrancisco";
 
       let score = 0;
       const shared = candidateSkills.filter((s) => userSkills.has(s));
@@ -177,7 +177,7 @@ describe("Connection Suggestion Algorithm", () => {
         reasons.push(`You share ${sharedCount} domain${sharedCount > 1 ? "s" : ""}`);
       }
       if (sameCity) {
-        reasons.push("Both in Portland");
+        reasons.push("Both in San Francisco");
       }
 
       expect(reasons.join(" and ")).toBe("You share 2 domains");
@@ -186,7 +186,7 @@ describe("Connection Suggestion Algorithm", () => {
     it("generates correct reason for shared domains and same city", () => {
       const sharedCount = 1;
       const sameCity = true;
-      const city = "Portland";
+      const city = "San Francisco";
       const reasons: string[] = [];
 
       if (sharedCount > 0) {
@@ -196,7 +196,7 @@ describe("Connection Suggestion Algorithm", () => {
         reasons.push(`Both in ${city}`);
       }
 
-      expect(reasons.join(" and ")).toBe("You share 1 domain and Both in Portland");
+      expect(reasons.join(" and ")).toBe("You share 1 domain and Both in San Francisco");
     });
 
     it("uses singular 'domain' for single shared domain", () => {

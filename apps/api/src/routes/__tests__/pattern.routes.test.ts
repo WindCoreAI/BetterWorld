@@ -100,7 +100,7 @@ describe("Pattern Routes", () => {
           id: "c1",
           title: "Pothole cluster",
           domain: "environmental_protection",
-          city: "chicago",
+          city: "newyork",
           memberCount: 6,
           isSystemic: true,
           isActive: true,
@@ -137,7 +137,7 @@ describe("Pattern Routes", () => {
         }),
       });
 
-      const res = await app.request("/patterns?domain=environmental_protection&city=chicago");
+      const res = await app.request("/patterns?domain=environmental_protection&city=newyork");
       expect(res.status).toBe(200);
 
       const body = await jsonBody(res) as { ok: boolean; data: unknown[] };
@@ -169,7 +169,7 @@ describe("Pattern Routes", () => {
         id: "aaaabbbb-cccc-4ddd-8eee-ffffffffffff",
         title: "Pothole cluster near Main St",
         domain: "environmental_protection",
-        city: "chicago",
+        city: "newyork",
         memberCount: 5,
         memberProblemIds: ["p1", "p2", "p3", "p4", "p5"],
         isSystemic: true,

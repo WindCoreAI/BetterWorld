@@ -62,9 +62,9 @@ describe("City Chapter Routes (Sprint 17)", () => {
   describe("GET /cities/:citySlug/chapter — City chapter detail", () => {
     it("returns 200 with chapter data for a valid city", async () => {
       const chapter = {
-        slug: "portland",
-        displayName: "Portland, OR",
-        tagline: "Keeping Portland's communities connected",
+        slug: "sanfrancisco",
+        displayName: "San Francisco, CA",
+        tagline: "Bay Area builds better communities",
         metrics: {
           totalProblems: 25,
           totalObservations: 12,
@@ -73,7 +73,7 @@ describe("City Chapter Routes (Sprint 17)", () => {
           activeParticipants: 30,
         },
         heatmap: [
-          { lat: 45.5152, lng: -122.6784, intensity: 0.8 },
+          { lat: 37.7749, lng: -122.4194, intensity: 0.8 },
         ],
         milestones: [
           {
@@ -97,14 +97,14 @@ describe("City Chapter Routes (Sprint 17)", () => {
       };
       mockGetChapter.mockResolvedValueOnce(chapter);
 
-      const res = await app.request("/cities/portland/chapter");
+      const res = await app.request("/cities/sanfrancisco/chapter");
 
       expect(res.status).toBe(200);
       const body = (await res.json()) as SuccessBody;
       expect(body.ok).toBe(true);
       const data = body.data as Record<string, unknown>;
-      expect(data.slug).toBe("portland");
-      expect(data.displayName).toBe("Portland, OR");
+      expect(data.slug).toBe("sanfrancisco");
+      expect(data.displayName).toBe("San Francisco, CA");
       expect(data.tagline).toBeTruthy();
       expect(data.metrics).toBeDefined();
       expect(data.heatmap).toBeDefined();
@@ -125,16 +125,16 @@ describe("City Chapter Routes (Sprint 17)", () => {
 
     it("includes requestId in response", async () => {
       mockGetChapter.mockResolvedValueOnce({
-        slug: "chicago",
-        displayName: "Chicago, IL",
-        tagline: "Building a better Chicago",
+        slug: "newyork",
+        displayName: "New York, NY",
+        tagline: "Building a better New York",
         metrics: {},
         heatmap: [],
         milestones: [],
         recentMilestones: [],
       });
 
-      const res = await app.request("/cities/chicago/chapter");
+      const res = await app.request("/cities/newyork/chapter");
 
       const body = (await res.json()) as SuccessBody;
       expect(body.requestId).toBeDefined();
@@ -142,9 +142,9 @@ describe("City Chapter Routes (Sprint 17)", () => {
 
     it("returns chapter with zero-state metrics", async () => {
       const chapter = {
-        slug: "denver",
-        displayName: "Denver, CO",
-        tagline: "Denver's community chapter",
+        slug: "seattle",
+        displayName: "Seattle, WA",
+        tagline: "Seattle's community chapter",
         metrics: {
           totalProblems: 0,
           totalObservations: 0,
@@ -158,7 +158,7 @@ describe("City Chapter Routes (Sprint 17)", () => {
       };
       mockGetChapter.mockResolvedValueOnce(chapter);
 
-      const res = await app.request("/cities/denver/chapter");
+      const res = await app.request("/cities/seattle/chapter");
 
       expect(res.status).toBe(200);
       const body = (await res.json()) as SuccessBody;

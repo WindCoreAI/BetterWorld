@@ -85,19 +85,19 @@ test.describe("Community Suite", () => {
     expect(errors).toHaveLength(0);
   });
 
-  test("city dashboard loads for portland with metrics", async ({ page }) => {
-    await page.goto(`${WEB_URL}/city/portland`);
+  test("city dashboard loads for sanfrancisco with metrics", async ({ page }) => {
+    await page.goto(`${WEB_URL}/city/sanfrancisco`);
     await expect(page.locator("h1, h2").first()).toBeVisible({
       timeout: 15_000,
     });
 
     // Verify city page has some content sections
-    expect(page.url()).toContain("/city/portland");
+    expect(page.url()).toContain("/city/sanfrancisco");
   });
 
   test("city metrics API returns data", async ({ request }) => {
     const res = await request.get(
-      `${API_URL}/api/v1/city/portland/metrics`,
+      `${API_URL}/api/v1/city/sanfrancisco/metrics`,
     );
     expect(res.ok()).toBeTruthy();
     const json = await res.json();

@@ -326,7 +326,7 @@ describe("Connection Routes (Sprint 16)", () => {
             displayName: "Alice",
             avatarUrl: null,
             tier: "contributor",
-            city: "Portland",
+            city: "San Francisco",
             sharedDomains: ["clean_water"],
             interactionCount: 3,
             connectedSince: new Date(),
@@ -398,11 +398,11 @@ describe("Connection Routes (Sprint 16)", () => {
           displayName: "Carol",
           avatarUrl: null,
           tier: "advocate",
-          city: "Portland",
+          city: "San Francisco",
           sharedDomains: ["clean_water", "healthcare"],
           mutualInteractions: 2,
           suggestionScore: 8,
-          reason: "You share 2 domains and Both in Portland",
+          reason: "You share 2 domains and Both in San Francisco",
         },
       ]);
 

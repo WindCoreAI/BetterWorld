@@ -82,7 +82,7 @@ describe("Network Routes (Sprint 16)", () => {
         followingCount: 18,
         connectionsCount: 12,
         sharedDomains: ["clean_water", "healthcare"],
-        activeCities: ["Portland", "Chicago"],
+        activeCities: ["San Francisco", "New York"],
         recentConnections: [
           { humanId: "h-1", displayName: "Alice", avatarUrl: null, connectedAt: "2026-02-10T00:00:00.000Z" },
         ],
