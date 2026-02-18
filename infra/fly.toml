@@ -2,7 +2,7 @@ app = "betterworld-api"
 primary_region = "iad"
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "infra/Dockerfile"
 
 [http_service]
   internal_port = 4000

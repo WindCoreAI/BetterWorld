@@ -2,7 +2,7 @@ app = "betterworld-worker"
 primary_region = "iad"
 
 [build]
-  dockerfile = "Dockerfile.worker"
+  dockerfile = "infra/Dockerfile.worker"
 
 [processes]
   worker = "node apps/api/dist/workers/all-workers.js"
