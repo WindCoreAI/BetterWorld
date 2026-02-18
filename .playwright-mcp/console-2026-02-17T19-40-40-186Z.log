@@ -1,3 +1,0 @@
-[     670ms] [WARNING] WebSocket connection to 'ws://localhost:3001/ws/human?token=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJkOWU5NGI4Ny0xNTU3LTQ0NTUtOWJhMS1mZjdhZjNhNjY0NDYiLCJlbWFpbCI6InRlc3Qtb25ib2FyZC1mbG93QGV4YW1wbGUuY29tIiwiZXhwIjoxNzcxMzU3MTA2fQ.geLgWIZgstrKqOYaTy1OqxFVEL_dEacGRVo8GrlmiJs' failed: WebSocket is closed before the connection is established. @ webpack-internal:///(app-pages-browser)/./src/hooks/useHumanWebSocket.ts:114
-[    5520ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4000/api/v1/human-auth/logout:0
-[    5534ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4000/api/v1/human-auth/refresh:0
