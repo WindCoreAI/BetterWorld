@@ -1,0 +1,305 @@
+openapi: 3.1.0
+info:
+  title: Security Hardening — GDPR Endpoints
+  version: 1.0.0
+  description: New API endpoints for GDPR data export and account deletion
+
+paths:
+  /api/v1/me/data-export:
+    get:
+      summary: Export all personal data (GDPR Article 15)
+      description: |
+        Returns a single JSON file containing all personal data held by the platform
+        for the authenticated user. Rate-limited to 2 requests per 24-hour period.
+      operationId: exportMyData
+      tags: [GDPR]
+      security:
+        - humanBearerAuth: []
+      responses:
+        "200":
+          description: JSON data export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataExportResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited (max 2 per 24h)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: RATE_LIMITED
+                  message: "Data export is limited to 2 requests per 24-hour period. Please try again later."
+
+  /api/v1/me/deletion-request:
+    get:
+      summary: Get current deletion request status
+      description: Returns the current account deletion request, if any.
+      operationId: getDeletionRequest
+      tags: [GDPR]
+      security:
+        - humanBearerAuth: []
+      responses:
+        "200":
+          description: Current deletion request (or null if none)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionRequestStatusResponse"
+        "401":
+          description: Not authenticated
+
+    post:
+      summary: Initiate account deletion (GDPR Article 17)
+      description: |
+        Initiates account deletion with a 14-day cooling-off period.
+        Blocked if user has active mission claims or unresolved disputes.
+      operationId: requestAccountDeletion
+      tags: [GDPR]
+      security:
+        - humanBearerAuth: []
+      responses:
+        "201":
+          description: Deletion request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionRequestCreatedResponse"
+        "401":
+          description: Not authenticated
+        "409":
+          description: Deletion request already pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: DELETION_ALREADY_PENDING
+                  message: "An account deletion request is already pending."
+        "422":
+          description: Cannot delete — active claims or disputes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: ACTIVE_OBLIGATIONS
+                  message: "Cannot delete account with active mission claims or unresolved disputes."
+                  details:
+                    activeMissionClaims: 2
+                    unresolvedDisputes: 0
+
+    delete:
+      summary: Cancel pending deletion request
+      description: |
+        Cancels a pending account deletion request during the 14-day cooling-off period.
+        Only valid when status is 'pending'.
+      operationId: cancelDeletionRequest
+      tags: [GDPR]
+      security:
+        - humanBearerAuth: []
+      responses:
+        "200":
+          description: Deletion request cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionRequestCancelledResponse"
+        "401":
+          description: Not authenticated
+        "404":
+          description: No pending deletion request found
+        "409":
+          description: Deletion already completed or cancelled
+
+components:
+  securitySchemes:
+    humanBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Human access token (JWT)
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+
+    DataExportResponse:
+      type: object
+      required: [ok, data, requestId]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        requestId:
+          type: string
+          description: Standard envelope requestId (Constitution Principle VI)
+        data:
+          type: object
+          required: [exportedAt, categories]
+          properties:
+            exportedAt:
+              type: string
+              format: date-time
+            categories:
+              type: object
+              properties:
+                profile:
+                  type: object
+                  description: "humans table (excludes passwordHash)"
+                humanProfile:
+                  type: object
+                  description: "humanProfiles — skills, location, bio, availability"
+                tokenTransactions:
+                  type: array
+                  description: "Full transaction history"
+                  items:
+                    type: object
+                missionClaims:
+                  type: array
+                  description: "Claimed missions + status"
+                  items:
+                    type: object
+                evidence:
+                  type: array
+                  description: "Submitted evidence (URLs, no EXIF)"
+                  items:
+                    type: object
+                follows:
+                  type: array
+                  description: "Following list"
+                  items:
+                    type: object
+                connections:
+                  type: array
+                  description: "Connections + status"
+                  items:
+                    type: object
+                notifications:
+                  type: array
+                  description: "Notification history"
+                  items:
+                    type: object
+                discussionThreads:
+                  type: array
+                  description: "Authored threads"
+                  items:
+                    type: object
+                discussionReplies:
+                  type: array
+                  description: "Authored replies"
+                  items:
+                    type: object
+                agents:
+                  type: array
+                  description: "Owned agents (excludes apiKeyHash)"
+                  items:
+                    type: object
+
+    DeletionRequestStatusResponse:
+      type: object
+      required: [ok, data, requestId]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        requestId:
+          type: string
+        data:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [pending, cancelled, completed]
+            requestedAt:
+              type: string
+              format: date-time
+            coolingOffExpiresAt:
+              type: string
+              format: date-time
+            cancelledAt:
+              type: string
+              format: date-time
+              nullable: true
+
+    DeletionRequestCreatedResponse:
+      type: object
+      required: [ok, data, requestId]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        requestId:
+          type: string
+        data:
+          type: object
+          required: [id, status, requestedAt, coolingOffExpiresAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [pending]
+            requestedAt:
+              type: string
+              format: date-time
+            coolingOffExpiresAt:
+              type: string
+              format: date-time
+              description: "requestedAt + 14 days"
+
+    DeletionRequestCancelledResponse:
+      type: object
+      required: [ok, data, requestId]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        requestId:
+          type: string
+        data:
+          type: object
+          required: [id, status, cancelledAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [cancelled]
+            cancelledAt:
+              type: string
+              format: date-time

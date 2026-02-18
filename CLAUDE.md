@@ -145,6 +145,7 @@ docs/challenges/         # 7 deep technical challenge research docs
 - PostgreSQL 16 + PostGIS (Supabase), Upstash Redis (cache, rate limits, feature flags), Supabase Storage (evidence media) (018-cooperative-depth-governance)
 - TypeScript 5.x (strict mode), Node.js 22+ + Hono (API), Drizzle ORM, Next.js 15 (App Router), React Query, Tailwind CSS 4, bcrypt, crypto (019-human-first-agent-onboarding)
 - PostgreSQL 16 (Supabase), Upstash Redis (auth cache) (019-human-first-agent-onboarding)
+- TypeScript 5.x (strict mode), Node.js 22+ + Hono (API), Drizzle ORM, Zod (validation), BullMQ (workers), jose (JWT), bcrypt, ioredis, @hono/node-ws (WebSocket), @anthropic-ai/sdk (Claude) (020-security-hardening)
 
 ## Recent Changes
 - 001-sprint1-core-infra: Monorepo, Hono API, Drizzle schema, better-auth, Redis rate limiting, Next.js 15 shell, CI/CD
