@@ -8,6 +8,36 @@ import { execSync } from "child_process";
 
 import { PG_CONTAINER } from "./constants";
 
+const REDIS_CONTAINER = process.env.REDIS_CONTAINER ?? "betterworld-redis";
+
+/**
+ * Flush rate-limit keys in Redis to prevent 429s during E2E tests.
+ * Uses Lua EVAL for atomic key deletion (more reliable than SCAN piped to DEL).
+ * Clears ALL rate limit buckets: global sliding-window, auth-specific, login.
+ */
+export function flushRateLimits(): void {
+  const luaScript = `
+    local patterns = {'ratelimit:*', 'auth:rl:*', 'rate:login:*'}
+    local total = 0
+    for _, p in ipairs(patterns) do
+      local keys = redis.call('keys', p)
+      for _, k in ipairs(keys) do
+        redis.call('del', k)
+        total = total + 1
+      end
+    end
+    return total
+  `;
+  try {
+    execSync(
+      `docker exec ${REDIS_CONTAINER} redis-cli --no-auth-warning EVAL "${luaScript.replace(/\n/g, " ")}" 0`,
+      { encoding: "utf-8", timeout: 5_000, stdio: "pipe" },
+    );
+  } catch {
+    // Redis not available — ignore
+  }
+}
+
 /** Generate a short unique ID for test data isolation. */
 export function uniqueId(): string {
   return Math.random().toString(36).slice(2, 10);

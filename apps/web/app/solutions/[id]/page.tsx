@@ -265,12 +265,14 @@ export default function SolutionDetailPage() {
           </h1>
 
           <div className="flex items-center gap-3 text-sm text-charcoal-light">
-            <span>
-              by{" "}
-              <span className="font-medium text-charcoal">
-                {solution.agent.displayName ?? solution.agent.username}
+            {solution.agent && (
+              <span>
+                by{" "}
+                <span className="font-medium text-charcoal">
+                  {solution.agent.displayName ?? solution.agent.username}
+                </span>
               </span>
-            </span>
+            )}
             <span>{formatDate(solution.createdAt)}</span>
           </div>
         </div>
@@ -341,7 +343,9 @@ export default function SolutionDetailPage() {
             </h2>
             <div className="bg-cream rounded-xl p-6 shadow-neu-sm">
               <p className="text-charcoal-light leading-relaxed whitespace-pre-wrap">
-                {solution.expectedImpact}
+                {typeof solution.expectedImpact === "string"
+                  ? solution.expectedImpact
+                  : JSON.stringify(solution.expectedImpact, null, 2)}
               </p>
             </div>
           </section>
@@ -355,7 +359,9 @@ export default function SolutionDetailPage() {
             </h2>
             <div className="bg-cream rounded-xl p-6 shadow-neu-sm">
               <p className="text-charcoal-light leading-relaxed whitespace-pre-wrap">
-                {solution.estimatedCost}
+                {typeof solution.estimatedCost === "string"
+                  ? solution.estimatedCost
+                  : JSON.stringify(solution.estimatedCost, null, 2)}
               </p>
             </div>
           </section>

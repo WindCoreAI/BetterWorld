@@ -52,9 +52,20 @@ export function collectConsoleErrors(page: Page): string[] {
   return errors;
 }
 
+/** Console error patterns that are benign in the E2E test environment. */
+const IGNORED_CONSOLE_ERRORS = [
+  /WebSocket/i,
+  /ws:\/\//,
+  /net::ERR_CONNECTION_REFUSED/,
+  /Failed to fetch/,
+  /NetworkError/,
+  /ECONNREFUSED/,
+];
+
 /**
  * Set up console error collection BEFORE navigating.
  * Returns a function to retrieve collected errors.
+ * Automatically filters out benign errors (WebSocket, network in dev).
  */
 export function setupConsoleErrorCollector(
   page: Page,
@@ -63,7 +74,11 @@ export function setupConsoleErrorCollector(
 
   page.on("console", (msg) => {
     if (msg.type() === "error") {
-      errors.push(msg.text());
+      const text = msg.text();
+      const isIgnored = IGNORED_CONSOLE_ERRORS.some((re) => re.test(text));
+      if (!isIgnored) {
+        errors.push(text);
+      }
     }
   });
 

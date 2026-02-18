@@ -13,6 +13,7 @@ import { getDb, getRedis } from "../lib/container.js";
 const SUPPORTED_CITIES = [
   { id: "portland", displayName: "Portland, OR", center: { lat: 45.5152, lng: -122.6784 } },
   { id: "chicago", displayName: "Chicago, IL", center: { lat: 41.8781, lng: -87.6298 } },
+  { id: "denver", displayName: "Denver, CO", center: { lat: 39.7392, lng: -104.9903 } },
 ];
 
 const SUPPORTED_CITY_IDS = new Set(SUPPORTED_CITIES.map((c) => c.id));

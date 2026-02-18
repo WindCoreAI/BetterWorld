@@ -12,7 +12,7 @@ import {
   HUMAN_ACCESS_KEY,
   HUMAN_REFRESH_KEY,
 } from "./constants";
-import { execSql, uniqueId } from "./db";
+import { execSql, flushRateLimits, uniqueId } from "./db";
 
 export interface TestHuman {
   email: string;
@@ -30,20 +30,30 @@ export interface TestAgent {
 
 /**
  * Register a new human, verify email via DB bypass, and login to get tokens.
+ *
+ * Uses a unique X-Forwarded-For per call to avoid the auth rate limiter
+ * (3 registrations / 5 min per IP), which would block sequential test suites.
  */
 export async function registerAndLoginHuman(
   request: APIRequestContext,
   prefix = "e2e",
 ): Promise<TestHuman> {
+  // Flush rate-limit keys before each registration to avoid global 30/60s limit
+  flushRateLimits();
+
   const uid = uniqueId();
   const email = `${prefix}_human_${uid}@example.com`;
   const password = `E2eTest_${uid}!`;
   const displayName = `E2E Human ${uid}`;
+  const fakeIp = `10.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
 
   // Register
   const regRes = await request.post(
     `${API_URL}/api/v1/human-auth/register`,
-    { data: { email, password, displayName } },
+    {
+      data: { email, password, displayName },
+      headers: { "X-Forwarded-For": fakeIp },
+    },
   );
   if (!regRes.ok()) {
     const body = await regRes.text();

@@ -31,6 +31,8 @@ Thumbs.db
 # Test & Coverage
 coverage/
 *.lcov
+test-results/
+.playwright-mcp/
 
 # Debug
 npm-debug.log*

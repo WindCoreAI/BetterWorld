@@ -11,7 +11,7 @@ import {
   solutions,
   tokenTransactions,
 } from "@betterworld/db";
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type Redis from "ioredis";
 import pino from "pino";
@@ -57,10 +57,30 @@ export async function aggregateDashboardMetrics(
     .from(missionClaims)
     .where(eq(missionClaims.status, "verified"));
 
+  const earnTypes = [
+    "earn_orientation",
+    "earn_mission",
+    "earn_reward",
+    "earn_bonus",
+    "earn_referral",
+    "earn_evidence_verified",
+    "earn_peer_review",
+    "earn_review_mission",
+    "earn_conversion_received",
+    "earn_mentorship_bonus",
+    "earn_mentee_first_mission",
+    "earn_mentorship_completion",
+    "earn_buddy_split",
+    "earn_helper_reward",
+    "earn_teaching_reward",
+    "earn_ambassador_welcome",
+    "earn_case_study_contribution",
+  ] as const;
+
   const [tokensResult] = await db
     .select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
     .from(tokenTransactions)
-    .where(sql`${tokenTransactions.transactionType} LIKE 'earn_%'`);
+    .where(inArray(tokenTransactions.transactionType, [...earnTypes]));
 
   const [humansResult] = await db
     .select({ count: count() })

@@ -12,11 +12,13 @@ import { followsApi } from "../lib/humanApi";
 
 export function useFollows(targetHumanId?: string) {
   const queryClient = useQueryClient();
+  const isAuthenticated =
+    typeof window !== "undefined" && !!localStorage.getItem("bw_human_access_token");
 
   const statusQuery = useQuery({
     queryKey: ["follow-status", targetHumanId],
     queryFn: () => followsApi.getStatus(targetHumanId!),
-    enabled: !!targetHumanId,
+    enabled: !!targetHumanId && isAuthenticated,
     staleTime: 30_000,
   });
 
