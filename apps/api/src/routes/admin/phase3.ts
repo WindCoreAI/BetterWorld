@@ -884,7 +884,8 @@ phase3AdminRoutes.put(
     if (parsed.status === "pending") {
       await redis.del(keyMap[criterionId]!);
     } else {
-      await redis.set(keyMap[criterionId]!, parsed.status === "pass" ? "true" : "false");
+      // T037: 24h TTL on admin-controlled decision gate keys (Sprint 20 Security Hardening)
+      await redis.set(keyMap[criterionId]!, parsed.status === "pass" ? "true" : "false", "EX", 86400);
     }
 
     return c.json({

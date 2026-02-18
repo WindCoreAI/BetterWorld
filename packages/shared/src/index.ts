@@ -378,6 +378,20 @@ export type {
   PowerAuditSnapshot, AgentFingerprintProfile,
 } from "./types/cooperative.js";
 
+// Sprint 20: Security Hardening — LLM output validation schemas
+export {
+  classifierResponseSchema,
+  visionVerificationResponseSchema,
+  decompositionResponseSchema,
+  beforeAfterResponseSchema,
+} from "./schemas/index.js";
+export type {
+  ClassifierResponse,
+  VisionVerificationResponse,
+  DecompositionResponse,
+  BeforeAfterResponse,
+} from "./schemas/index.js";
+
 // Config
 export { loadConfig, resetConfig, envSchema } from "./config.js";
 export type { EnvConfig } from "./config.js";

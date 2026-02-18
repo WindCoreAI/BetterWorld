@@ -16,6 +16,11 @@ RUN node scripts/download-face-models.js --copy
 # Stage 2: Runtime
 FROM node:22-slim AS runtime
 RUN corepack enable pnpm
+
+# T030: Non-root user for defense-in-depth (Sprint 20 Security Hardening)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 betterworld
+
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
@@ -31,4 +36,12 @@ COPY --from=builder /app/packages/guardrails/package.json ./packages/guardrails/
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-workspace.yaml ./
 ENV NODE_ENV=production
+
+# T030: Run as non-root user
+USER betterworld
+
+# No HEALTHCHECK for worker — it does not expose an HTTP server.
+# BullMQ workers process jobs from Redis queues and have no health endpoint.
+# Worker health is monitored via BullMQ job completion/failure metrics in Sentry.
+
 CMD ["node", "apps/api/dist/workers/all-workers.js"]

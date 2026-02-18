@@ -5,6 +5,7 @@
  * Returns improvement score, confidence, reasoning, and decision.
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { beforeAfterResponseSchema } from "@betterworld/shared";
 import pino from "pino";
 
 const logger = pino({ name: "before-after-service" });
@@ -99,11 +100,22 @@ export async function comparePhotos(
     };
   }
 
-  const output = toolUse.input as {
-    improvementScore: number;
-    confidence: number;
-    reasoning: string;
-  };
+  // Sprint 20: Validate before/after comparison response with strict Zod schema (FR-002b)
+  const parseResult = beforeAfterResponseSchema.safeParse(toolUse.input);
+  if (!parseResult.success) {
+    logger.warn(
+      { zodErrors: parseResult.error.flatten() },
+      "Before/after comparison response failed Zod validation — flagging for manual review",
+    );
+    return {
+      improvementScore: 0,
+      confidence: 0,
+      reasoning: "AI comparison response failed schema validation",
+      decision: "peer_review",
+    };
+  }
+
+  const output = parseResult.data;
 
   const confidence = Math.max(0, Math.min(1, output.confidence));
   const improvementScore = Math.max(0, Math.min(1, output.improvementScore));

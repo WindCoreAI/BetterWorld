@@ -213,7 +213,8 @@ describe("Layer B: LLM Classifier", () => {
         ],
       });
 
-      await expect(evaluateLayerB("Test content")).rejects.toThrow("Invalid alignment score");
+      // Sprint 20: Zod validation now catches invalid scores before the manual check
+      await expect(evaluateLayerB("Test content")).rejects.toThrow("Invalid response structure from LLM");
     });
   });
 
@@ -616,8 +617,9 @@ describe("Layer B: LLM Classifier", () => {
         ],
       });
 
+      // Sprint 20: Zod validation now catches out-of-range scores
       await expect(evaluateLayerB("Test negative score")).rejects.toThrow(
-        "Invalid alignment score",
+        "Invalid response structure from LLM",
       );
     });
 
@@ -639,8 +641,9 @@ describe("Layer B: LLM Classifier", () => {
         ],
       });
 
+      // Sprint 20: Zod validation now catches out-of-range scores
       await expect(evaluateLayerB("Test over-range score")).rejects.toThrow(
-        "Invalid alignment score",
+        "Invalid response structure from LLM",
       );
     });
 
@@ -707,6 +710,231 @@ describe("Layer B: LLM Classifier", () => {
       });
 
       await expect(evaluateLayerB("Missing field test")).rejects.toThrow(
+        "Invalid response structure",
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sprint 20: T014 — Zod validation tests for malformed classifier responses
+  // ---------------------------------------------------------------------------
+  describe("T014: Zod Schema Validation (Sprint 20 Security Hardening)", () => {
+    it("should reject response with missing alignment_score field", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              // alignment_score is missing
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "good",
+              decision: "approve",
+              reasoning: "Missing alignment_score",
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Missing alignment_score")).rejects.toThrow(
+        "Invalid response structure",
+      );
+    });
+
+    it("should reject response with out-of-range alignment_score (> 1)", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: 1.5,
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "good",
+              decision: "approve",
+              reasoning: "Score > 1.0",
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Out of range score")).rejects.toThrow();
+    });
+
+    it("should reject response with out-of-range alignment_score (< 0)", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: -0.5,
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "good",
+              decision: "approve",
+              reasoning: "Negative score",
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Negative score")).rejects.toThrow();
+    });
+
+    it("should reject response with extra unexpected fields (strict mode)", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: 0.85,
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "good",
+              decision: "approve",
+              reasoning: "Has extra fields",
+              malicious_field: "should not be here",
+              injected_data: { evil: true },
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Extra fields test")).rejects.toThrow(
+        "Invalid response structure",
+      );
+    });
+
+    it("should reject response with invalid decision enum value", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: 0.85,
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "good",
+              decision: "bypass_guardrails",
+              reasoning: "Trying to inject invalid decision",
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Invalid decision")).rejects.toThrow(
+        "Invalid response structure",
+      );
+    });
+
+    it("should reject response with invalid harm_risk enum value", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: 0.85,
+              harm_risk: "extreme",
+              feasibility: "high",
+              quality: "good",
+              decision: "approve",
+              reasoning: "Invalid harm risk",
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Invalid harm_risk")).rejects.toThrow(
+        "Invalid response structure",
+      );
+    });
+
+    it("should accept valid response with solution_scores for solution content type", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: 0.9,
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "excellent",
+              decision: "approve",
+              reasoning: "Great solution",
+              solution_scores: {
+                impact: 85,
+                feasibility: 90,
+                cost_efficiency: 75,
+              },
+            }),
+          },
+        ],
+      });
+
+      const result = await evaluateLayerB("Great food bank solution", "solution");
+
+      expect(result.alignedDomain).toBe("food_security");
+      expect(result.alignmentScore).toBe(0.9);
+      expect(result.solutionScores).toBeDefined();
+      expect(result.solutionScores!.impact).toBe(85);
+      expect(result.solutionScores!.feasibility).toBe(90);
+      expect(result.solutionScores!.costEfficiency).toBe(75);
+    });
+
+    it("should reject response with solution_scores out of range", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: 0.9,
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "good",
+              decision: "approve",
+              reasoning: "Bad scores",
+              solution_scores: {
+                impact: 150, // > 100 — invalid
+                feasibility: 90,
+                cost_efficiency: 75,
+              },
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Bad solution scores", "solution")).rejects.toThrow(
+        "Invalid response structure",
+      );
+    });
+
+    it("should reject response with wrong type for alignment_score (string instead of number)", async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              aligned_domain: "food_security",
+              alignment_score: "0.85",
+              harm_risk: "low",
+              feasibility: "high",
+              quality: "good",
+              decision: "approve",
+              reasoning: "Score is string not number",
+            }),
+          },
+        ],
+      });
+
+      await expect(evaluateLayerB("Wrong type score")).rejects.toThrow(
         "Invalid response structure",
       );
     });

@@ -107,3 +107,13 @@ export type {
   NarrativeInput, FeatureEndorsementInput, HumanSolutionInput,
   HumanMissionProposalInput, FeedQueryInput, DiscoverQueryInput,
 } from "./enhancements.js";
+
+// Sprint 20: Security Hardening — LLM output validation schemas
+export { classifierResponseSchema } from "./classifier-response.js";
+export type { ClassifierResponse } from "./classifier-response.js";
+export { visionVerificationResponseSchema } from "./vision-verification-response.js";
+export type { VisionVerificationResponse } from "./vision-verification-response.js";
+export { decompositionResponseSchema } from "./decomposition-response.js";
+export type { DecompositionResponse } from "./decomposition-response.js";
+export { beforeAfterResponseSchema } from "./before-after-response.js";
+export type { BeforeAfterResponse } from "./before-after-response.js";

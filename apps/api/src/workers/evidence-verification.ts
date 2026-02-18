@@ -7,7 +7,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { evidence, missions, verificationAuditLog } from "@betterworld/db";
-import { QUEUE_NAMES } from "@betterworld/shared";
+import { QUEUE_NAMES, visionVerificationResponseSchema } from "@betterworld/shared";
 import { Worker, type Job } from "bullmq";
 import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -305,7 +305,23 @@ export async function processEvidenceVerification(
       return;
     }
 
-    const output = toolUse.input as VerifyToolOutput;
+    // Sprint 20: Validate vision verification response with strict Zod schema (FR-002)
+    const parseResult = visionVerificationResponseSchema.safeParse(toolUse.input);
+    if (!parseResult.success) {
+      logger.error(
+        { evidenceId, zodErrors: parseResult.error.flatten() },
+        "Vision verification response failed Zod validation — routing to manual review",
+      );
+      await db.update(evidence).set({
+        verificationStage: "peer_review",
+        aiVerificationReasoning: "AI verification response failed schema validation",
+        updatedAt: new Date(),
+      }).where(eq(evidence.id, evidenceId));
+      await routeToPeerReview(db, evidenceId, evidenceRow.submittedByHumanId, "Zod validation failed");
+      return;
+    }
+
+    const output = parseResult.data as VerifyToolOutput;
     const score = Math.max(0, Math.min(1, output.overallConfidence));
 
     await db

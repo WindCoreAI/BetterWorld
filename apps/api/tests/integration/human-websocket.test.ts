@@ -22,6 +22,7 @@ function connectHumanWs(token: string): Promise<{
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(
       `ws://localhost:${getWsPort()}/ws/human?token=${token}`,
+      { headers: { origin: "http://localhost:3000" } },
     );
     let settled = false;
 

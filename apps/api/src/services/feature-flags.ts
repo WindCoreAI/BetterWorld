@@ -81,7 +81,9 @@ export async function setFlag<K extends FeatureFlagName>(
   const previousValue = await getFlag(redis, name);
 
   const redisKey = `${FEATURE_FLAG_REDIS_PREFIX}${name}`;
-  await redis.set(redisKey, JSON.stringify(value));
+  // T035: 30-day TTL prevents orphaned keys on flag removal (Sprint 20 Security Hardening)
+  // Long TTL avoids silently expiring active production config flags
+  await redis.set(redisKey, JSON.stringify(value), "EX", 2592000);
 
   logger.info(
     { flag: name, previousValue, newValue: value },

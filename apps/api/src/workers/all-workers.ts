@@ -45,6 +45,8 @@ async function main() {
   const { createPowerAuditWorker } = await import("./power-audit-worker.js");
   const { createAgentFingerprintWorker } = await import("./agent-fingerprint-worker.js");
   const { createFeedEventProcessorWorker } = await import("./feed-event-processor-worker.js");
+  // Sprint 20: Security Hardening
+  const { createAccountDeletionWorker } = await import("./account-deletion-worker.js");
 
   const workers = [
     { name: "guardrail", create: createGuardrailWorker },
@@ -81,6 +83,8 @@ async function main() {
     { name: "power-audit", create: createPowerAuditWorker },
     { name: "agent-fingerprint", create: createAgentFingerprintWorker },
     { name: "feed-event-processor", create: createFeedEventProcessorWorker },
+    // Sprint 20: Security Hardening
+    { name: "account-deletion", create: createAccountDeletionWorker },
   ];
 
   for (const { name, create } of workers) {

@@ -97,3 +97,5 @@ export { agentFingerprints } from "./schema/agentFingerprints";
 export { feedEvents } from "./schema/feedEvents";
 export { missionEndorsements } from "./schema/missionEndorsements";
 export { ambassadorAssignments } from "./schema/ambassadorAssignments";
+// Sprint 20: Security Hardening tables
+export { accountDeletionRequests } from "./schema/account-deletion-requests";

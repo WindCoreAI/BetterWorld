@@ -17,7 +17,9 @@ function createWsConnection(token: string): Promise<{
   close: () => void;
 }> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`ws://localhost:${getWsPort()}/ws/feed?token=${token}`);
+    const ws = new WebSocket(`ws://localhost:${getWsPort()}/ws/feed?token=${token}`, {
+      headers: { origin: "http://localhost:3000" },
+    });
     const messages: any[] = [];
     let resolveMessage: ((msg: any) => void) | null = null;
     let isResolved = false;

@@ -140,7 +140,9 @@ describe("Before/After Verification", () => {
       expect(result.confidence).toBe(0);
     });
 
-    it("clamps scores to [0, 1] range", async () => {
+    it("rejects out-of-range scores via Zod validation and routes to peer_review", async () => {
+      // Sprint 20: Out-of-range scores now fail Zod strict validation (FR-002b)
+      // instead of being clamped, they are rejected and routed to peer review
       mockCreate.mockResolvedValue({
         content: [
           {
@@ -163,8 +165,10 @@ describe("Before/After Verification", () => {
         "Test",
       );
 
-      expect(result.improvementScore).toBe(1);
+      // Zod rejects out-of-range values, so scores are 0 and decision is peer_review
+      expect(result.improvementScore).toBe(0);
       expect(result.confidence).toBe(0);
+      expect(result.decision).toBe("peer_review");
     });
   });
 

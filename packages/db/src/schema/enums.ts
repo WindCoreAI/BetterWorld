@@ -461,6 +461,13 @@ export const cooperativeAchievementTypeEnum = pgEnum("cooperative_achievement_ty
   "growth_partners",
 ]);
 
+// Sprint 20: Security Hardening — GDPR account deletion
+export const deletionRequestStatusEnum = pgEnum("deletion_request_status", [
+  "pending",
+  "cancelled",
+  "completed",
+]);
+
 export const feedEventTypeEnum = pgEnum("feed_event_type", [
   "problem_created",
   "solution_proposed",

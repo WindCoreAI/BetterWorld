@@ -81,3 +81,6 @@ export * from "./agentFingerprints";
 export * from "./feedEvents";
 export * from "./missionEndorsements";
 export * from "./ambassadorAssignments";
+
+// Sprint 20: Security Hardening
+export * from "./account-deletion-requests";
