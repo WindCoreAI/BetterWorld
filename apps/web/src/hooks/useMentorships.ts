@@ -8,12 +8,14 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { getHumanToken } from "../lib/api";
 import { mentorshipsApi } from "../lib/humanApi";
 
 export function useMentorshipSuggestions() {
   return useQuery({
     queryKey: ["mentorship-suggestions"],
     queryFn: () => mentorshipsApi.getSuggestions(),
+    enabled: !!getHumanToken(),
     staleTime: 60_000,
   });
 }
@@ -22,6 +24,7 @@ export function useMentorships(params?: { status?: string; role?: string }) {
   return useQuery({
     queryKey: ["mentorships", params],
     queryFn: () => mentorshipsApi.list(params),
+    enabled: !!getHumanToken(),
     staleTime: 30_000,
   });
 }
@@ -30,7 +33,7 @@ export function useMentorshipDetail(id: string | undefined) {
   return useQuery({
     queryKey: ["mentorship", id],
     queryFn: () => mentorshipsApi.getDetail(id!),
-    enabled: !!id,
+    enabled: !!id && !!getHumanToken(),
     staleTime: 30_000,
   });
 }

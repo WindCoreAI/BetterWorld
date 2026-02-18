@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-import { getHumanAuthHeaders } from "../../lib/api";
+import { API_BASE, getHumanAuthHeaders } from "../../lib/api";
 import { Card, CardBody } from "../ui";
 
 interface DisputeFormProps {
@@ -29,7 +29,7 @@ export default function DisputeForm({
   useEffect(() => {
     async function fetchBalance() {
       try {
-        const res = await fetch("/api/v1/tokens/balance", {
+        const res = await fetch(`${API_BASE}/api/v1/tokens/balance`, {
           credentials: "include",
           headers: getHumanAuthHeaders(),
         });

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 import DisputeReviewPanel from "../../../src/components/admin/DisputeReviewPanel";
+import { API_BASE } from "../../../src/lib/api";
 
 interface Dispute {
   id: string;
@@ -23,7 +24,7 @@ export default function AdminDisputesPage() {
   const fetchDisputes = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/v1/disputes/admin/queue?status=open");
+      const res = await fetch(`${API_BASE}/api/v1/disputes/admin/queue?status=open`);
       if (!res.ok) throw new Error("Failed to fetch dispute queue");
       const json = await res.json();
       setDisputes(json.data?.disputes ?? []);
@@ -39,7 +40,7 @@ export default function AdminDisputesPage() {
   }, [fetchDisputes]);
 
   const handleResolve = async (disputeId: string, verdict: "upheld" | "dismissed", adminNotes: string) => {
-    const res = await fetch(`/api/v1/disputes/admin/${disputeId}/resolve`, {
+    const res = await fetch(`${API_BASE}/api/v1/disputes/admin/${disputeId}/resolve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ verdict, adminNotes }),

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 import { ReviewQueue } from "../../src/components/reviews/ReviewQueue";
+import { API_BASE } from "../../src/lib/api";
 
 interface PendingReview {
   evidenceId: string;
@@ -21,7 +22,7 @@ export default function ReviewsPage() {
   useEffect(() => {
     async function loadReviews() {
       try {
-        const res = await fetch("/api/v1/peer-reviews/pending");
+        const res = await fetch(`${API_BASE}/api/v1/peer-reviews/pending`);
         if (res.ok) {
           const data = await res.json();
           setReviews(data.data.reviews);
@@ -41,7 +42,7 @@ export default function ReviewsPage() {
     confidence: number,
     reasoning: string,
   ) => {
-    const res = await fetch(`/api/v1/peer-reviews/${evidenceId}/vote`, {
+    const res = await fetch(`${API_BASE}/api/v1/peer-reviews/${evidenceId}/vote`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ verdict, confidence, reasoning }),

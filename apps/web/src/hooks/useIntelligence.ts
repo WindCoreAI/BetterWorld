@@ -9,25 +9,37 @@ import { useQuery } from "@tanstack/react-query";
 
 import { API_BASE } from "../lib/api";
 
-async function fetchPublic(url: string) {
+/**
+ * Fetch public intelligence endpoint. Returns JSON body even on
+ * non-ok status (e.g., 404 NO_REPORT_AVAILABLE) so the component
+ * can render a friendly fallback instead of retrying on expected errors.
+ */
+async function fetchIntelligence(url: string) {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  const body = await res.json();
+  // If the server returned an API-level error (e.g., NO_REPORT_AVAILABLE),
+  // return it as data rather than throwing, so the component can handle it.
+  if (!res.ok) {
+    return body;
+  }
+  return body;
 }
 
 export function useLatestIntelligence() {
   return useQuery({
     queryKey: ["intelligence", "latest"],
-    queryFn: () => fetchPublic(`${API_BASE}/api/v1/intelligence/latest`),
+    queryFn: () => fetchIntelligence(`${API_BASE}/api/v1/intelligence/latest`),
     staleTime: 3_600_000, // 1 hour
+    retry: false, // Missing report is not transient; don't retry
   });
 }
 
 export function useDomainIntelligence(domain: string | undefined) {
   return useQuery({
     queryKey: ["intelligence", "domain", domain],
-    queryFn: () => fetchPublic(`${API_BASE}/api/v1/intelligence/domain/${domain}`),
+    queryFn: () => fetchIntelligence(`${API_BASE}/api/v1/intelligence/domain/${domain}`),
     staleTime: 3_600_000,
     enabled: !!domain,
+    retry: false,
   });
 }

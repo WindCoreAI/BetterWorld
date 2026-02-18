@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 import { Card, CardBody } from "../ui";
 
 interface CityMetric {
@@ -25,7 +27,7 @@ export default function CrossCityDashboard() {
     async function fetchData() {
       try {
         setLoading(true);
-        const res = await fetch("/api/v1/cross-city/compare");
+        const res = await fetch(`${API_BASE}/api/v1/cross-city/compare`);
         if (!res.ok) throw new Error("Failed to fetch cross-city data");
         const json = await res.json();
         if (!cancelled) setCities(json.data?.cities ?? []);

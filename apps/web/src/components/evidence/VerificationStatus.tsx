@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 interface VerificationStatusProps {
   evidenceId: string;
   initialStage?: string;
@@ -27,7 +29,7 @@ export function VerificationStatus({
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/v1/evidence/${evidenceId}/status`);
+        const res = await fetch(`${API_BASE}/api/v1/evidence/${evidenceId}/status`);
         if (res.ok) {
           const data = await res.json();
           setStage(data.data.verificationStage);

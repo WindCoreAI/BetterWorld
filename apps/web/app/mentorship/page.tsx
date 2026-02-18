@@ -6,7 +6,7 @@
  * Shows mentor suggestions for newcomers, active mentorships,
  * mentee list for mentors, and past mentorships.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { MenteeCard } from "../../src/components/mentorship/MenteeCard";
 import { MentorCard } from "../../src/components/mentorship/MentorCard";
@@ -19,6 +19,9 @@ import {
 
 // eslint-disable-next-line complexity
 export default function MentorshipPage() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
   const { user } = useHumanAuth();
   const [activeTab, setActiveTab] = useState<"active" | "past">("active");
 
@@ -43,6 +46,20 @@ export default function MentorshipPage() {
       }
     }
   };
+
+  if (!isMounted) {
+    return (
+      <div className="mx-auto max-w-6xl p-8">
+        <h1 className="mb-2 text-2xl font-bold text-charcoal">Mentorship</h1>
+        <p className="mb-6 text-sm text-charcoal-light">
+          Connect with experienced community members for guidance, or mentor newcomers to earn teaching rewards.
+        </p>
+        <div className="rounded-xl bg-white shadow-neu-sm p-8 text-center">
+          <p className="text-charcoal-light">Loading mentorships...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl p-8">

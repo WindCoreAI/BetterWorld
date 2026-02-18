@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 import { Card, CardBody } from "../ui";
 
 interface Criterion {
@@ -40,7 +42,7 @@ export default function DecisionGateTracker() {
     async function fetch_() {
       try {
         setLoading(true);
-        const res = await fetch("/api/v1/admin/phase3/production-shift/decision-gate");
+        const res = await fetch(`${API_BASE}/api/v1/admin/phase3/production-shift/decision-gate`);
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         const json = await res.json();
         if (!cancelled) setData(json.data);

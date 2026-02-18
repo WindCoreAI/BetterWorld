@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 import { Card, CardBody } from "../ui";
 
 interface Cluster {
@@ -30,7 +32,7 @@ export default function PatternClusterView() {
       try {
         setLoading(true);
         const params = filter === "systemic" ? "?systemic=true" : "";
-        const res = await fetch(`/api/v1/patterns${params}`);
+        const res = await fetch(`${API_BASE}/api/v1/patterns${params}`);
         if (!res.ok) throw new Error("Failed to fetch clusters");
         const json = await res.json();
         if (!cancelled) setClusters(json.data?.clusters ?? []);
@@ -47,10 +49,10 @@ export default function PatternClusterView() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const res = await fetch("/api/v1/patterns/admin/refresh", { method: "POST" });
+      const res = await fetch(`${API_BASE}/api/v1/patterns/admin/refresh`, { method: "POST" });
       if (!res.ok) throw new Error("Refresh failed");
       // Refetch after refresh
-      const listRes = await fetch("/api/v1/patterns");
+      const listRes = await fetch(`${API_BASE}/api/v1/patterns`);
       if (listRes.ok) {
         const json = await listRes.json();
         setClusters(json.data?.clusters ?? []);

@@ -5,12 +5,15 @@
  *
  * Feedback inbox with unread count badge, filtering, and mark-as-read.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { FeedbackList } from "../../../src/components/feedback/FeedbackList";
 import { useFeedbackList, useFeedbackUnreadCount, useMarkFeedbackRead } from "../../../src/hooks/useFeedback";
 
 export default function FeedbackInboxPage() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
   const [unreadOnly, setUnreadOnly] = useState(false);
   const { data, isLoading } = useFeedbackList({ unreadOnly, limit: 20 });
   const { data: unreadData } = useFeedbackUnreadCount();
@@ -18,6 +21,19 @@ export default function FeedbackInboxPage() {
 
   const unreadCount = unreadData?.data?.count ?? 0;
   const items = data?.data?.items ?? [];
+
+  if (!isMounted) {
+    return (
+      <div className="mx-auto max-w-3xl p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Feedback Inbox</h1>
+          </div>
+        </div>
+        <p className="text-gray-500">Loading feedback...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl p-8">

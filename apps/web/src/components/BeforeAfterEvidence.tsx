@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 import { Card, CardBody } from "./ui";
 
 interface BeforeAfterEvidenceProps {
@@ -105,7 +107,7 @@ export default function BeforeAfterEvidence({
       }
 
       const resp = await fetch(
-        `/api/v1/missions/${missionId}/evidence`,
+        `${API_BASE}/api/v1/missions/${missionId}/evidence`,
         {
           method: "POST",
           body: formData,

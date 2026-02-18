@@ -7,7 +7,7 @@ import { EvidenceChecklist } from "../../../../src/components/evidence/EvidenceC
 import { EvidencePreview } from "../../../../src/components/evidence/EvidencePreview";
 import { EvidenceSubmitForm } from "../../../../src/components/evidence/EvidenceSubmitForm";
 import { GPSIndicator } from "../../../../src/components/evidence/GPSIndicator";
-import { getHumanAuthHeaders } from "../../../../src/lib/api";
+import { API_BASE, getHumanAuthHeaders } from "../../../../src/lib/api";
 import { useOnboardingGuard } from "../../../../src/lib/onboardingGuard";
 
 export default function SubmitEvidencePage() {
@@ -62,7 +62,7 @@ export default function SubmitEvidencePage() {
     }
 
     // FR-014: Use standard auth wrapper instead of manual auth headers
-    const res = await fetch(`/api/v1/missions/${missionId}/evidence`, {
+    const res = await fetch(`${API_BASE}/api/v1/missions/${missionId}/evidence`, {
       method: "POST",
       headers: getHumanAuthHeaders(),
       body: formData,

@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 
 import MissionClaimButton from "@/components/missions/MissionClaimButton";
 import MissionStatusBadge from "@/components/missions/MissionStatusBadge";
+import { API_BASE } from "@/lib/api";
 import { difficultyColors, formatDomain, formatDuration, timeRemaining } from "@/lib/mission-utils";
 
 // JSON-serialized variant of MissionDetail (Date fields become strings)
@@ -60,7 +61,7 @@ export default function MissionDetailPage() {
   useEffect(() => {
     const fetchMission = async () => {
       try {
-        const res = await fetch(`/api/v1/missions/${id}`, { credentials: "include" });
+        const res = await fetch(`${API_BASE}/api/v1/missions/${id}`, { credentials: "include" });
         const data = await res.json();
         if (data.ok) {
           setMission(data.data);

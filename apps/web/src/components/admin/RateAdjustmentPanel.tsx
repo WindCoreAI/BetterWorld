@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 import { Card, CardBody } from "../ui";
 
 interface RateAdjustment {
@@ -31,7 +33,7 @@ export default function RateAdjustmentPanel() {
     async function fetchData() {
       try {
         setLoading(true);
-        const res = await fetch("/api/v1/admin/rate-adjustments?limit=10");
+        const res = await fetch(`${API_BASE}/api/v1/admin/rate-adjustments?limit=10`);
         if (!res.ok) throw new Error("Failed to fetch rate adjustments");
         const json = await res.json();
         if (!cancelled) setAdjustments(json.data?.adjustments ?? []);
@@ -52,7 +54,7 @@ export default function RateAdjustmentPanel() {
 
     setOverriding(true);
     try {
-      const res = await fetch("/api/v1/admin/rate-adjustments/override", {
+      const res = await fetch(`${API_BASE}/api/v1/admin/rate-adjustments/override`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rewardMultiplier: reward, costMultiplier: cost }),
@@ -61,7 +63,7 @@ export default function RateAdjustmentPanel() {
       setOverrideReward("");
       setOverrideCost("");
       // Refresh
-      const refreshRes = await fetch("/api/v1/admin/rate-adjustments?limit=10");
+      const refreshRes = await fetch(`${API_BASE}/api/v1/admin/rate-adjustments?limit=10`);
       if (refreshRes.ok) {
         const json = await refreshRes.json();
         setAdjustments(json.data?.adjustments ?? []);

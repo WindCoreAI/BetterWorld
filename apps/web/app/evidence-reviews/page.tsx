@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 
 import EvidenceReviewCard from "../../src/components/evidence/EvidenceReviewCard";
 import EvidenceReviewForm from "../../src/components/evidence/EvidenceReviewForm";
+import { API_BASE } from "../../src/lib/api";
 import { useOnboardingGuard } from "../../src/lib/onboardingGuard";
 
 interface Assignment {
@@ -27,7 +28,7 @@ export default function EvidenceReviewsPage() {
   const fetchAssignments = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/v1/evidence-reviews/pending");
+      const res = await fetch(`${API_BASE}/api/v1/evidence-reviews/pending`);
       if (!res.ok) throw new Error("Failed to fetch assignments");
       const json = await res.json();
       setAssignments(json.data?.assignments ?? []);
@@ -59,7 +60,7 @@ export default function EvidenceReviewsPage() {
     reasoning: string;
   }) => {
     if (!selectedId) return;
-    const res = await fetch(`/api/v1/evidence-reviews/${selectedId}/respond`, {
+    const res = await fetch(`${API_BASE}/api/v1/evidence-reviews/${selectedId}/respond`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

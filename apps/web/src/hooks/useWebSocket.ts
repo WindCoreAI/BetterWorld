@@ -18,7 +18,7 @@ const MAX_BACKOFF_MS = 30_000;
 
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const {
-    url = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001",
+    url = `${process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001"}/ws/feed`,
     enabled = true,
   } = options;
 

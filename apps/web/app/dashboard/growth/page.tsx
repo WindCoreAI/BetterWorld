@@ -6,6 +6,8 @@
  * "Your Growth Journey" -- reputation trend, tier progress, skills,
  * domain expertise, personal milestones, and next goals.
  */
+import { useEffect, useState } from "react";
+
 import { DomainExpertise } from "../../../src/components/growth/DomainExpertise";
 import { NextGoals } from "../../../src/components/growth/NextGoals";
 import { ReputationTrend } from "../../../src/components/growth/ReputationTrend";
@@ -14,9 +16,12 @@ import { Card } from "../../../src/components/ui";
 import { useGrowthJourney } from "../../../src/hooks/useGrowthJourney";
 
 export default function GrowthDashboardPage() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
   const { data, isLoading, error } = useGrowthJourney();
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return (
       <div className="mx-auto max-w-5xl p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Your Growth Journey</h1>

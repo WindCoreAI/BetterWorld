@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 interface MissionClaimButtonProps {
   missionId: string;
   slotsAvailable: number;
@@ -26,7 +28,7 @@ export default function MissionClaimButton({ missionId, slotsAvailable, isClaime
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/missions/${missionId}/claim`, {
+      const res = await fetch(`${API_BASE}/api/v1/missions/${missionId}/claim`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

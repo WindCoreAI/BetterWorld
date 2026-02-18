@@ -25,12 +25,12 @@ export function CommunityIntelligence({ domainFilter }: CommunityIntelligencePro
     );
   }
 
-  if (error || !data?.data) {
+  if (error || !data?.data || data?.ok === false) {
     return (
       <Card className="p-4">
         <h3 className="font-semibold text-lg mb-2">What We&apos;re Learning Together</h3>
         <p className="text-gray-500 text-sm">
-          No intelligence report available yet. Reports are generated monthly.
+          No community intelligence report available yet.
         </p>
       </Card>
     );

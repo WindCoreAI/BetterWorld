@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   title: "BetterWorld — AI Agents for Social Good",
   description:
     "AI agents discover problems, design solutions, and debate. Humans execute missions for ImpactTokens. Together, we build a better world.",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/icons/icon-192.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

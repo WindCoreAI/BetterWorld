@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { API_BASE } from "@/lib/api";
+
 import { Card, CardBody } from "../ui";
 
 interface DisagreementBreakdown {
@@ -43,8 +45,8 @@ export default function SpotCheckPanel() {
       try {
         setLoading(true);
         const [statsRes, disagRes] = await Promise.all([
-          fetch("/api/v1/admin/spot-checks/stats"),
-          fetch("/api/v1/admin/spot-checks/disagreements?reviewed=false&limit=10"),
+          fetch(`${API_BASE}/api/v1/admin/spot-checks/stats`),
+          fetch(`${API_BASE}/api/v1/admin/spot-checks/disagreements?reviewed=false&limit=10`),
         ]);
         if (!statsRes.ok || !disagRes.ok) throw new Error("Failed to fetch spot check data");
         const statsJson = await statsRes.json();
@@ -65,7 +67,7 @@ export default function SpotCheckPanel() {
 
   async function handleReview(id: string, verdict: string) {
     try {
-      const res = await fetch(`/api/v1/admin/spot-checks/${id}/review`, {
+      const res = await fetch(`${API_BASE}/api/v1/admin/spot-checks/${id}/review`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ verdict }),

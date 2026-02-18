@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import MissionCard from "@/components/missions/MissionCard";
 import MissionFilters from "@/components/missions/MissionFilters";
 import MissionMap from "@/components/missions/MissionMap";
+import { API_BASE } from "@/lib/api";
 import { useOnboardingGuard } from "@/lib/onboardingGuard";
 
 export default function MissionsPage() {
@@ -28,7 +29,7 @@ export default function MissionsPage() {
       if (cursor) params.set("cursor", cursor);
       params.set("limit", "20");
 
-      const res = await fetch(`/api/v1/missions?${params.toString()}`, { credentials: "include" });
+      const res = await fetch(`${API_BASE}/api/v1/missions?${params.toString()}`, { credentials: "include" });
       const data = await res.json();
       if (data.ok) {
         if (cursor) {

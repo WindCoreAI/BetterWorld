@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 
 import DisputeCard from "../../src/components/disputes/DisputeCard";
-import { getHumanAuthHeaders } from "../../src/lib/api";
+import { API_BASE, getHumanAuthHeaders } from "../../src/lib/api";
 import { useOnboardingGuard } from "../../src/lib/onboardingGuard";
 
 interface Dispute {
@@ -33,7 +33,7 @@ export default function DisputesPage() {
       setLoading(true);
       const params = statusFilter !== "all" ? `?status=${statusFilter}` : "";
       // FR-016: Include authentication credentials on disputes fetch
-      const res = await fetch(`/api/v1/disputes${params}`, {
+      const res = await fetch(`${API_BASE}/api/v1/disputes${params}`, {
         credentials: "include",
         headers: getHumanAuthHeaders(),
       });
