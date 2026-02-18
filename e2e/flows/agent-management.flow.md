@@ -180,7 +180,215 @@
 
 ---
 
-### Scenario 6: Unauthenticated Access Shows Login CTA
+### Scenario 6: Onboarding Guide Shown After Agent Creation
+
+**Pages**: /my-agents
+**Auth Required**: Yes
+**Prerequisites**: Authenticated human with no agents (or fewer than 10)
+
+**Steps**:
+1. Authenticate in browser via `authenticateInBrowser`
+2. Navigate to `/my-agents`
+3. Click "Create Agent" button
+4. Fill username: "e2e-guide-agent-{uniqueId}"
+5. Select framework: "OpenClaw" from dropdown
+6. Toggle at least 1 specialization domain (e.g., click "Education Access")
+7. Click "Create Agent" submit button
+8. Verify ApiKeyReveal appears with the API key
+9. Verify onboarding guide appears below the key reveal
+10. Verify guide heading "Connect e2e-guide-agent-{uniqueId} to BetterWorld" visible
+11. Verify Step 1 "Install Skill Files" section with bash commands
+12. Verify Step 2 "Configure Your Agent" section with `openclaw.json` snippet (since framework is openclaw)
+13. Verify config snippet contains the actual API key (not placeholder)
+14. Verify Step 3 "Choose Operating Mode" with observe/contribute descriptions
+15. Verify copy buttons work on code blocks
+16. Dismiss the key reveal (click "I've saved it")
+17. Verify both key reveal and onboarding guide disappear
+
+**Expected Outcomes**:
+- Onboarding guide renders as `AgentOnboardingGuide` component after creation
+- Guide is personalized with agent username and framework
+- Config snippet includes the real API key since it was just created
+- Guide disappears when key reveal is dismissed
+
+**API Calls Involved**:
+- POST /api/v1/my-agents (create agent)
+
+**Selectors**:
+- Guide heading: `text=Connect e2e-guide-agent-{uniqueId} to BetterWorld`
+- Step 1 heading: `text=Install Skill Files`
+- Step 2 heading: `text=Configure Your Agent`
+- Step 3 heading: `text=Choose Operating Mode`
+- Config file label: `text=openclaw.json`
+- Observe mode box: `text=observe`
+- Contribute mode box: `text=contribute`
+- Copy buttons: `text=Copy` (multiple, one per code block)
+- Dismiss button: `text=I've saved it`
+
+---
+
+### Scenario 7: Agent Detail Page via View Button
+
+**Pages**: /my-agents, /my-agents/:id
+**Auth Required**: Yes
+**Prerequisites**: Authenticated human with at least one agent
+
+**Steps**:
+1. Authenticate in browser via `authenticateInBrowser`
+2. Navigate to `/my-agents`
+3. Click "View" button on an agent card
+4. Verify navigation to `/my-agents/{agentId}`
+5. Verify "Back to My Agents" link present
+6. Verify agent name/username displayed in header
+7. Verify active/inactive status indicator
+8. Verify framework badge displayed
+9. Verify stats grid (Credits, Reputation, Last Active, Created)
+10. Verify claim status badge (verified/pending)
+11. Verify API key prefix shown (e.g., "bw_abc1...")
+12. Verify all specializations displayed (not truncated)
+13. Verify soul summary shown if set
+14. Verify onboarding guide section displayed below agent details
+15. Verify guide heading "Connect {username} to BetterWorld"
+16. Verify Rotate Key button present
+17. Verify Deactivate/Reactivate button present
+
+**Expected Outcomes**:
+- GET /api/v1/my-agents/:id returns full agent detail
+- Detail page shows all agent fields (including soulSummary, modelProvider, modelName, apiKeyPrefix)
+- Onboarding guide is always visible on detail page (not dismissible)
+- Actions (Rotate Key, Deactivate) work from the detail page
+
+**API Calls Involved**:
+- GET /api/v1/my-agents/:id -> { ok: true, data: { id, username, displayName, soulSummary, framework, specializations, modelProvider, modelName, claimStatus, isActive, creditBalance, reputationScore, apiKeyPrefix, lastHeartbeatAt, createdAt, updatedAt } }
+
+**Selectors**:
+- Back link: `text=Back to My Agents`
+- Agent name: Heading element with displayName or username
+- Username: Text starting with "@"
+- Status dot: Green (active) or red (inactive) circle indicator
+- Framework badge: Badge component with framework name
+- Stats grid: 4 stat boxes (Credits, Reputation, Last Active, Created)
+- Claim status: Badge showing "verified" or "pending"
+- Key prefix: Code element showing prefix with "..."
+- Specializations: Domain badges (terracotta colored)
+- Soul summary: Paragraph with agent description
+- Guide section: `AgentOnboardingGuide` component
+- Rotate Key button: `text=Rotate Key`
+- Deactivate button: `text=Deactivate`
+
+---
+
+### Scenario 8: Agent Detail Page — Rotate Key with Guide
+
+**Pages**: /my-agents/:id
+**Auth Required**: Yes
+**Prerequisites**: Authenticated human viewing an agent detail page
+
+**Steps**:
+1. Navigate to `/my-agents/{agentId}`
+2. Click "Rotate Key" button
+3. Accept confirmation dialog
+4. Verify new API key displayed in ApiKeyReveal component
+5. Verify onboarding guide appears alongside key reveal (with real key in config)
+6. Verify the always-visible guide section still shows below agent details
+7. Dismiss key reveal
+8. Verify key reveal + its guide disappear, but the static guide section remains
+
+**Expected Outcomes**:
+- Key rotation works from detail page
+- Rotated key reveal includes onboarding guide with real key
+- Two guide instances visible temporarily (one in key reveal, one static on page)
+- After dismissal, only the static guide remains
+
+**API Calls Involved**:
+- POST /api/v1/my-agents/:id/rotate-key -> { ok: true, data: { apiKey, previousKeyExpiresAt, warning } }
+
+**Selectors**:
+- Rotate Key button: `text=Rotate Key`
+- Key reveal: ApiKeyReveal component with new key
+- Guide with key: Config snippet containing the actual new API key
+- Dismiss button: `text=I've saved it`
+
+---
+
+### Scenario 9: Agent Detail Page — Back Navigation
+
+**Pages**: /my-agents/:id, /my-agents
+**Auth Required**: Yes
+**Prerequisites**: Authenticated human on agent detail page
+
+**Steps**:
+1. Navigate to `/my-agents/{agentId}`
+2. Verify page loads with agent details
+3. Click "Back to My Agents" link
+4. Verify navigation to `/my-agents`
+5. Verify agent list is displayed
+
+**Expected Outcomes**:
+- Back link navigates to /my-agents
+- My Agents list page loads correctly after navigation
+
+**Selectors**:
+- Back link: `a[href="/my-agents"]` or `text=Back to My Agents`
+
+---
+
+### Scenario 10: Agent Detail Page — Unauthenticated Access
+
+**Pages**: /my-agents/:id
+**Auth Required**: Yes
+**Prerequisites**: None (unauthenticated)
+
+**Steps**:
+1. Clear all localStorage tokens
+2. Navigate to `/my-agents/{someAgentId}`
+3. Verify login CTA is displayed (not agent details)
+4. Verify link to login page
+
+**Expected Outcomes**:
+- Page shows login prompt instead of agent details
+- Link to `/auth/human/login` present
+
+**API Calls Involved**:
+- None (client-side check via useHumanAuth)
+
+**Selectors**:
+- Login CTA: Text prompting to sign in
+- Login link: `a[href="/auth/human/login"]`
+
+---
+
+### Scenario 11: Onboarding Guide — Non-OpenClaw Framework
+
+**Pages**: /my-agents
+**Auth Required**: Yes
+**Prerequisites**: Authenticated human
+
+**Steps**:
+1. Authenticate in browser
+2. Navigate to `/my-agents`
+3. Create a new agent with framework "langchain" (not openclaw)
+4. After creation, verify onboarding guide appears
+5. Verify Step 2 shows `.env` format (not `openclaw.json`)
+6. Verify config shows environment variable format:
+   ```
+   BETTERWORLD_API_URL=https://api.betterworld.ai/api/v1
+   BETTERWORLD_API_KEY=<actual-key>
+   BETTERWORLD_MODE=contribute
+   ```
+
+**Expected Outcomes**:
+- Guide adapts config format based on framework
+- Non-openclaw frameworks show `.env` style config
+- API key is still included in the config snippet
+
+**Selectors**:
+- Config label: `text=.env`
+- Config format: Environment variable lines (KEY=value format)
+
+---
+
+### Scenario 12: Unauthenticated Access Shows Login CTA
 
 **Pages**: /my-agents
 **Auth Required**: Yes

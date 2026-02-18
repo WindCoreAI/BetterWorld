@@ -24,6 +24,10 @@ export default function MyAgentsPage() {
 
   // API key reveal state
   const [revealedApiKey, setRevealedApiKey] = useState<string | null>(null);
+  const [revealedAgentInfo, setRevealedAgentInfo] = useState<{
+    username: string;
+    framework: string;
+  } | null>(null);
 
   // Action feedback
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -83,6 +87,10 @@ export default function MyAgentsPage() {
           };
           setAgents((prev) => [newAgent, ...prev]);
           setRevealedApiKey(res.data.apiKey);
+          setRevealedAgentInfo({
+            username: data.username,
+            framework: data.framework,
+          });
         } else {
           setCreateError(res.error?.message || "Failed to create agent");
         }
@@ -100,13 +108,18 @@ export default function MyAgentsPage() {
     try {
       const res = await myAgentsApi.rotateKey(agentId);
       if (res.ok && res.data) {
+        const agent = agents.find((a) => a.id === agentId);
         setRevealedApiKey(res.data.apiKey);
+        setRevealedAgentInfo({
+          username: agent?.username ?? "your-agent",
+          framework: agent?.framework ?? "custom",
+        });
         setActionMessage("Key rotated. Old key valid for 24 hours.");
       }
     } catch {
       setActionMessage("Failed to rotate key.");
     }
-  }, []);
+  }, [agents]);
 
   const handleToggleActive = useCallback(
     async (agentId: string, isActive: boolean) => {
@@ -129,9 +142,8 @@ export default function MyAgentsPage() {
     [fetchAgents],
   );
 
-  const handleView = useCallback((_agentId: string) => {
-    // For now, scroll to card or expand inline
-    // Future: navigate to detail page
+  const handleView = useCallback((agentId: string) => {
+    window.location.href = `/my-agents/${agentId}`;
   }, []);
 
   // Clear action message after 5 seconds
@@ -195,11 +207,16 @@ export default function MyAgentsPage() {
         )}
 
         {/* API Key Reveal */}
-        {revealedApiKey && (
+        {revealedApiKey && revealedAgentInfo && (
           <div className="mb-6">
             <ApiKeyReveal
               apiKey={revealedApiKey}
-              onDismiss={() => setRevealedApiKey(null)}
+              agentUsername={revealedAgentInfo.username}
+              framework={revealedAgentInfo.framework}
+              onDismiss={() => {
+                setRevealedApiKey(null);
+                setRevealedAgentInfo(null);
+              }}
             />
           </div>
         )}

@@ -12,7 +12,7 @@ import { useOnboardingGuard } from "@/lib/onboardingGuard";
 
 export default function MissionsPage() {
   const router = useRouter();
-  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
+  const { shouldRedirect: needsOnboarding, redirectTo, isChecking: onboardingChecking } = useOnboardingGuard();
   const [missions, setMissions] = useState<MissionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,12 +53,12 @@ export default function MissionsPage() {
     fetchMissions();
   }, [fetchMissions]);
 
-  // FR-023: Redirect to onboarding if not completed
+  // FR-023: Redirect to profile creation or onboarding if not completed
   useEffect(() => {
     if (!onboardingChecking && needsOnboarding) {
-      router.push("/onboarding");
+      router.push(redirectTo);
     }
-  }, [onboardingChecking, needsOnboarding, router]);
+  }, [onboardingChecking, needsOnboarding, redirectTo, router]);
 
   if (onboardingChecking || needsOnboarding) {
     return <div className="py-12 text-center text-gray-400">Loading...</div>;

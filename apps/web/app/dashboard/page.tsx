@@ -75,7 +75,7 @@ function DashboardError({ error, onRetry }: { error: unknown; onRetry: () => voi
 export default function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user, loading: authLoading } = useHumanAuth();
-  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
+  const { shouldRedirect: needsOnboarding, redirectTo, isChecking: onboardingChecking } = useOnboardingGuard();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -84,12 +84,12 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // FR-023: Hard redirect to onboarding if not completed
+  // FR-023: Hard redirect to profile creation or onboarding if not completed
   useEffect(() => {
     if (!onboardingChecking && needsOnboarding && isAuthenticated) {
-      router.push("/onboarding");
+      router.push(redirectTo);
     }
-  }, [onboardingChecking, needsOnboarding, isAuthenticated, router]);
+  }, [onboardingChecking, needsOnboarding, isAuthenticated, router, redirectTo]);
 
   const {
     data: dashboard,

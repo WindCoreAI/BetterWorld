@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button, Card, CardBody, Input } from "../../../../src/components/ui";
 import { useHumanAuth } from "../../../../src/hooks/useHumanAuth";
 import { API_BASE } from "../../../../src/lib/api";
+import { profileApi } from "../../../../src/lib/humanApi";
 
 export default function HumanLoginPage() {
   const router = useRouter();
@@ -35,7 +36,15 @@ export default function HumanLoginPage() {
     setLoading(false);
 
     if (result.ok) {
-      router.push("/dashboard");
+      // Check if user has a profile — new users need to create one first
+      const profileRes = await profileApi.get();
+      if (profileRes.ok && profileRes.data === null) {
+        router.push("/auth/human/profile");
+      } else if (profileRes.ok && profileRes.data && !profileRes.data.orientationCompletedAt) {
+        router.push("/onboarding");
+      } else {
+        router.push("/dashboard");
+      }
     } else {
       setError(result.error ?? "Login failed");
       setErrorCode(result.errorCode ?? "");

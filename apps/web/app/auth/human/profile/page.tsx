@@ -178,11 +178,8 @@ export default function ProfilePage() {
     setLoading(false);
 
     if (res.ok) {
-      if (isEditMode) {
-        router.push("/dashboard");
-      } else {
-        router.push("/onboarding");
-      }
+      // Hard navigation to ensure fresh state on destination page
+      window.location.href = isEditMode ? "/dashboard" : "/onboarding";
     } else {
       setError(res.error?.message ?? "Failed to save profile");
     }

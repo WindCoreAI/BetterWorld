@@ -5,8 +5,8 @@
  * Returns redirect state for use in protected page components.
  *
  * Usage in page components:
- *   const { shouldRedirect, isChecking } = useOnboardingGuard();
- *   useEffect(() => { if (shouldRedirect) router.push("/onboarding"); }, [shouldRedirect]);
+ *   const { shouldRedirect, redirectTo, isChecking } = useOnboardingGuard();
+ *   useEffect(() => { if (shouldRedirect) router.push(redirectTo); }, [shouldRedirect, redirectTo]);
  */
 import { useState, useEffect } from "react";
 
@@ -15,6 +15,8 @@ import { API_BASE, getHumanAuthHeaders, getHumanToken } from "./api";
 interface OnboardingGuardState {
   /** True if user needs to be redirected to /onboarding */
   shouldRedirect: boolean;
+  /** Where to redirect: /auth/human/profile (no profile) or /onboarding (no orientation) */
+  redirectTo: "/auth/human/profile" | "/onboarding";
   /** True while the profile check is in progress */
   isChecking: boolean;
 }
@@ -26,6 +28,7 @@ interface OnboardingGuardState {
 export function useOnboardingGuard(): OnboardingGuardState {
   const [state, setState] = useState<OnboardingGuardState>({
     shouldRedirect: false,
+    redirectTo: "/onboarding",
     isChecking: true,
   });
 
@@ -34,7 +37,7 @@ export function useOnboardingGuard(): OnboardingGuardState {
       const token = getHumanToken();
       if (!token) {
         // Not logged in — don't redirect to onboarding (auth check is separate)
-        setState({ shouldRedirect: false, isChecking: false });
+        setState({ shouldRedirect: false, redirectTo: "/onboarding", isChecking: false });
         return;
       }
 
@@ -46,15 +49,15 @@ export function useOnboardingGuard(): OnboardingGuardState {
 
         if (!res.ok) {
           // Profile fetch failed — don't block, let the page handle auth
-          setState({ shouldRedirect: false, isChecking: false });
+          setState({ shouldRedirect: false, redirectTo: "/onboarding", isChecking: false });
           return;
         }
 
         const json = await res.json();
 
-        // Profile doesn't exist yet — user needs onboarding
+        // Profile doesn't exist yet — user needs to create profile first
         if (json.ok && json.data === null) {
-          setState({ shouldRedirect: true, isChecking: false });
+          setState({ shouldRedirect: true, redirectTo: "/auth/human/profile", isChecking: false });
           return;
         }
 
@@ -63,11 +66,12 @@ export function useOnboardingGuard(): OnboardingGuardState {
 
         setState({
           shouldRedirect: !orientationCompleted,
+          redirectTo: "/onboarding",
           isChecking: false,
         });
       } catch {
         // Network error — don't block, let the page handle it
-        setState({ shouldRedirect: false, isChecking: false });
+        setState({ shouldRedirect: false, redirectTo: "/onboarding", isChecking: false });
       }
     }
 

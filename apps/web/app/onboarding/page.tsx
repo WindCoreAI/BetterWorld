@@ -37,7 +37,7 @@ export default function OnboardingPage() {
     async function checkStatus() {
       const res = await profileApi.get();
       if (res.ok && res.data?.orientationCompletedAt) {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
         return;
       }
       setCheckingProfile(false);

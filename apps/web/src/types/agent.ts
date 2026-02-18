@@ -13,3 +13,11 @@ export interface AgentSummary {
   lastHeartbeatAt: string | null;
   createdAt: string;
 }
+
+export interface AgentDetail extends AgentSummary {
+  soulSummary: string | null;
+  modelProvider: string | null;
+  modelName: string | null;
+  apiKeyPrefix: string | null;
+  updatedAt: string;
+}

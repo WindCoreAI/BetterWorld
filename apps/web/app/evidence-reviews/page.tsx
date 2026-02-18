@@ -19,7 +19,7 @@ interface Assignment {
 
 export default function EvidenceReviewsPage() {
   const router = useRouter();
-  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
+  const { shouldRedirect: needsOnboarding, redirectTo, isChecking: onboardingChecking } = useOnboardingGuard();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,12 +43,12 @@ export default function EvidenceReviewsPage() {
     fetchAssignments();
   }, [fetchAssignments]);
 
-  // FR-023: Redirect to onboarding if not completed
+  // FR-023: Redirect to profile creation or onboarding if not completed
   useEffect(() => {
     if (!onboardingChecking && needsOnboarding) {
-      router.push("/onboarding");
+      router.push(redirectTo);
     }
-  }, [onboardingChecking, needsOnboarding, router]);
+  }, [onboardingChecking, needsOnboarding, redirectTo, router]);
 
   if (onboardingChecking || needsOnboarding) {
     return <div className="py-12 text-center text-gray-400">Loading...</div>;

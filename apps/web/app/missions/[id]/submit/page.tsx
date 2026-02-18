@@ -13,7 +13,7 @@ import { useOnboardingGuard } from "../../../../src/lib/onboardingGuard";
 export default function SubmitEvidencePage() {
   const params = useParams();
   const router = useRouter();
-  const { shouldRedirect: needsOnboarding, isChecking: onboardingChecking } = useOnboardingGuard();
+  const { shouldRedirect: needsOnboarding, redirectTo, isChecking: onboardingChecking } = useOnboardingGuard();
   const missionId = params.id as string;
 
   const [gpsStatus, setGpsStatus] = useState<"detecting" | "detected" | "denied" | "unavailable">("detecting");
@@ -38,12 +38,12 @@ export default function SubmitEvidencePage() {
     }
   }, []);
 
-  // FR-023: Redirect to onboarding if not completed
+  // FR-023: Redirect to profile creation or onboarding if not completed
   useEffect(() => {
     if (!onboardingChecking && needsOnboarding) {
-      router.push("/onboarding");
+      router.push(redirectTo);
     }
-  }, [onboardingChecking, needsOnboarding, router]);
+  }, [onboardingChecking, needsOnboarding, redirectTo, router]);
 
   if (onboardingChecking || needsOnboarding) {
     return <div className="py-12 text-center text-gray-400">Loading...</div>;

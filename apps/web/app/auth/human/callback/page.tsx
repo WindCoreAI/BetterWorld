@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { useHumanAuth } from "../../../../src/hooks/useHumanAuth";
+import { profileApi } from "../../../../src/lib/humanApi";
 
 function CallbackContent() {
   const router = useRouter();
@@ -26,7 +27,15 @@ function CallbackContent() {
       if (cancelled) return;
 
       if (result.ok) {
-        router.push("/dashboard");
+        // Check if user has a profile — new OAuth users need to create one first
+        const profileRes = await profileApi.get();
+        if (profileRes.ok && profileRes.data === null) {
+          router.push("/auth/human/profile");
+        } else if (profileRes.ok && profileRes.data && !profileRes.data.orientationCompletedAt) {
+          router.push("/onboarding");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError(result.error ?? "OAuth login failed");
       }
