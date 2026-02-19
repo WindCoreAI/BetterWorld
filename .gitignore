@@ -48,3 +48,6 @@ apps/api/storage/
 
 # Face detection model files (copied from node_modules)
 apps/api/assets/models/
+
+# UI report screenshots (local only)
+UI-report/
