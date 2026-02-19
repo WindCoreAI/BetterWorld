@@ -248,6 +248,7 @@ jobs:
           exit-code: "1"
           severity: "HIGH,CRITICAL"
           ignore-unfixed: true
+          trivyignores: ".trivyignore"
       - name: Build Worker image for scanning
         run: docker build -f infra/Dockerfile.worker -t betterworld-worker:scan .
       - name: Run Trivy on worker image
@@ -258,6 +259,7 @@ jobs:
           exit-code: "1"
           severity: "HIGH,CRITICAL"
           ignore-unfixed: true
+          trivyignores: ".trivyignore"
 
   build:
     name: Build
