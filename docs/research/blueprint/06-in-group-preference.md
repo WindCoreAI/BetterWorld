@@ -1,8 +1,9 @@
 # Blueprint Deep-Dive: In-Group Preference (Trait 6)
 
-> **Assessment Grade**: B-
+> **Assessment Grade**: B- | **Final Grade**: A | Target Exceeded
 > **Target Grade**: A-
-> **Date**: 2026-02-15
+> **Date**: 2026-02-15 | **Updated**: 2026-02-16 (Spec 1 B-→B, Spec 2 B→A-, Spec 3 A-→A)
+> **Implemented in**: Sprint 16 (discussion boards) + Sprint 17 (domain/city pages, milestones) + Sprint 18 (cross-group challenges, welcome ambassadors)
 > **Principle**: *"Children wearing red t-shirts favoured and liked other children wearing the same colour — even when told colours were given out randomly."* — In-group preference creates powerful cohesion; successful societies channel it toward constructive group identity.
 
 ---

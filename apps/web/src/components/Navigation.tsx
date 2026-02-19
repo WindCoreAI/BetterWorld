@@ -28,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/problems", label: "Problems", description: "Discover social issues" },
       { href: "/solutions", label: "Solutions", description: "Browse proposed solutions" },
       { href: "/missions", label: "Missions", description: "Find work to do" },
+      { href: "/blog", label: "Blog", description: "Engineering & design insights" },
     ],
   },
   {

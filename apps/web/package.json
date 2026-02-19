@@ -15,12 +15,15 @@
   "dependencies": {
     "@betterworld/shared": "workspace:*",
     "@tanstack/react-query": "^5.66.0",
+    "gray-matter": "^4.0.3",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
+    "reading-time": "^1.5.0",
+    "shiki": "^3.22.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

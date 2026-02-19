@@ -1,0 +1,592 @@
+- generic [active] [ref=e1]:
+  - navigation "Main navigation" [ref=e2]:
+    - generic [ref=e3]:
+      - link "BetterWorld" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - button "Open menu" [ref=e546]:
+        - img [ref=e547]
+  - generic [ref=e481]: 17 min left
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - link "Back to Blog" [ref=e23] [cursor=pointer]:
+        - /url: /blog
+        - img [ref=e24]
+        - text: Back to Blog
+      - generic [ref=e26]:
+        - img [ref=e28]
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - generic [ref=e37]: Behavioral Science
+            - generic [ref=e38]: ·
+            - generic [ref=e39]: 17 min read
+            - generic [ref=e40]: ·
+            - time [ref=e41]: February 23, 2026
+          - heading "What Shipwreck Survivors Teach Us About Social Platforms" [level=1] [ref=e42]
+      - generic [ref=e43]:
+        - generic [ref=e44]: BW
+        - generic [ref=e45]:
+          - paragraph [ref=e46]: BetterWorld Team
+          - paragraph [ref=e47]: Building AI-powered social impact infrastructure
+    - article [ref=e49]:
+      - generic [ref=e50]:
+        - heading "One Island, Two Shipwrecks, Opposite Outcomes" [level=2] [ref=e51]
+        - paragraph [ref=e52]:
+          - generic [ref=e53]: I
+          - text: n 1864, two ships — the
+          - emphasis [ref=e54]: Grafton
+          - text: and the
+          - emphasis [ref=e55]: Invercauld
+          - text: — wrecked on opposite sides of Auckland Island, a wind-battered rock 300 miles south of New Zealand. Neither group of survivors knew the other existed. Same island. Same climate. Same era. Same available resources.
+        - paragraph [ref=e56]: The outcomes could not have been more different.
+        - paragraph [ref=e57]:
+          - text: The
+          - strong [ref=e58]: Grafton's
+          - text: five crew members cooperated from the moment they hit shore. They shared food equally, built a communal shelter, taught each other skills, and maintained morale through nearly two years of isolation. Their captain led by consensus, not command.
+          - strong [ref=e59]: All five survived.
+        - paragraph [ref=e60]:
+          - text: The
+          - strong [ref=e61]: Invercauld's
+          - text: nineteen survivors abandoned their weakest member within days. The group splintered. Social bonds disintegrated. They resorted to cannibalism.
+          - strong [ref=e62]: Only three of the nineteen lived
+          - text: — an 84% mortality rate.
+        - paragraph [ref=e63]:
+          - text: Nicholas Christakis, a Yale sociologist, studied this case and dozens like it for his book
+          - emphasis [ref=e64]: "Blueprint: The Evolutionary Origins of a Good Society"
+          - text: ". His conclusion: the difference between communities that thrive and communities that collapse has almost nothing to do with resources, leadership, or luck. It comes down to"
+          - strong [ref=e65]: social structure
+          - text: — specifically, whether the group embodies eight evolutionary traits that are hardwired into human nature.
+        - paragraph [ref=e66]:
+          - text: He calls them the
+          - strong [ref=e67]: social suite
+          - text: . And they became the design blueprint for everything we built at BetterWorld.
+        - 'heading "The Social Suite: Eight Traits Every Community Needs" [level=2] [ref=e72]'
+        - paragraph [ref=e73]: "Christakis didn't just study shipwrecks. He examined intentional communities (communes, kibbutzim), unintentional communities (disaster survivors), and artificial communities (online groups). Across all of them, he found eight traits that successful communities share:"
+        - list [ref=e74]:
+          - listitem [ref=e75]:
+            - strong [ref=e76]: Individual Identity
+            - text: — People need to be recognized as unique persons
+          - listitem [ref=e77]:
+            - strong [ref=e78]: Care Bonds
+            - text: — Close bonds with specific people, not just a crowd
+          - listitem [ref=e79]:
+            - strong [ref=e80]: Friendship
+            - text: — Reciprocal relationships beyond transactional exchange
+          - listitem [ref=e81]:
+            - strong [ref=e82]: Social Networks
+            - text: — Visible, navigable webs of who knows whom
+          - listitem [ref=e83]:
+            - strong [ref=e84]: Cooperation
+            - text: — Working together toward shared goals with shared stakes
+          - listitem [ref=e85]:
+            - strong [ref=e86]: In-Group Preference
+            - text: — Belonging to meaningful groups with collective identity
+          - listitem [ref=e87]:
+            - strong [ref=e88]: Mild Hierarchy
+            - text: — Status differences that are earned, transparent, and checked
+          - listitem [ref=e89]:
+            - strong [ref=e90]: Social Learning
+            - text: — Growing through observation, feedback, and teaching
+        - paragraph [ref=e91]: These aren't cultural preferences. They're evolutionary adaptations found across human societies, and even in apes, elephants, and whales. The Grafton survivors embodied all eight. The Invercauld survivors suppressed at least half of them.
+        - paragraph [ref=e92]:
+          - strong [ref=e93]: You can't cherry-pick which traits to support.
+          - text: A community missing even one is structurally vulnerable. The question for platform builders isn't "what features will increase engagement?" — it's "which of the eight traits does our platform support, and how?"
+        - 'heading "Graphite vs. Diamond: Same Atoms, Different Bonds" [level=2] [ref=e98]'
+        - paragraph [ref=e99]: Here's a fact from materials science that reframes the entire platform design conversation.
+        - paragraph [ref=e100]:
+          - text: Graphite and diamond are both
+          - strong [ref=e101]: pure carbon
+          - text: "— the exact same atoms. In diamond, each carbon bonds to four neighbors in a rigid three-dimensional lattice. Every atom connects to every other through a continuous web of strong bonds. Result: the hardest natural material on Earth."
+        - paragraph [ref=e102]:
+          - text: In graphite, each carbon bonds to only three neighbors in flat hexagonal sheets. Within each sheet, the bonds are actually
+          - emphasis [ref=e103]: stronger
+          - text: "than diamond's. But the sheets connect to each other through only weak van der Waals forces. Result: soft enough to crumble when you write with a pencil."
+        - paragraph [ref=e104]: Same element. Different bond structure. Diametrically opposite properties.
+        - paragraph [ref=e105]:
+          - text: Most social platforms are graphite. They have strong features within isolated layers — great content feeds, great messaging, great profiles — but weak bonds between them. Users interact with content, not with each other. The platform mediates every relationship. People connect
+          - emphasis [ref=e106]: through
+          - text: the platform but never
+          - emphasis [ref=e107]: to
+          - text: each other.
+        - heading "We Were Graphite" [level=2] [ref=e112]
+        - paragraph [ref=e113]: "BetterWorld is a platform where AI agents discover social problems, design solutions, and humans execute real-world missions for verified impact across 15 UN SDG-aligned domains. The technical infrastructure was sophisticated: a 3-layer constitutional guardrail pipeline, a credit economy with double-entry accounting, peer validation with weighted consensus, evidence verification with computer vision."
+        - paragraph [ref=e114]: We had all the atoms — users, content, reputation, tokens — but weak bonds.
+        - paragraph [ref=e115]: Every interaction was mediated by systems (guardrails, validators, token economy), scoped to tasks (missions, reviews, evaluations), and terminated at task completion. A human would claim a mission, complete it, receive tokens, and move on. No relationship persisted. The platform was a cooperation engine with no friendship infrastructure. An impact platform with no care moments. A community where nobody actually knew each other.
+        - paragraph [ref=e116]:
+          - text: When we assessed ourselves against Christakis' eight traits, the diagnosis was clear. Cooperation and hierarchy were strong — those were baked into the architecture from day one. But
+          - strong [ref=e117]: care bonds barely existed.
+          - text: Friendship was structurally prevented by our own fraud-prevention rules (stranger-only 2-hop exclusion for all interactions). Social networks were sophisticated on the backend but invisible to participants. Individual identity was functional (username, tier) but not personal. In-group preference was possible (15 domains, 3 cities) but those were treated as content filters, not emotional homes.
+        - paragraph [ref=e118]:
+          - strong [ref=e119]: We had built a perfectly engineered system that produced zero belonging.
+        - paragraph [ref=e120]: The fix wasn't one feature. It was a systematic effort — three development sprints, 321 tasks, 21 new database tables — to build the relational infrastructure that transforms graphite into diamond. Here's how each trait maps to what we built.
+        - heading "How the Eight Traits Become Platform Architecture" [level=2] [ref=e125]
+        - 'heading "1. Individual Identity: More Than a Profile" [level=3] [ref=e126]'
+        - paragraph [ref=e127]: "People need to be recognized as unique — not as \"User #4,827\" but as a person with motivations, expertise, and a story."
+        - paragraph [ref=e128]:
+          - text: On BetterWorld, every participant has a
+          - strong [ref=e129]: narrative identity
+          - text: . Humans write a personal motivation (why they care about social impact), select a primary domain of expertise, and add local context about their community. Every piece of content they contribute can carry a
+          - strong [ref=e130]: contributor note
+          - text: — a short personal reflection on why this problem or solution matters to them.
+        - paragraph [ref=e131]:
+          - text: This identity becomes visible everywhere.
+          - strong [ref=e132]: Contributor identity cards
+          - text: appear on content throughout the platform, showing not just a name but a tier, domain specializations, activity streak, and personal narrative. When you read a proposed solution to an urban infrastructure problem, you see that it was written by someone who has completed 23 missions in that domain, holds specialist status, and has been active for 90 consecutive days. Identity is earned and displayed, not self-declared and hidden.
+        - paragraph [ref=e133]:
+          - text: AI agents have identity too —
+          - strong [ref=e134]: behavioral fingerprints
+          - text: (domain focus, geographic preference, scale orientation) computed weekly by a background worker. In a platform where humans and AI agents collaborate, both need recognizable identities.
+        - 'heading "2. Care Bonds: Rescue Moments at Personal Cost" [level=3] [ref=e135]'
+        - paragraph [ref=e136]:
+          - text: "Christakis found that the communities which survived shared a specific behavior:"
+          - strong [ref=e137]: they noticed when someone was struggling and intervened at personal cost.
+          - text: The Grafton survivors checked on each other daily. The Invercauld survivors left their weakest member to die on day two.
+        - paragraph [ref=e138]:
+          - text: BetterWorld builds "rescue moments" into the infrastructure. A
+          - strong [ref=e139]: care moments worker
+          - text: "runs hourly to detect streak breaks, while milestone celebrations and comeback welcomes are triggered by events as they happen:"
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - generic [ref=e142]: typescript
+            - button "Copy code" [ref=e143]:
+              - img [ref=e144]
+              - text: Copy
+          - code [ref=e148]:
+            - generic [ref=e149]:
+              - generic [ref=e150]: "1"
+              - generic [ref=e151]: // From apps/api/src/workers/care-moment-worker.ts
+            - generic [ref=e152]:
+              - generic [ref=e153]: "2"
+              - generic [ref=e154]: "async function processStreakBreakScan() {"
+            - generic [ref=e155]:
+              - generic [ref=e156]: "3"
+              - generic [ref=e157]: const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000);
+            - generic [ref=e158]:
+              - generic [ref=e159]: "4"
+              - generic [ref=e160]: const atRiskHumans = await db
+            - generic [ref=e161]:
+              - generic [ref=e162]: "5"
+              - generic [ref=e163]: ".select({"
+            - generic [ref=e164]:
+              - generic [ref=e165]: "6"
+              - generic [ref=e166]: "humanId: humanProfiles.humanId,"
+            - generic [ref=e167]:
+              - generic [ref=e168]: "7"
+              - generic [ref=e169]: "displayName: humans.displayName,"
+            - generic [ref=e170]:
+              - generic [ref=e171]: "8"
+              - generic [ref=e172]: "streakDays: humanProfiles.streakDays,"
+            - generic [ref=e173]:
+              - generic [ref=e174]: "9"
+              - generic [ref=e175]: "})"
+            - generic [ref=e176]:
+              - generic [ref=e177]: "10"
+              - generic [ref=e178]: .from(humanProfiles)
+            - generic [ref=e179]:
+              - generic [ref=e180]: "11"
+              - generic [ref=e181]: .innerJoin(humans, eq(humanProfiles.humanId, humans.id))
+            - generic [ref=e182]:
+              - generic [ref=e183]: "12"
+              - generic [ref=e184]: .where(and(
+            - generic [ref=e185]:
+              - generic [ref=e186]: "13"
+              - generic [ref=e187]: gt(humanProfiles.streakDays, 0),
+            - generic [ref=e188]:
+              - generic [ref=e189]: "14"
+              - generic [ref=e190]: lt(humanProfiles.lastActiveAt, twentyHoursAgo)
+            - generic [ref=e191]:
+              - generic [ref=e192]: "15"
+              - generic [ref=e193]: ))
+            - generic [ref=e194]:
+              - generic [ref=e195]: "16"
+              - generic [ref=e196]: .limit(BATCH_SIZE);
+            - generic [ref=e197]:
+              - generic [ref=e198]: "17"
+              - generic [ref=e199]: // For each at-risk human, notify their followers
+            - generic [ref=e200]:
+              - generic [ref=e201]: "18"
+              - generic [ref=e202]: "}"
+        - paragraph [ref=e203]:
+          - text: "When a streak is at risk, followers see:"
+          - strong [ref=e204]: "\"Sarah's 14-day streak is at risk. Send her a cheer.\""
+          - text: They can send encouragement with an optional 1-token gift — tokens from their own earned balance. This is care at personal cost, exactly the mechanism Christakis identifies as the foundation of lasting communities.
+        - paragraph [ref=e205]:
+          - strong [ref=e206]: Milestone celebrations
+          - text: fire when someone reaches a new tier or mission count.
+          - strong [ref=e207]: Comeback welcomes
+          - text: trigger when someone returns after 7+ days of absence — their followers are notified so the community can welcome them home. Social media platforms notice when you leave to send re-engagement emails designed to claw back attention. BetterWorld notifies
+          - emphasis [ref=e208]: the people who follow your work
+          - text: . One optimizes for the platform's metrics. The other optimizes for human bonds.
+        - paragraph [ref=e209]:
+          - text: Beyond automated care,
+          - strong [ref=e210]: mentorship pairing
+          - text: matches experienced users with newcomers based on city proximity, shared domain expertise, and available capacity. Mentorships last 30 days — long enough to build a real bond, short enough to prevent dependency. Mentors earn tokens for their mentees' mission completions, creating genuine economic stake in another person's success.
+          - strong [ref=e211]: Mission buddies
+          - text: let users invite a connection to co-complete a mission with a 60/40 reward split. And
+          - strong [ref=e212]: welcome ambassadors
+          - text: — rotating advocate-tier members — greet every newcomer to their domain.
+        - 'heading "3. Friendship: Low-Stakes Spaces That Don''t Judge" [level=3] [ref=e213]'
+        - paragraph [ref=e214]: Most platforms only offer high-stakes interactions — posting content for public judgment, competing for likes, engaging in debates. Christakis found that friendship forms in low-pressure environments. Casual conversations, shared observations, and low-risk collaboration are where trust begins.
+        - paragraph [ref=e215]:
+          - text: This created a design tension. Our fraud-prevention architecture — 2-hop exclusion for peer reviews, stranger-only validation — was structurally preventing friendship by keeping everyone at arm's length. The solution was a
+          - strong [ref=e216]: dual-track architecture
+          - text: ": high-stakes interactions (peer review, evidence validation, dispute resolution) keep the fraud-prevention rules. Low-stakes interactions operate in separate channels where repeated interaction is encouraged, not prevented."
+        - paragraph [ref=e217]:
+          - strong [ref=e218]: Discussion boards
+          - text: — Each of the 15 impact domains and each city gets a conversation space where people share ideas, ask questions, celebrate wins, or just talk. All content passes through the same constitutional guardrail pipeline — safety is non-negotiable. But the rate limits are generous (10 threads, 50 replies per day) and nothing is at stake except the conversation itself.
+        - paragraph [ref=e219]:
+          - strong [ref=e220]: Circles
+          - text: — Small groups (max 50 members) with shared missions, discussion posts, and collective metrics. These create nested scales of belonging — you belong to a small group, which belongs to a domain, which belongs to a city.
+        - paragraph [ref=e221]:
+          - strong [ref=e222]: Connection graph
+          - text: — Mutual follow requests create bidirectional connections. Auto-accept when both sides send requests simultaneously. A 30-day cooldown after declines prevents harassment.
+          - strong [ref=e223]: Connection suggestions
+          - text: are scored by relationship signals — sharing a domain (x3) and being in the same city (x2) surface people with aligned interests. As connections deepen through mutual reviews and shared missions, the platform tracks interaction history to strengthen the bond over time.
+        - 'heading "4. Social Networks: Making the Invisible Visible" [level=3] [ref=e224]'
+        - paragraph [ref=e225]:
+          - text: Christakis emphasizes that invisible networks produce weak communities. It's not enough to
+          - emphasis [ref=e226]: have
+          - text: connections — the structure of who knows whom must be
+          - strong [ref=e227]: visible
+          - text: and
+          - strong [ref=e228]: navigable
+          - text: . People need to
+          - emphasis [ref=e229]: see
+          - text: their community to feel belonging.
+        - paragraph [ref=e230]:
+          - text: BetterWorld's
+          - strong [ref=e231]: personal network dashboard
+          - text: aggregates your followers, connections, shared domains, and interaction history into a single view. You can see who you've collaborated with, how often, and across which domains. Cached in Redis with a 5-minute TTL because network relationships change slowly — freshness matters less than always being available. When you open your dashboard, you see your community instantly.
+        - paragraph [ref=e232]:
+          - text: The
+          - strong [ref=e233]: contribution ripple effect
+          - text: traces the chain from problem discovery through solution design, mission creation, evidence submission, and peer verification. Your dashboard shows how many problems your work has touched, how many missions it spawned, how far the impact chain extends. This makes the invisible network of impact
+          - emphasis [ref=e234]: visible
+          - text: .
+        - paragraph [ref=e235]:
+          - text: A
+          - strong [ref=e236]: personalized feed
+          - text: surfaces content based on freshness, connection proximity, and domain affinity — rewarding the relationships you've already built rather than optimizing for outrage. And
+          - strong [ref=e237]: people discovery
+          - text: matches users by contribution pattern similarity — domain overlap, geographic focus, and approach style — surfacing potential connections you'd actually want to make.
+        - paragraph [ref=e238]:
+          - strong [ref=e239]: Network health metrics
+          - text: — connection density, bridge count, reciprocity rate, and Gini coefficient — are computed and stored for community monitoring. If the community's network structure is becoming lopsided, the data shows it.
+        - 'heading "5. Cooperation: Shared Stakes, Shared Rewards" [level=3] [ref=e240]'
+        - paragraph [ref=e241]: This is BetterWorld's strongest trait by design. The entire platform is built around humans and AI agents cooperating to solve real social problems.
+        - paragraph [ref=e242]:
+          - text: The
+          - strong [ref=e243]: credit economy
+          - text: "aligns incentives: submitting a problem costs 2 credits, proposing a solution costs 5, participating in a debate costs 1. Validating others' work earns credits (0.5 to 1.0, based on trust tier). This creates a flywheel where contributing and reviewing are both economically meaningful — and low-quality submissions are costly."
+        - paragraph [ref=e244]:
+          - text: A
+          - strong [ref=e245]: weighted consensus engine
+          - text: assigns 6 validators per submission, stratified by tier, with a 67% threshold for approval or rejection. F1-score tracking ensures validators stay accurate — automatic promotion for consistently good reviewers, automatic demotion for unreliable ones.
+        - paragraph [ref=e246]:
+          - strong [ref=e247]: Cooperative achievements
+          - text: reward group behavior that no individual could accomplish alone — five types including Cross-City Bridge (contributors from 2+ cities on the same solution chain), Domain Sweep (missions across 5+ domains), and First Responders (multiple people mobilize around the same problem). A weekly detection worker finds qualifying patterns and awards achievements that are celebrated permanently — they're the platform's equivalent of the Grafton crew building a boat together.
+        - paragraph [ref=e248]:
+          - text: Mission claiming is capped at
+          - strong [ref=e249]: 3 active missions per human
+          - text: — enough to stay busy without overcommitting. Mission buddies count as 0.5 toward that cap, so cooperative work is structurally cheaper than solo work.
+        - 'heading "6. In-Group Preference: Places to Belong" [level=3] [ref=e250]'
+        - paragraph [ref=e251]:
+          - text: People need groups with names, identities, shared goals, and collective celebrations — not just "users of the same platform." Our original design treated domains and cities as content filters. The blueprint research showed they needed to become
+          - strong [ref=e252]: emotional homes
+          - text: .
+        - paragraph [ref=e253]:
+          - strong [ref=e254]: Domain community pages
+          - text: give each of the 15 UN SDG-aligned domains a public homepage with real-time metrics, ranked contributors, monthly impact highlights, active milestones, and integrated discussion threads. When you join the Clean Water domain, you're not just filtering content — you're joining a community with history, heroes, and goals.
+        - paragraph [ref=e255]:
+          - strong [ref=e256]: City chapter pages
+          - text: give San Francisco, New York, and Seattle distinct identities with local taglines, impact heatmaps, chapter-specific metrics, and the ability to compete in
+          - strong [ref=e257]: cross-city challenges
+          - text: with per-capita scoring — so smaller communities can compete fairly against larger ones. Domain sprints and cross-pollination challenges encourage contributing outside your primary domain.
+        - paragraph [ref=e258]:
+          - strong [ref=e259]: Group milestones
+          - text: create shared memory. A daily worker detects when a domain or city crosses a threshold — 100 missions completed, 50 active validators, a perfect week of daily activity — and triggers a 7-day celebration banner visible to all members. These moments of collective pride are the digital equivalent of the Grafton survivors celebrating when they hunted their first seal.
+        - 'heading "7. Mild Hierarchy: Earned, Transparent, Accountable" [level=3] [ref=e260]'
+        - paragraph [ref=e261]:
+          - text: The Invercauld's hierarchy was based on rank and force. The Grafton's was based on competence and consensus. Christakis found that communities need
+          - emphasis [ref=e262]: some
+          - text: status differentiation — pure egalitarianism creates confusion — but the hierarchy must be
+          - strong [ref=e263]: transparent, earned, and bounded
+          - text: .
+        - paragraph [ref=e264]:
+          - text: BetterWorld's
+          - strong [ref=e265]: 5-tier trust system
+          - text: "(Newcomer, Contributor, Advocate, Leader, Champion) has public requirements: mission quality, peer review accuracy, activity streaks, and endorsements from other users. Higher tiers unlock privileges — review capabilities, specialist weight multipliers, moderator eligibility — but every submission, regardless of tier, passes through the same 3-layer constitutional guardrail pipeline. Status grants influence, not immunity."
+        - paragraph [ref=e266]:
+          - strong [ref=e267]: Community moderators
+          - text: are drawn exclusively from Champion-tier users with 90%+ review accuracy, 90+ days of activity, zero suspensions, and 3+ endorsements from advocates or above. Their scope is limited to their domain. Every action is recorded in an
+          - strong [ref=e268]: immutable audit trail
+          - text: . A periodic eligibility worker revokes moderator status if any criterion lapses. This is hierarchy that's
+          - emphasis [ref=e269]: earned continuously
+          - text: ", not granted once."
+        - paragraph [ref=e270]:
+          - text: A weekly
+          - strong [ref=e271]: power audit
+          - text: computes the Gini coefficient of credit distribution, decision concentration (who actually influences outcomes), and participation coverage (how many users contribute meaningfully). These metrics are published on a
+          - strong [ref=e272]: public governance page
+          - text: . If power concentrates, the community sees it — and the platform's economic self-regulation system adjusts automatically.
+        - 'heading "8. Social Learning: Growing Together" [level=3] [ref=e273]'
+        - paragraph [ref=e274]: The Grafton survivors taught each other skills — navigation, blacksmithing, hunting. Knowledge flowed between members, making the entire group more capable over time.
+        - paragraph [ref=e275]:
+          - text: BetterWorld's
+          - strong [ref=e276]: learning pathways
+          - text: "provide four-level progressions per domain: Observer (read case studies, observe debates), Participant (complete missions, submit evidence, do peer reviews), Specialist (work across cities, maintain review accuracy), and Expert (demonstrated mastery through sustained high-quality contributions). Each level has concrete requirements that build on the previous one."
+        - paragraph [ref=e277]:
+          - text: A
+          - strong [ref=e278]: case study library
+          - text: auto-curates from the platform's best work — missions with 90%+ confidence, unanimous peer consensus, before/after evidence, and 3+ community attestations. Admins review and publish curated summaries. These case studies appear on domain pages and count toward learning pathway requirements.
+        - paragraph [ref=e279]:
+          - text: A
+          - strong [ref=e280]: review feedback loop
+          - text: generates personalized learning after every consensus decision — explaining why evidence was rejected (with improvement suggestions), showing where your evaluation diverged from consensus, and recognizing high-accuracy streaks.
+        - paragraph [ref=e281]:
+          - strong [ref=e282]: Teaching is rewarded economically.
+          - text: Completing a mentorship earns 5 tokens. A help offer that leads to mission completion earns 2. Contributing a case study earns 2. After 20+ teaching activity points, you earn a
+          - strong [ref=e283]: "\"Teacher\" badge"
+          - text: visible on your identity card — making teaching expertise a recognized part of your platform identity.
+        - paragraph [ref=e284]:
+          - text: Your
+          - strong [ref=e285]: Skill Progression Dashboard
+          - text: — "Your Growth Journey" — shows a 90-day reputation trend, tier progress with exact thresholds, domain expertise breakdown, personal milestone timeline, and auto-generated next goals. Growth isn't hidden in a database. It's the first thing you see when you log in.
+        - 'heading "The Architectural Insight: Two Tracks, Not One" [level=2] [ref=e290]'
+        - paragraph [ref=e291]:
+          - text: "The deepest design challenge wasn't building any single feature. It was resolving a tension between two valid principles:"
+          - strong [ref=e292]: fraud prevention requires distance between participants
+          - text: (stranger-only review, 2-hop exclusion) while
+          - strong [ref=e293]: friendship requires closeness
+          - text: (repeated interaction, personal investment, low-stakes contact).
+        - paragraph [ref=e294]: The solution was recognizing these don't have to operate in the same channel. High-stakes interactions — peer review, evidence validation, dispute resolution — keep the fraud-prevention rules that make the platform trustworthy. Low-stakes interactions — discussions, circles, mentorship, endorsements, cheers — operate in separate channels where repeated contact is the whole point.
+        - paragraph [ref=e295]:
+          - text: These tracks never cross. A mentor cannot review their mentee's evidence. Circle members don't get preference in peer validation. The system maintains integrity
+          - emphasis [ref=e296]: and
+          - text: builds bonds — because it recognizes that trust in a community requires both.
+        - heading "The Lesson From Auckland Island" [level=2] [ref=e301]
+        - paragraph [ref=e302]: The Grafton's captain, Thomas Musgrave, wasn't a great leader in the traditional sense. He wasn't more charismatic or more skilled than the Invercauld's captain, George Dalgarno. He was simply the leader of a group that maintained all eight social bonds — individual recognition, care for each other, friendship beyond utility, visible connections, cooperation toward shared goals, meaningful belonging, earned respect, and a culture of learning from mistakes.
+        - paragraph [ref=e303]: "Every social platform has the same atoms: people, content, connections. The question is how those atoms are bonded to each other. Engagement-optimized platforms create graphite — strong individual features, weak interpersonal bonds. Purpose-driven platforms, designed around the evolutionary social needs that Christakis identified, can create diamond — resilient, multi-directional bonds that hold even when individual features change."
+        - paragraph [ref=e304]: That's what we're building. Not because it's a nice theory, but because two crews on the same island proved that social structure is the difference between survival and collapse.
+        - paragraph [ref=e305]: Same atoms. Different bonds. Diamond instead of graphite.
+        - heading "References & Further Reading" [level=2] [ref=e310]
+        - paragraph [ref=e311]:
+          - strong [ref=e312]: "Research:"
+        - list [ref=e313]:
+          - listitem [ref=e314]:
+            - text: Nicholas Christakis,
+            - 'link "Blueprint: The Evolutionary Origins of a Good Society" [ref=e315] [cursor=pointer]':
+              - /url: https://www.hachettebookgroup.com/titles/nicholas-a-christakis-md-phd/blueprint/9780316230049/
+              - emphasis [ref=e316]: "Blueprint: The Evolutionary Origins of a Good Society"
+              - img [ref=e317]
+            - text: (2019)
+          - listitem [ref=e321]:
+            - text: WHO Commission on Social Connection,
+            - link "Social connection linked to improved health and reduced risk of early death" [ref=e322] [cursor=pointer]:
+              - /url: https://www.who.int/news/item/30-06-2025-social-connection-linked-to-improved-heath-and-reduced-risk-of-early-death
+              - emphasis [ref=e323]: Social connection linked to improved health and reduced risk of early death
+              - img [ref=e324]
+            - text: (June 2025)
+          - listitem [ref=e328]:
+            - text: Holt-Lunstad et al.,
+            - link "Loneliness and Social Isolation as Risk Factors for Mortality" [ref=e329] [cursor=pointer]:
+              - /url: https://pubmed.ncbi.nlm.nih.gov/25910392/
+              - text: Loneliness and Social Isolation as Risk Factors for Mortality
+              - img [ref=e330]
+            - text: (
+            - emphasis [ref=e334]: Perspectives on Psychological Science
+            - text: ", 2015)"
+        - paragraph [ref=e335]:
+          - strong [ref=e336]: "BetterWorld Series:"
+        - list [ref=e337]:
+          - listitem [ref=e338]:
+            - link "The Loneliness Epidemic Needs Purpose-Driven Platforms" [ref=e339] [cursor=pointer]:
+              - /url: /blog/loneliness-epidemic-purpose-driven-platforms
+            - text: — How care moments and connection graphs address the belonging crisis with code
+          - listitem [ref=e340]:
+            - link "AI Slop Is Killing Open Source" [ref=e341] [cursor=pointer]:
+              - /url: /blog/ai-slop-constitutional-content-pipeline
+            - text: — The 3-layer guardrail system that processes every piece of platform content, including discussions and care moments
+          - listitem [ref=e342]:
+            - link "82% of SDGs Are Failing" [ref=e343] [cursor=pointer]:
+              - /url: /blog/sdgs-failing-hyperlocal-technology
+            - text: — The hyperlocal pipeline from AI problem discovery to verified neighborhood impact
+    - navigation "Post navigation" [ref=e360]:
+      - link "Previous The Loneliness Epidemic Needs Purpose-Driven Platforms, Not More Social Media Behavioral Science 16 min read" [ref=e361] [cursor=pointer]:
+        - /url: /blog/loneliness-epidemic-purpose-driven-platforms
+        - generic [ref=e362]:
+          - img [ref=e363]
+          - text: Previous
+        - generic [ref=e365]: The Loneliness Epidemic Needs Purpose-Driven Platforms, Not More Social Media
+        - generic [ref=e366]:
+          - generic [ref=e367]: Behavioral Science
+          - generic [ref=e368]: 16 min read
+      - 'link "Next Governance-as-Code: When AI Safety Moves from PDFs to Running Infrastructure AI Safety 12 min read" [ref=e369] [cursor=pointer]':
+        - /url: /blog/governance-as-code
+        - generic [ref=e370]:
+          - text: Next
+          - img [ref=e371]
+        - generic [ref=e373]: "Governance-as-Code: When AI Safety Moves from PDFs to Running Infrastructure"
+        - generic [ref=e374]:
+          - generic [ref=e375]: AI Safety
+          - generic [ref=e376]: 12 min read
+    - generic [ref=e377]:
+      - generic [ref=e378]:
+        - generic [ref=e379]: Christakis
+        - generic [ref=e380]: social suite
+        - generic [ref=e381]: evolutionary psychology
+        - generic [ref=e382]: community design
+        - generic [ref=e383]: platform bonds
+        - generic [ref=e384]: graphite vs diamond
+        - generic [ref=e385]: social architecture
+      - generic [ref=e386]:
+        - img [ref=e388]
+        - heading "Enjoyed this post?" [level=3] [ref=e391]
+        - paragraph [ref=e392]: We write about AI safety, platform engineering, and building technology for social good. Follow along as we build in the open.
+        - generic [ref=e393]:
+          - link "Star on GitHub" [ref=e394] [cursor=pointer]:
+            - /url: https://github.com/WindCoreAI/BetterWorld
+            - img [ref=e395]
+            - text: Star on GitHub
+          - link "Read more posts" [ref=e397] [cursor=pointer]:
+            - /url: /blog
+      - generic [ref=e398]:
+        - heading "Related Posts" [level=2] [ref=e399]:
+          - img [ref=e400]
+          - text: Related Posts
+        - generic [ref=e403]:
+          - link [ref=e404] [cursor=pointer]:
+            - /url: /blog/loneliness-epidemic-purpose-driven-platforms
+            - article [ref=e405]:
+              - generic [ref=e406]:
+                - img [ref=e408]
+                - img [ref=e411]
+              - generic [ref=e413]:
+                - generic [ref=e414]:
+                  - generic [ref=e415]: Behavioral Science
+                  - generic [ref=e416]: ·
+                  - generic [ref=e417]: 16 min read
+                  - generic [ref=e418]: ·
+                  - generic [ref=e419]: Feb 2026
+                - heading "The Loneliness Epidemic Needs Purpose-Driven Platforms, Not More Social Media" [level=3] [ref=e420]
+                - paragraph [ref=e421]: Loneliness kills 100 people every hour. Social media was supposed to connect us — engagement-optimized feeds isolate us further. Here's what a belonging-optimized platform looks like in code.
+                - generic [ref=e423]:
+                  - generic [ref=e424]: loneliness epidemic
+                  - generic [ref=e425]: community building
+                  - generic [ref=e426]: purpose-driven design
+          - link [ref=e427] [cursor=pointer]:
+            - /url: /blog/market-design-volunteering-mission-marketplace
+            - article [ref=e428]:
+              - generic [ref=e429]:
+                - img [ref=e431]
+                - img [ref=e434]
+              - generic [ref=e436]:
+                - generic [ref=e437]:
+                  - generic [ref=e438]: Platform Design
+                  - generic [ref=e439]: ·
+                  - generic [ref=e440]: 15 min read
+                  - generic [ref=e441]: ·
+                  - generic [ref=e442]: Mar 2026
+                - 'heading "Market Design for Volunteering: Creating a Mission Marketplace Without Commodifying People" [level=3] [ref=e443]'
+                - paragraph [ref=e444]: The volunteer platform market is projected to reach $2.78B by 2035. But most platforms commodify human effort the same way gig economy apps commodify labor. Here's how to design a marketplace with the same mechanics and opposite values.
+                - generic [ref=e446]:
+                  - generic [ref=e447]: marketplace design
+                  - generic [ref=e448]: mission marketplace
+                  - generic [ref=e449]: volunteering
+          - link [ref=e450] [cursor=pointer]:
+            - /url: /blog/postgresql-social-good-database
+            - article [ref=e451]:
+              - generic [ref=e452]:
+                - img [ref=e454]
+                - img [ref=e457]
+              - generic [ref=e459]:
+                - generic [ref=e460]:
+                  - generic [ref=e461]: Engineering
+                  - generic [ref=e462]: ·
+                  - generic [ref=e463]: 19 min read
+                  - generic [ref=e464]: ·
+                  - generic [ref=e465]: Mar 2026
+                - 'heading "PostgreSQL as Your Social Good Database: PostGIS, pgvector, and Concurrency Patterns" [level=3] [ref=e466]'
+                - paragraph [ref=e467]: Most teams use PostgreSQL for CRUD. We use it for spatial queries with PostGIS, semantic search with pgvector, atomic transactions with advisory locks, and recursive graph traversal — all in the same database.
+                - generic [ref=e469]:
+                  - generic [ref=e470]: PostgreSQL
+                  - generic [ref=e471]: PostGIS
+                  - generic [ref=e472]: pgvector
+  - button "Open table of contents" [ref=e549]:
+    - img [ref=e550]
+    - generic [ref=e552]: Contents
+  - generic [ref=e554]:
+    - generic [ref=e557]:
+      - paragraph [ref=e558]: On this page
+      - button "Close table of contents" [ref=e559]:
+        - img [ref=e560]
+    - navigation "Table of contents" [ref=e562]:
+      - list [ref=e563]:
+        - listitem [ref=e564]:
+          - link "One Island, Two Shipwrecks, Opposite Outcomes" [ref=e565] [cursor=pointer]:
+            - /url: "#one-island-two-shipwrecks-opposite-outcomes"
+            - generic [ref=e566]: One Island, Two Shipwrecks, Opposite Outcomes
+        - listitem [ref=e567]:
+          - 'link "The Social Suite: Eight Traits Every Community Needs" [ref=e568] [cursor=pointer]':
+            - /url: "#the-social-suite-eight-traits-every-community-needs"
+            - generic [ref=e569]: "The Social Suite: Eight Traits Every Community Needs"
+        - listitem [ref=e570]:
+          - 'link "Graphite vs. Diamond: Same Atoms, Different Bonds" [ref=e571] [cursor=pointer]':
+            - /url: "#graphite-vs-diamond-same-atoms-different-bonds"
+            - generic [ref=e572]: "Graphite vs. Diamond: Same Atoms, Different Bonds"
+        - listitem [ref=e573]:
+          - link "We Were Graphite" [ref=e574] [cursor=pointer]:
+            - /url: "#we-were-graphite"
+            - generic [ref=e575]: We Were Graphite
+        - listitem [ref=e576]:
+          - link "How the Eight Traits Become Platform Architecture" [ref=e577] [cursor=pointer]:
+            - /url: "#how-the-eight-traits-become-platform-architecture"
+            - generic [ref=e578]: How the Eight Traits Become Platform Architecture
+        - listitem [ref=e579]:
+          - 'link "1. Individual Identity: More Than a Profile" [ref=e580] [cursor=pointer]':
+            - /url: "#1-individual-identity-more-than-a-profile"
+            - generic [ref=e581]: "1. Individual Identity: More Than a Profile"
+        - listitem [ref=e582]:
+          - 'link "2. Care Bonds: Rescue Moments at Personal Cost" [ref=e583] [cursor=pointer]':
+            - /url: "#2-care-bonds-rescue-moments-at-personal-cost"
+            - generic [ref=e584]: "2. Care Bonds: Rescue Moments at Personal Cost"
+        - listitem [ref=e585]:
+          - 'link "3. Friendship: Low-Stakes Spaces That Don''t Judge" [ref=e586] [cursor=pointer]':
+            - /url: "#3-friendship-low-stakes-spaces-that-dont-judge"
+            - generic [ref=e587]: "3. Friendship: Low-Stakes Spaces That Don't Judge"
+        - listitem [ref=e588]:
+          - 'link "4. Social Networks: Making the Invisible Visible" [ref=e589] [cursor=pointer]':
+            - /url: "#4-social-networks-making-the-invisible-visible"
+            - generic [ref=e590]: "4. Social Networks: Making the Invisible Visible"
+        - listitem [ref=e591]:
+          - 'link "5. Cooperation: Shared Stakes, Shared Rewards" [ref=e592] [cursor=pointer]':
+            - /url: "#5-cooperation-shared-stakes-shared-rewards"
+            - generic [ref=e593]: "5. Cooperation: Shared Stakes, Shared Rewards"
+        - listitem [ref=e594]:
+          - 'link "6. In-Group Preference: Places to Belong" [ref=e595] [cursor=pointer]':
+            - /url: "#6-in-group-preference-places-to-belong"
+            - generic [ref=e596]: "6. In-Group Preference: Places to Belong"
+        - listitem [ref=e597]:
+          - 'link "7. Mild Hierarchy: Earned, Transparent, Accountable" [ref=e598] [cursor=pointer]':
+            - /url: "#7-mild-hierarchy-earned-transparent-accountable"
+            - generic [ref=e599]: "7. Mild Hierarchy: Earned, Transparent, Accountable"
+        - listitem [ref=e600]:
+          - 'link "8. Social Learning: Growing Together" [ref=e601] [cursor=pointer]':
+            - /url: "#8-social-learning-growing-together"
+            - generic [ref=e602]: "8. Social Learning: Growing Together"
+        - listitem [ref=e603]:
+          - 'link "The Architectural Insight: Two Tracks, Not One" [ref=e604] [cursor=pointer]':
+            - /url: "#the-architectural-insight-two-tracks-not-one"
+            - generic [ref=e605]: "The Architectural Insight: Two Tracks, Not One"
+        - listitem [ref=e606]:
+          - link "The Lesson From Auckland Island" [ref=e607] [cursor=pointer]:
+            - /url: "#the-lesson-from-auckland-island"
+            - generic [ref=e608]: The Lesson From Auckland Island
+        - listitem [ref=e609]:
+          - link "References & Further Reading" [ref=e610] [cursor=pointer]:
+            - /url: "#references-further-reading"
+            - generic [ref=e611]: References & Further Reading
+  - button "Open Next.js Dev Tools" [ref=e538] [cursor=pointer]:
+    - img [ref=e539]
+  - alert [ref=e542]
+  - button "Back to top" [ref=e543]:
+    - img [ref=e544]

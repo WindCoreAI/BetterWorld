@@ -1,8 +1,9 @@
 # Blueprint Deep-Dive: Friendship (Trait 3)
 
-> **Assessment Grade**: D+
+> **Assessment Grade**: D+ | **Final Grade**: B+ | Target Met
 > **Target Grade**: B+
-> **Date**: 2026-02-15
+> **Date**: 2026-02-15 | **Updated**: 2026-02-16 (Spec 1 D+→B-, Spec 3 B-→B+)
+> **Implemented in**: Sprint 16 (connection graph, discussion spaces) + Sprint 18 (circle enrichment, mission buddies, informal help)
 > **Principle**: *"Friendship lays the foundation for morality."* — The evolutionary bridge between self-interest and genuine care for non-kin.
 
 ---
