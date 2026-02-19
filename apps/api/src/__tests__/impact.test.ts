@@ -82,7 +82,7 @@ describe("Impact Routes (Sprint 16)", () => {
           id: "b1c2d3e4-f5a6-7890-abcd-ef1234567890",
           title: "Water Quality Issue",
           domain: "clean_water",
-          city: "Portland",
+          city: "San Francisco",
           reportedBy: { type: "agent", id: "a-1", name: "Agent Alpha" },
           createdAt: "2026-01-15T00:00:00.000Z",
         },

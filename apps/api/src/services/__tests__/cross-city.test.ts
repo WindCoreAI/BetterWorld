@@ -30,23 +30,23 @@ describe("Cross-City Service", () => {
           if (executeCallCount === 1) {
             // Problem counts by city
             return Promise.resolve([
-              { city: "chicago", count: "274" },
-              { city: "portland", count: "65" },
-              { city: "denver", count: "71" },
+              { city: "newyork", count: "274" },
+              { city: "sanfrancisco", count: "65" },
+              { city: "seattle", count: "71" },
             ]);
           }
           if (executeCallCount === 2) {
             // Observation counts by city
             return Promise.resolve([
-              { city: "chicago", count: "150" },
-              { city: "portland", count: "30" },
+              { city: "newyork", count: "150" },
+              { city: "sanfrancisco", count: "30" },
             ]);
           }
           // Validator counts by region
           return Promise.resolve([
-            { region: "Chicago, IL", count: "10" },
-            { region: "Portland, OR", count: "5" },
-            { region: "Denver, CO", count: "3" },
+            { region: "New York, NY", count: "10" },
+            { region: "San Francisco, CA", count: "5" },
+            { region: "Seattle, WA", count: "3" },
           ]);
         }),
       };
@@ -55,23 +55,23 @@ describe("Cross-City Service", () => {
 
       expect(result.cities).toHaveLength(3);
 
-      // Verify Chicago metrics
-      const chicago = result.cities.find((c) => c.id === "chicago");
-      expect(chicago).toBeDefined();
-      expect(chicago!.problems).toBe(274);
-      // Per 100K: 274 * (100_000 / 2_746_388) ~ 9.98
-      expect(chicago!.problemsPerCapita).toBeGreaterThan(0);
-      expect(chicago!.observations).toBe(150);
-      expect(chicago!.validatorCount).toBe(10);
+      // Verify New York metrics
+      const newyork = result.cities.find((c) => c.id === "newyork");
+      expect(newyork).toBeDefined();
+      expect(newyork!.problems).toBe(274);
+      // Per 100K: 274 * (100_000 / 8_336_817) ~ 3.29
+      expect(newyork!.problemsPerCapita).toBeGreaterThan(0);
+      expect(newyork!.observations).toBe(150);
+      expect(newyork!.validatorCount).toBe(10);
 
-      // Verify Portland metrics
-      const portland = result.cities.find((c) => c.id === "portland");
-      expect(portland).toBeDefined();
-      expect(portland!.problems).toBe(65);
-      // Per 100K: 65 * (100_000 / 652_503) ~ 9.96
-      expect(portland!.problemsPerCapita).toBeGreaterThan(0);
+      // Verify San Francisco metrics
+      const sanfrancisco = result.cities.find((c) => c.id === "sanfrancisco");
+      expect(sanfrancisco).toBeDefined();
+      expect(sanfrancisco!.problems).toBe(65);
+      // Per 100K: 65 * (100_000 / 873_965) ~ 7.44
+      expect(sanfrancisco!.problemsPerCapita).toBeGreaterThan(0);
 
-      // Portland per-capita should be similar to Chicago despite fewer raw problems
+      // San Francisco per-capita should be higher than New York despite fewer raw problems
       // because population is much smaller
     });
 
@@ -81,8 +81,8 @@ describe("Cross-City Service", () => {
         execute: vi.fn().mockImplementation(() => {
           executeCallCount++;
           if (executeCallCount === 1) {
-            // Only chicago has problems
-            return Promise.resolve([{ city: "chicago", count: "100" }]);
+            // Only newyork has problems
+            return Promise.resolve([{ city: "newyork", count: "100" }]);
           }
           if (executeCallCount === 2) {
             return Promise.resolve([]); // No observations
@@ -95,12 +95,12 @@ describe("Cross-City Service", () => {
 
       expect(result.cities).toHaveLength(3);
 
-      const portland = result.cities.find((c) => c.id === "portland");
-      expect(portland).toBeDefined();
-      expect(portland!.problems).toBe(0);
-      expect(portland!.problemsPerCapita).toBe(0);
-      expect(portland!.observations).toBe(0);
-      expect(portland!.validatorCount).toBe(0);
+      const sanfrancisco = result.cities.find((c) => c.id === "sanfrancisco");
+      expect(sanfrancisco).toBeDefined();
+      expect(sanfrancisco!.problems).toBe(0);
+      expect(sanfrancisco!.problemsPerCapita).toBe(0);
+      expect(sanfrancisco!.observations).toBe(0);
+      expect(sanfrancisco!.validatorCount).toBe(0);
     });
 
     it("returns all configured cities even without data", async () => {
@@ -113,9 +113,9 @@ describe("Cross-City Service", () => {
       // Should include all cities from OPEN311_CITY_CONFIGS
       expect(result.cities.length).toBeGreaterThanOrEqual(3);
       const cityIds = result.cities.map((c) => c.id);
-      expect(cityIds).toContain("chicago");
-      expect(cityIds).toContain("portland");
-      expect(cityIds).toContain("denver");
+      expect(cityIds).toContain("newyork");
+      expect(cityIds).toContain("sanfrancisco");
+      expect(cityIds).toContain("seattle");
     });
   });
 
@@ -127,8 +127,8 @@ describe("Cross-City Service", () => {
           executeCallCount++;
           if (executeCallCount === 1) {
             return Promise.resolve([
-              { city: "chicago", count: "500" },
-              { city: "portland", count: "100" },
+              { city: "newyork", count: "500" },
+              { city: "sanfrancisco", count: "100" },
             ]);
           }
           return Promise.resolve([]);
@@ -140,9 +140,9 @@ describe("Cross-City Service", () => {
       expect(result.metric).toBe("problems_per_capita");
       expect(result.cities.length).toBeGreaterThanOrEqual(2);
 
-      const chicago = result.cities.find((c) => c.id === "chicago");
-      expect(chicago).toBeDefined();
-      expect(chicago!.value).toBeGreaterThan(0);
+      const newyork = result.cities.find((c) => c.id === "newyork");
+      expect(newyork).toBeDefined();
+      expect(newyork!.value).toBeGreaterThan(0);
     });
 
     it("returns empty cities array for invalid metric", async () => {

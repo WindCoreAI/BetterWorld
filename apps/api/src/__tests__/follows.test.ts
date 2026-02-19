@@ -220,7 +220,7 @@ describe("Follow Routes (Sprint 16)", () => {
     it("returns paginated following list", async () => {
       mockGetFollowing.mockResolvedValueOnce({
         items: [
-          { humanId: "h-1", displayName: "Alice", avatarUrl: null, tier: "newcomer", city: "Portland", followedAt: new Date() },
+          { humanId: "h-1", displayName: "Alice", avatarUrl: null, tier: "newcomer", city: "San Francisco", followedAt: new Date() },
         ],
         hasMore: false,
         nextCursor: null,
@@ -261,7 +261,7 @@ describe("Follow Routes (Sprint 16)", () => {
             displayName: "Bob",
             avatarUrl: null,
             tier: "contributor",
-            city: "Chicago",
+            city: "New York",
             followedAt: new Date(),
             isFollowingBack: true,
           },

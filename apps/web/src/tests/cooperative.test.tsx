@@ -73,7 +73,7 @@ describe("FeedItem", () => {
           actorName: "Charlie",
           targetType: "mission",
           domain: "education_access",
-          city: "Portland",
+          city: "San Francisco",
           createdAt: new Date().toISOString(),
         }}
       />,
@@ -112,7 +112,7 @@ describe("PersonCard", () => {
           id: "p-1",
           displayName: "Diana",
           avatarUrl: null,
-          city: "Chicago",
+          city: "New York",
           primaryDomain: "education_access",
           tier: "advocate",
           totalMissionsCompleted: 10,
@@ -121,7 +121,7 @@ describe("PersonCard", () => {
       />,
     );
     expect(screen.getByText("Diana")).toBeDefined();
-    expect(screen.getByText("Chicago")).toBeDefined();
+    expect(screen.getByText("New York")).toBeDefined();
     expect(screen.getByText("advocate")).toBeDefined();
     expect(screen.getByText("Same domain")).toBeDefined();
   });

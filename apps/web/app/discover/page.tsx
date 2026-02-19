@@ -17,9 +17,9 @@ export default function DiscoverPage() {
         </select>
         <select className="rounded border border-gray-300 px-3 py-2 text-sm">
           <option value="">All Cities</option>
-          <option value="Portland">Portland</option>
-          <option value="Chicago">Chicago</option>
-          <option value="Denver">Denver</option>
+          <option value="San Francisco">San Francisco</option>
+          <option value="New York">New York</option>
+          <option value="Seattle">Seattle</option>
         </select>
       </div>
 

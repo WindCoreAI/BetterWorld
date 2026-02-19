@@ -9,7 +9,7 @@ import crypto from "crypto";
 
 import Anthropic from "@anthropic-ai/sdk";
 import { problems, solutions } from "@betterworld/db";
-import { AppError } from "@betterworld/shared";
+import { AppError, decompositionResponseSchema } from "@betterworld/shared";
 import type { DecomposedMission } from "@betterworld/shared";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -174,8 +174,20 @@ function extractMissions(response: Anthropic.Message): DecomposedMission[] {
     throw new AppError("SERVICE_UNAVAILABLE", "Claude Sonnet failed to generate missions");
   }
 
-  const { missions } = toolUseBlock.input as { missions: DecomposedMission[] };
-  return missions;
+  // Sprint 20: Validate decomposition response with strict Zod schema (FR-003)
+  const parseResult = decompositionResponseSchema.safeParse(toolUseBlock.input);
+  if (!parseResult.success) {
+    logger.warn(
+      { zodErrors: parseResult.error.flatten() },
+      "Decomposition response failed Zod validation",
+    );
+    throw new AppError(
+      "SERVICE_UNAVAILABLE",
+      "Mission decomposition temporarily unavailable, please retry",
+    );
+  }
+
+  return parseResult.data.missions as DecomposedMission[];
 }
 
 /** Track Sonnet token usage cost in Redis (best-effort). */

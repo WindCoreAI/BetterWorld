@@ -38,6 +38,7 @@ import feedRoutes from "./feed/index.js";
 import feedbackRoutes from "./feedback/index.js";
 import followRoutes from "./follows.routes.js";
 import fraudRoutes from "./fraud/index.js";
+import gdprRoutes from "./gdpr.routes.js";
 import governanceRoutes from "./governance/index.js";
 import growthRoutes from "./growth/index.js";
 import { guardrailRoutes } from "./guardrails/index.js";
@@ -185,3 +186,6 @@ v1Routes.route("/admin/moderator", adminModeratorRoutes);
 
 // Sprint 19 routes — Human-First Agent Onboarding
 v1Routes.route("/my-agents", myAgentsRoutes);
+
+// Sprint 20 routes — Security Hardening (GDPR)
+v1Routes.route("/", gdprRoutes);

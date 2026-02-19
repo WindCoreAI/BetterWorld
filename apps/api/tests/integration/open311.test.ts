@@ -37,26 +37,26 @@ describe("Open311 Municipal Ingestion (US2)", () => {
   it("should parse valid Open311 service request", () => {
     const request: Open311ServiceRequest = {
       service_request_id: "CHI-2024-001",
-      service_code: "4fd3b167e750846744000005",
+      service_code: "graffiti",
       service_name: "Graffiti Removal",
       status: "open",
       description: "Graffiti on a building wall at 123 Main St",
-      lat: 41.8781,
-      long: -87.6298,
-      address: "123 Main St, Chicago, IL",
+      lat: 40.7128,
+      long: -74.006,
+      address: "123 Main St, New York, NY",
       requested_datetime: "2024-01-15T10:30:00Z",
     };
 
-    const chicagoConfig = OPEN311_CITY_CONFIGS.chicago;
-    const result = transformRequestToProblem(request, chicagoConfig);
+    const newyorkConfig = OPEN311_CITY_CONFIGS.newyork;
+    const result = transformRequestToProblem(request, newyorkConfig);
 
     expect(result).not.toBeNull();
     expect(result!.domain).toBe("environmental_protection");
     expect(result!.severity).toBe("medium");
-    expect(result!.latitude).toBe("41.8781");
-    expect(result!.longitude).toBe("-87.6298");
+    expect(result!.latitude).toBe("40.7128");
+    expect(result!.longitude).toBe("-74.006");
     expect(result!.municipalSourceId).toBe("CHI-2024-001");
-    expect(result!.municipalSourceType).toBe("chicago");
+    expect(result!.municipalSourceType).toBe("newyork");
     expect(result!.reportedByAgentId).toBe(SYSTEM_MUNICIPAL_AGENT_ID);
   });
 
@@ -69,37 +69,37 @@ describe("Open311 Municipal Ingestion (US2)", () => {
       description: "Some unknown service",
     };
 
-    const chicagoConfig = OPEN311_CITY_CONFIGS.chicago;
-    const result = transformRequestToProblem(request, chicagoConfig);
+    const newyorkConfig = OPEN311_CITY_CONFIGS.newyork;
+    const result = transformRequestToProblem(request, newyorkConfig);
 
     expect(result).toBeNull();
   });
 
   it("should map service codes to correct domains", () => {
-    const chicagoConfig = OPEN311_CITY_CONFIGS.chicago;
+    const newyorkConfig = OPEN311_CITY_CONFIGS.newyork;
 
-    // Water in Street → clean_water_sanitation
+    // water_quality → clean_water_sanitation
     const waterRequest: Open311ServiceRequest = {
       service_request_id: "CHI-WATER-1",
-      service_code: "4ffa4c69601827691b000018",
-      service_name: "Water in Street",
+      service_code: "water_quality",
+      service_name: "Water Quality",
       status: "open",
       description: "Water flooding",
     };
-    const waterResult = transformRequestToProblem(waterRequest, chicagoConfig);
+    const waterResult = transformRequestToProblem(waterRequest, newyorkConfig);
     expect(waterResult).not.toBeNull();
     expect(waterResult!.domain).toBe("clean_water_sanitation");
     expect(waterResult!.severity).toBe("high");
 
-    // Street Light Out → community_building
+    // streetlight → community_building
     const lightRequest: Open311ServiceRequest = {
       service_request_id: "CHI-LIGHT-1",
-      service_code: "4fd3b750e750846c53000010",
+      service_code: "streetlight",
       service_name: "Street Light Out",
       status: "open",
       description: "Street light is out",
     };
-    const lightResult = transformRequestToProblem(lightRequest, chicagoConfig);
+    const lightResult = transformRequestToProblem(lightRequest, newyorkConfig);
     expect(lightResult).not.toBeNull();
     expect(lightResult!.domain).toBe("community_building");
   });
@@ -107,22 +107,22 @@ describe("Open311 Municipal Ingestion (US2)", () => {
   it("should handle requests without coordinates (geocoding fallback)", () => {
     const request: Open311ServiceRequest = {
       service_request_id: "CHI-2024-003",
-      service_code: "4fd3b167e750846744000005",
+      service_code: "graffiti",
       service_name: "Graffiti Removal",
       status: "open",
       description: "Graffiti on wall",
       lat: null,
       long: null,
-      address: "456 Oak Ave, Chicago, IL",
+      address: "456 Oak Ave, New York, NY",
     };
 
-    const chicagoConfig = OPEN311_CITY_CONFIGS.chicago;
-    const result = transformRequestToProblem(request, chicagoConfig);
+    const newyorkConfig = OPEN311_CITY_CONFIGS.newyork;
+    const result = transformRequestToProblem(request, newyorkConfig);
 
     expect(result).not.toBeNull();
     expect(result!.latitude).toBeNull();
     expect(result!.longitude).toBeNull();
-    expect(result!.address).toBe("456 Oak Ave, Chicago, IL");
+    expect(result!.address).toBe("456 Oak Ave, New York, NY");
   });
 
   it("should handle malformed records gracefully", () => {
@@ -132,16 +132,16 @@ describe("Open311 Municipal Ingestion (US2)", () => {
       // No service_request_id
     };
 
-    const chicagoConfig = OPEN311_CITY_CONFIGS.chicago;
+    const newyorkConfig = OPEN311_CITY_CONFIGS.newyork;
     // transformRequestToProblem expects valid input, so schema validation
     // should catch this upstream. Testing that transforms handle edge cases.
     const request: Open311ServiceRequest = {
       service_request_id: "",
-      service_code: "4fd3b167e750846744000005",
+      service_code: "graffiti",
       description: "",
     };
 
-    const result = transformRequestToProblem(request, chicagoConfig);
+    const result = transformRequestToProblem(request, newyorkConfig);
     expect(result).not.toBeNull();
     expect(result!.title).toBeTruthy();
   });

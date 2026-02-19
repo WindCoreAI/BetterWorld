@@ -12,11 +12,15 @@ BetterWorld already has a **built-in hyperlocal content engine** via Open311 mun
 
 ### Current Open311 Configuration
 
+> **VERIFIED 2026-02-18**: All three endpoints are currently `enabled: false` in `packages/shared/src/constants/phase3.ts`. Chicago has full service code mappings but is NOT actively ingesting. Portland has placeholder service codes. Activation requires `PUT /admin/feature-flags/HYPERLOCAL_INGESTION_ENABLED` -> `true`.
+
 | City | Status | Service Codes | Polling Interval | System Agent |
 |------|--------|---------------|-----------------|--------------|
-| Chicago | **Active** | graffiti, pothole, water, rodent baiting, etc. | 15 minutes | `system-municipal-311` |
-| Portland | Configured (disabled) | — | — | `system-municipal-311` |
-| Denver | Configured (disabled) | — | — | `system-municipal-311` |
+| Chicago | **Configured (disabled)** | graffiti, pothole, water, rodent baiting + 4 more (8 total) | 15 minutes | `system-municipal-311` |
+| Portland | **Configured (disabled, placeholder codes)** | TBD — needs service code mapping | — | `system-municipal-311` |
+| Denver | **Configured (disabled)** | pothole, streetlight, graffiti, illegal_dumping (4 total) | — | `system-municipal-311` |
+
+> **Risk**: Portland's endpoint URL (`https://www.portlandoregon.gov/shared/cfm/open311.cfm`) uses a ColdFusion-based pattern suggesting a legacy system. Manual verification needed before committing Portland as a launch city. See [Champaign's SeeClickFix failure](https://cu-citizenaccess.org/2025/12/software-issues-led-champaign-to-axe-seeclickfix-in-favor-of-new-public-reporting-system-brightly/) — API reliability is not guaranteed.
 
 ### Open311 → BetterWorld Problem Transformation
 
@@ -211,12 +215,31 @@ Seed content should be tagged with appropriate `localUrgency` and `actionability
 | 3-4 | Generate solutions and missions for top problems | 150-300 solutions, 500-1000 missions |
 | 4+ | Create easy-entry missions in target neighborhoods | Missions ready for human claiming |
 
+## Beyond Open311: Multi-Source Data Enrichment
+
+> **Research insight**: Chicago's data portal hosts 900+ datasets. SeeClickFix processes 5,000+ unique issues per month in Chicago alone. Open311 alone provides a narrow view of municipal issues.
+
+Layer additional data sources for richer problem context:
+
+| Data Source | Type | BetterWorld Domains | Access |
+|-------------|------|---------------------|--------|
+| EPA EnviroFacts | Environmental quality, violations | environmental_protection, clean_water | API (free) |
+| HUD Housing Data | Housing quality, affordability | poverty_reduction, community_building | GIS datasets |
+| Census ACS | Demographics, income, education | All domains (enrichment layer) | API (free) |
+| USDA Food Access Atlas | Food desert mapping | food_security | CSV download |
+| City crime/safety data | Safety incidents | community_building, human_rights | Open data portals |
+
+A single address could show: 311 complaints + EPA environmental scores + HUD housing indicators + Census demographics. This "community intelligence" enrichment creates **"come for the tool" standalone value** before any community features are needed.
+
 ## Risk Mitigation
 
 | Risk | Mitigation |
 |------|-----------|
 | Open311 data quality varies | Validate and enrich before publishing; reject incomplete records |
+| Open311 API reliability | Monitor ingestion health: success rate, dedup rate, time-to-publish (Champaign abandoned SeeClickFix after 12 years due to API failures) |
 | Stale 311 data (already resolved) | Check 311 status before ingestion; mark resolved issues |
+| Portland endpoint may be legacy | Manually verify endpoint before committing; have fallback plan (observation-only) |
 | GPS accuracy issues | Use PostGIS `ST_DWithin` validation, reject null island/polar |
 | Content feels robotic | Use AI enrichment + human review of templates |
-| Neighborhood selection bias | Choose diverse neighborhoods; monitor geographic spread |
+| Neighborhood selection bias | Choose diverse neighborhoods; monitor geographic Gini coefficient |
+| Geographic sparsity | Concentrate on 1 city first; 60% of marketplaces fail due to insufficient local liquidity (McKinsey) |

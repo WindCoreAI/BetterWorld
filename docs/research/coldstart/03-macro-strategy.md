@@ -158,6 +158,36 @@ All seed content must:
 4. Avoid any impression of fabrication — problems must be real, solutions must be genuine
 5. Cover diverse perspectives within each domain (not all problems from one angle)
 
+## Concentrated Atomic Network Approach
+
+> **Research insight**: Marketplaces using single-player mode have 10x the capital efficiency of those using "fill empty seats" strategies. 60% of marketplaces fail due to insufficient initial liquidity (McKinsey). TaskRabbit launched with 100 runners in one city.
+
+**Don't launch all 15 domains simultaneously.** Instead:
+
+### Phase 1 Focus (Month 1-2): 3-4 Priority Domains
+| Priority | Domain | Rationale |
+|----------|--------|-----------|
+| **P0** | `environmental_protection` | Strongest data sources (EPA, municipal), highest public engagement, aligns with Portland identity |
+| **P0** | `community_building` | Maps directly to Open311 data (potholes, streetlights, safety), most tangible missions |
+| **P1** | `food_security` | USDA Food Access Atlas provides rich data, community gardens are actionable missions |
+| **P1** | `clean_water_sanitation` | EPA water quality data, lead testing missions, high urgency |
+
+### Phase 2 Expansion (Month 3-4): +5 Domains
+Add: `healthcare_improvement`, `education_access`, `poverty_reduction`, `sustainable_energy`, `digital_inclusion`
+
+### Phase 3 Full Coverage (Month 5+): Remaining 6 Domains
+Add: `mental_health_wellbeing`, `disaster_response`, `human_rights`, `gender_equality`, `biodiversity_conservation`, `elder_care`
+
+### "Come for the Tool" Strategy
+
+Before recruiting contributors, launch **community intelligence dashboards** as standalone civic tools:
+
+1. **City health dashboards** — "What's happening in your neighborhood" (already built: city dashboards, heatmaps)
+2. **Domain report cards** — "State of Environmental Protection in Portland 2026" (already built: community intelligence reports)
+3. **Problem tracker** — "Track 311 issues near you" (needs: Open311 enrichment + public search)
+
+These provide single-player value that doesn't require the community to exist. Users arrive for the information, discover the platform, and convert to contributors.
+
 ## Domain Coverage Matrix
 
 Track seeding progress with this matrix (target: all cells filled):

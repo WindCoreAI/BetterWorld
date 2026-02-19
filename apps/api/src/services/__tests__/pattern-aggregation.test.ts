@@ -90,7 +90,7 @@ describe("Pattern Aggregation Service", () => {
         }),
       };
 
-      const result = await findClusters(mockDb, "environmental_protection", "chicago");
+      const result = await findClusters(mockDb, "environmental_protection", "newyork");
 
       expect(result.length).toBeGreaterThanOrEqual(1);
       expect(result[0]!.memberCount).toBeGreaterThanOrEqual(5);
@@ -148,7 +148,7 @@ describe("Pattern Aggregation Service", () => {
         }),
       };
 
-      const result = await findClusters(mockDb, "environmental_protection", "chicago");
+      const result = await findClusters(mockDb, "environmental_protection", "newyork");
 
       expect(result.length).toBeGreaterThanOrEqual(1);
       expect(result[0]!.isSystemic).toBe(true);
@@ -174,7 +174,7 @@ describe("Pattern Aggregation Service", () => {
         select: vi.fn().mockReturnValue(recentProblemsResult()),
       };
 
-      const result = await findClusters(mockDb, "environmental_protection", "chicago");
+      const result = await findClusters(mockDb, "environmental_protection", "newyork");
 
       expect(result).toHaveLength(0);
     });
@@ -245,7 +245,7 @@ describe("Pattern Aggregation Service", () => {
         }),
       };
 
-      const result = await findClusters(mockDb, "environmental_protection", "chicago");
+      const result = await findClusters(mockDb, "environmental_protection", "newyork");
 
       // Each cluster should have distinct member IDs
       if (result.length >= 2) {

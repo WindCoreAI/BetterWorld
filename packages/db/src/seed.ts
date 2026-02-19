@@ -868,7 +868,7 @@ async function seed() {
       "human_rights", "clean_water_sanitation", "sustainable_energy",
       "gender_equality", "biodiversity_conservation", "elder_care",
     ];
-    const citySlugs = ["portland", "chicago", "denver"];
+    const citySlugs = ["sanfrancisco", "newyork", "seattle"];
     const milestoneConfig: Record<string, number[]> = {
       missions_completed: [10, 25, 50, 100, 250],
       problems_resolved: [5, 10, 25, 50, 100],

@@ -136,7 +136,7 @@ describe("Milestones Routes (Sprint 17)", () => {
         {
           id: "m-3",
           groupType: "city",
-          groupValue: "portland",
+          groupValue: "sanfrancisco",
           milestoneType: "problems_submitted",
           targetValue: 100,
           currentValue: 45,
@@ -145,7 +145,7 @@ describe("Milestones Routes (Sprint 17)", () => {
         },
       ]);
 
-      const res = await app.request("/milestones?groupType=city&groupValue=portland");
+      const res = await app.request("/milestones?groupType=city&groupValue=sanfrancisco");
 
       expect(res.status).toBe(200);
       const body = (await res.json()) as SuccessBody;
@@ -155,7 +155,7 @@ describe("Milestones Routes (Sprint 17)", () => {
     });
 
     it("returns 400 VALIDATION_ERROR for missing groupType", async () => {
-      const res = await app.request("/milestones?groupValue=portland");
+      const res = await app.request("/milestones?groupValue=sanfrancisco");
 
       expect(res.status).toBe(400);
       const body = (await res.json()) as ErrorBody;

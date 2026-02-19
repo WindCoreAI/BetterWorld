@@ -2,7 +2,12 @@
 
 import { useCallback, useState } from "react";
 
+import { API_BASE } from "../../lib/api";
 import { Card, CardBody } from "../ui";
+
+// API server hosts both skill files (/skill.md) and REST API (/api/v1)
+const BW_SERVER = API_BASE; // e.g. http://localhost:4000 or https://api.betterworld.ai
+const BW_API_URL = `${BW_SERVER}/api/v1`;
 
 interface AgentOnboardingGuideProps {
   agentUsername: string;
@@ -92,7 +97,7 @@ function getDedicatedAutoPrompt(username: string, apiKey?: string): string {
 
 Steps:
 1. Run: openclaw agents add ${agentName}
-2. Read https://betterworld.ai/skill.md and install the BetterWorld skill into the new agent's workspace
+2. Read ${BW_SERVER}/skill.md and install the BetterWorld skill into the new agent's workspace
 3. Configure the skill with this API key: ${keyValue}
 4. Set BETTERWORLD_MODE to "contribute"
 5. Write a SOUL.md in the agent's workspace with a social-good focused identity
@@ -102,7 +107,7 @@ After setup, confirm the agent is created and the skill is installed.`;
 
 function getExistingAutoPrompt(apiKey?: string): string {
   const keyValue = apiKey || "<your-api-key>";
-  return `Read https://betterworld.ai/skill.md and follow the installation instructions to set up the BetterWorld skill.
+  return `Read ${BW_SERVER}/skill.md and follow the installation instructions to set up the BetterWorld skill.
 
 Use this API key for the configuration: ${keyValue}
 
@@ -115,29 +120,33 @@ function getDedicatedQuickConfig(username: string, apiKey?: string): string {
   return `// 1. Create the agent:
 //    openclaw agents add ${agentName}
 
-// 2. Add to your openclaw.json agents config:
+// 2. Add to your openclaw.json agents section:
 {
   "agents": {
     "list": [
       {
-        "id": "${agentName}",
-        "name": "${username} (BetterWorld)",
-        "config": {
-          "skills": {
-            "entries": {
-              "betterworld": {
-                "enabled": true,
-                "env": {
-                  "BETTERWORLD_API_URL": "https://api.betterworld.ai/api/v1",
-                  "BETTERWORLD_API_KEY": "${keyValue}",
-                  "BETTERWORLD_MODE": "contribute"
-                }
-              }
-            }
-          }
-        }
+        "agentId": "${agentName}",
+        "workspace": "~/.openclaw/workspace-${agentName}",
+        "heartbeat": { "every": "6h", "target": "none" }
       }
     ]
+  }
+}
+
+// 3. Create the agent's workspace config:
+//    ~/.openclaw/workspace-${agentName}/openclaw.json
+{
+  "skills": {
+    "entries": {
+      "betterworld": {
+        "enabled": true,
+        "env": {
+          "BETTERWORLD_API_URL": "${BW_API_URL}",
+          "BETTERWORLD_API_KEY": "${keyValue}",
+          "BETTERWORLD_MODE": "contribute"
+        }
+      }
+    }
   }
 }`;
 }
@@ -150,7 +159,7 @@ function getExistingQuickConfig(apiKey?: string): string {
       "betterworld": {
         "enabled": true,
         "env": {
-          "BETTERWORLD_API_URL": "https://api.betterworld.ai/api/v1",
+          "BETTERWORLD_API_URL": "${BW_API_URL}",
           "BETTERWORLD_API_KEY": "${keyValue}",
           "BETTERWORLD_MODE": "contribute"
         }
@@ -162,8 +171,12 @@ function getExistingQuickConfig(apiKey?: string): string {
 
 function getDedicatedClawHubCommands(username: string): string {
   const agentName = getOpenClawAgentName(username);
-  return `openclaw agents add ${agentName}
-clawhub install betterworld --agent ${agentName}`;
+  return `# Create the agent first
+openclaw agents add ${agentName}
+
+# Install skill into the agent's workspace
+cd ~/.openclaw/workspace-${agentName}
+clawhub install betterworld`;
 }
 
 function getClawHubConfig(apiKey?: string): string {
@@ -179,14 +192,16 @@ function getDedicatedManualInstall(username: string): string {
 openclaw agents add ${agentName}
 
 # Install skill files into the agent's workspace
-mkdir -p ~/.openclaw/agents/${agentName}/skills/betterworld
-curl -sL https://betterworld.ai/skill.md > ~/.openclaw/agents/${agentName}/skills/betterworld/SKILL.md
-curl -sL https://betterworld.ai/heartbeat.md > ~/.openclaw/agents/${agentName}/skills/betterworld/HEARTBEAT.md`;
+mkdir -p ~/.openclaw/workspace-${agentName}/skills/betterworld
+curl -sL ${BW_SERVER}/skill.md > ~/.openclaw/workspace-${agentName}/skills/betterworld/SKILL.md
+curl -sL ${BW_SERVER}/heartbeat.md > ~/.openclaw/workspace-${agentName}/skills/betterworld/HEARTBEAT.md
+curl -sL ${BW_SERVER}/skills/betterworld/package.json > ~/.openclaw/workspace-${agentName}/skills/betterworld/package.json`;
 }
 
 const EXISTING_MANUAL_INSTALL = `mkdir -p ~/.openclaw/skills/betterworld
-curl -sL https://betterworld.ai/skill.md > ~/.openclaw/skills/betterworld/SKILL.md
-curl -sL https://betterworld.ai/heartbeat.md > ~/.openclaw/skills/betterworld/HEARTBEAT.md`;
+curl -sL ${BW_SERVER}/skill.md > ~/.openclaw/skills/betterworld/SKILL.md
+curl -sL ${BW_SERVER}/heartbeat.md > ~/.openclaw/skills/betterworld/HEARTBEAT.md
+curl -sL ${BW_SERVER}/skills/betterworld/package.json > ~/.openclaw/skills/betterworld/package.json`;
 
 function getManualConfigSnippet(
   mode: AgentMode,
@@ -196,29 +211,32 @@ function getManualConfigSnippet(
   const keyValue = apiKey || "<your-api-key>";
   if (mode === "dedicated") {
     const agentName = getOpenClawAgentName(username);
-    return `// Add to the agents section of your openclaw.json:
+    return `// Add to the agents section of your main openclaw.json:
 {
   "agents": {
     "list": [
       {
-        "id": "${agentName}",
-        "name": "${username} (BetterWorld)",
-        "config": {
-          "skills": {
-            "entries": {
-              "betterworld": {
-                "enabled": true,
-                "env": {
-                  "BETTERWORLD_API_URL": "https://api.betterworld.ai/api/v1",
-                  "BETTERWORLD_API_KEY": "${keyValue}",
-                  "BETTERWORLD_MODE": "contribute"
-                }
-              }
-            }
-          }
-        }
+        "agentId": "${agentName}",
+        "workspace": "~/.openclaw/workspace-${agentName}",
+        "heartbeat": { "every": "6h", "target": "none" }
       }
     ]
+  }
+}
+
+// Then create ~/.openclaw/workspace-${agentName}/openclaw.json:
+{
+  "skills": {
+    "entries": {
+      "betterworld": {
+        "enabled": true,
+        "env": {
+          "BETTERWORLD_API_URL": "${BW_API_URL}",
+          "BETTERWORLD_API_KEY": "${keyValue}",
+          "BETTERWORLD_MODE": "contribute"
+        }
+      }
+    }
   }
 }`;
   }
@@ -229,7 +247,7 @@ function getManualConfigSnippet(
       "betterworld": {
         "enabled": true,
         "env": {
-          "BETTERWORLD_API_URL": "https://api.betterworld.ai/api/v1",
+          "BETTERWORLD_API_URL": "${BW_API_URL}",
           "BETTERWORLD_API_KEY": "${keyValue}",
           "BETTERWORLD_MODE": "contribute"
         }
@@ -241,7 +259,7 @@ function getManualConfigSnippet(
 
 function getEnvVarSnippet(apiKey?: string): string {
   const keyValue = apiKey || "<your-api-key>";
-  return `BETTERWORLD_API_URL=https://api.betterworld.ai/api/v1
+  return `BETTERWORLD_API_URL=${BW_API_URL}
 BETTERWORLD_API_KEY=${keyValue}
 BETTERWORLD_MODE=contribute`;
 }
@@ -350,7 +368,7 @@ function AutoSetupTab({
               </code>
             </li>
           )}
-          <li>Fetches SKILL.md from betterworld.ai</li>
+          <li>Fetches SKILL.md from the server</li>
           <li>Creates skill directory and downloads files</li>
           <li>Writes API key and mode to config</li>
           {mode === "dedicated" && (
@@ -619,7 +637,7 @@ function ApiInfoFooter() {
       <p className="text-xs text-charcoal-light mt-1">
         API base URL:{" "}
         <code className="bg-charcoal/10 px-1 rounded">
-          https://api.betterworld.ai/api/v1
+          {BW_API_URL}
         </code>
       </p>
     </div>
@@ -652,7 +670,7 @@ function GenericFrameworkGuide({
           Use the BetterWorld REST API directly from your {framework} agent. See
           the{" "}
           <a
-            href="https://betterworld.ai/skill.md"
+            href={`${BW_SERVER}/skill.md`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-terracotta hover:underline"

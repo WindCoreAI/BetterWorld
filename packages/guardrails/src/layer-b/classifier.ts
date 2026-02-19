@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import pino from "pino";
 import type { LayerBResult, ContentType } from "@betterworld/shared/types/guardrails";
+import { classifierResponseSchema } from "@betterworld/shared/schemas/classifier-response";
 import { promptTemplate } from "./prompt-template";
 
 const logger = pino({ name: "guardrails:layer-b" });
@@ -62,45 +63,24 @@ export async function evaluateLayerB(content: string, contentType?: ContentType)
   // Extract text response
   const responseText = message.content[0]?.type === "text" ? message.content[0].text : "";
 
-  // Parse JSON response (LLM returns snake_case keys)
-  interface RawLLMResponse {
-    aligned_domain: string;
-    alignment_score: number;
-    harm_risk: string;
-    feasibility: string;
-    quality: string;
-    decision: string;
-    reasoning: string;
-    solution_scores?: {
-      impact: number;
-      feasibility: number;
-      cost_efficiency: number;
-    };
-  }
-
+  // Parse JSON and validate with strict Zod schema (Sprint 20: LLM Output Integrity)
   try {
-    const raw = JSON.parse(responseText) as RawLLMResponse;
+    const rawJson = JSON.parse(responseText);
+    const parseResult = classifierResponseSchema.safeParse(rawJson);
 
-    // Validate response structure
-    if (
-      typeof raw.aligned_domain !== "string" ||
-      typeof raw.alignment_score !== "number" ||
-      typeof raw.harm_risk !== "string" ||
-      typeof raw.feasibility !== "string" ||
-      typeof raw.quality !== "string" ||
-      typeof raw.decision !== "string" ||
-      typeof raw.reasoning !== "string"
-    ) {
+    if (!parseResult.success) {
+      // FR-004: Log raw response + Zod error for debugging, route to human review
+      logger.error(
+        { zodErrors: parseResult.error.flatten(), responsePreview: responseText.slice(0, 200) },
+        "Layer B classifier response failed Zod validation — routing to human review",
+      );
       throw new Error("Invalid response structure from LLM");
     }
 
-    // Ensure score is a valid finite number in valid range
-    if (
-      typeof raw.alignment_score !== "number" ||
-      !Number.isFinite(raw.alignment_score) ||
-      raw.alignment_score < 0 ||
-      raw.alignment_score > 1
-    ) {
+    const raw = parseResult.data;
+
+    // Belt-and-suspenders: Ensure alignment_score is finite (Zod covers range but not NaN/Infinity)
+    if (!Number.isFinite(raw.alignment_score)) {
       throw new Error(`Invalid alignment score: ${raw.alignment_score}`);
     }
 
@@ -114,24 +94,15 @@ export async function evaluateLayerB(content: string, contentType?: ContentType)
       reasoning: raw.reasoning,
     };
 
-    // Extract solution scores if present
+    // Extract solution scores if present and validated by Zod
     if (raw.solution_scores && contentType === "solution") {
       const scores = raw.solution_scores;
-      if (
-        typeof scores.impact === "number" &&
-        Number.isFinite(scores.impact) &&
-        typeof scores.feasibility === "number" &&
-        Number.isFinite(scores.feasibility) &&
-        typeof scores.cost_efficiency === "number" &&
-        Number.isFinite(scores.cost_efficiency)
-      ) {
-        result.solutionScores = {
-          impact: Math.max(0, Math.min(100, scores.impact)),
-          feasibility: Math.max(0, Math.min(100, scores.feasibility)),
-          costEfficiency: Math.max(0, Math.min(100, scores.cost_efficiency)),
-          composite: 0, // Computed by caller
-        };
-      }
+      result.solutionScores = {
+        impact: Math.max(0, Math.min(100, scores.impact)),
+        feasibility: Math.max(0, Math.min(100, scores.feasibility)),
+        costEfficiency: Math.max(0, Math.min(100, scores.cost_efficiency)),
+        composite: 0, // Computed by caller
+      };
     }
 
     logger.info(

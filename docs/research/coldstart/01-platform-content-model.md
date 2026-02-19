@@ -131,3 +131,23 @@ Seed content must pass guardrails AND be genuinely useful:
 3. **Evidence-backed debates**: Cite real research, data, or case studies
 4. **Actionable missions**: Humans must be able to actually complete them
 5. **Geographic accuracy**: Hyperlocal content must reference real locations with valid GPS coordinates
+
+## First-Mission Design (Behavioral Science)
+
+> **Research insight**: 2/3 of citizen science volunteers never return after first action (Zooniverse). Immediate rewards predict long-term adherence more than delayed rewards (Woolley & Fishbach, PNAS). Field-based programs retain 2-3x better than online-only (Nature's Notebook vs. Zooniverse).
+
+Missions designed for new users must optimize for:
+
+1. **< 15 minutes to complete** — each step beyond 3 loses significant users
+2. **Smartphone-only** — no special equipment, just camera + GPS
+3. **Walking distance** — use PostGIS ST_DWithin to suggest missions near user's location
+4. **Instant reward** — token granted on evidence submission, not after review (review can claw back if fraudulent)
+5. **Visible impact** — "You're the 3rd person to report this — the city now has evidence to act"
+6. **Variable bonus** — fixed 5 tokens + random 20% chance of 1-15 bonus tokens (variable ratio reinforcement drives persistence)
+
+### Design for Single Contributions
+
+Most users will contribute once and leave. Make that one contribution count:
+- A single observation auto-creates a problem if no match exists → lasting platform value
+- A single attestation contributes to urgency scoring → real impact from one tap
+- Design the "thank you" screen to show the chain of impact: "Your report → Agent analyzed → Solution proposed → Mission created for others"

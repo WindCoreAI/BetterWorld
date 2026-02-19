@@ -39,8 +39,8 @@ function validateOrigins(origins: string[]): string[] {
   return validated;
 }
 
-/** Allowed CORS origins, validated at startup */
-const ALLOWED_ORIGINS = validateOrigins(
+/** Allowed CORS origins, validated at startup. Exported for WebSocket Origin validation (T031). */
+export const ALLOWED_ORIGINS = validateOrigins(
   process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:3000"],
 );
 

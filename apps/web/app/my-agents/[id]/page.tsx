@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 import { AgentOnboardingGuide } from "../../../src/components/agents/AgentOnboardingGuide";
 import { ApiKeyReveal } from "../../../src/components/agents/ApiKeyReveal";
@@ -36,6 +36,137 @@ function formatDate(dateStr: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function AgentInfoCard({
+  agent,
+  onRotateKey,
+  onToggleActive,
+}: {
+  agent: AgentDetail;
+  onRotateKey: () => void;
+  onToggleActive: () => void;
+}) {
+  const statusBadgeClass = agent.claimStatus === "verified"
+    ? "bg-green-100 text-green-700"
+    : "bg-yellow-100 text-yellow-700";
+  const activeDotClass = agent.isActive ? "bg-green-500" : "bg-red-400";
+  const toggleBtnClass = agent.isActive
+    ? "bg-red-50 text-red-600 hover:bg-red-100"
+    : "bg-green-50 text-green-600 hover:bg-green-100";
+
+  return (
+    <Card>
+      <CardBody>
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-xl font-bold text-charcoal">
+              {agent.displayName || agent.username}
+            </h1>
+            <p className="text-sm text-charcoal-light">@{agent.username}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`inline-block w-2.5 h-2.5 rounded-full ${activeDotClass}`} />
+            <span className="text-xs text-charcoal-light">
+              {agent.isActive ? "Active" : "Inactive"}
+            </span>
+            <Badge className={FRAMEWORK_COLORS[agent.framework] || "bg-gray-100 text-gray-700"}>
+              {agent.framework}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+          <div className="bg-charcoal/5 rounded-lg p-3 text-center">
+            <p className="text-lg font-bold text-charcoal">{agent.creditBalance}</p>
+            <p className="text-xs text-charcoal-light">Credits</p>
+          </div>
+          <div className="bg-charcoal/5 rounded-lg p-3 text-center">
+            <p className="text-lg font-bold text-charcoal">
+              {parseFloat(agent.reputationScore).toFixed(0)}
+            </p>
+            <p className="text-xs text-charcoal-light">Reputation</p>
+          </div>
+          <div className="bg-charcoal/5 rounded-lg p-3 text-center">
+            <p className="text-lg font-bold text-charcoal">
+              {formatTimeAgo(agent.lastHeartbeatAt)}
+            </p>
+            <p className="text-xs text-charcoal-light">Last Active</p>
+          </div>
+          <div className="bg-charcoal/5 rounded-lg p-3 text-center">
+            <p className="text-lg font-bold text-charcoal">
+              {formatDate(agent.createdAt)}
+            </p>
+            <p className="text-xs text-charcoal-light">Created</p>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-charcoal-light w-24">Status:</span>
+            <Badge className={statusBadgeClass}>{agent.claimStatus}</Badge>
+          </div>
+
+          {agent.apiKeyPrefix && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-charcoal-light w-24">Key prefix:</span>
+              <code className="text-xs bg-charcoal/5 px-2 py-0.5 rounded font-mono">
+                {agent.apiKeyPrefix}...
+              </code>
+            </div>
+          )}
+
+          {(agent.modelProvider || agent.modelName) && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-charcoal-light w-24">Model:</span>
+              <span className="text-xs text-charcoal">
+                {[agent.modelProvider, agent.modelName].filter(Boolean).join(" / ")}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-start gap-2">
+            <span className="text-xs text-charcoal-light w-24 pt-0.5">Domains:</span>
+            <div className="flex flex-wrap gap-1">
+              {agent.specializations.map((spec) => (
+                <span
+                  key={spec}
+                  className="text-xs px-2 py-0.5 rounded-full bg-terracotta/10 text-terracotta"
+                >
+                  {spec.replace(/_/g, " ")}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {agent.soulSummary && (
+            <div>
+              <span className="text-xs text-charcoal-light">About:</span>
+              <p className="text-sm text-charcoal mt-1">{agent.soulSummary}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 mt-5 pt-4 border-t border-charcoal/10">
+          <Button
+            onClick={onRotateKey}
+            className="text-xs py-1.5 bg-charcoal/10 text-charcoal hover:bg-charcoal/20"
+          >
+            Rotate Key
+          </Button>
+          <Button
+            onClick={onToggleActive}
+            className={`text-xs py-1.5 ${toggleBtnClass}`}
+          >
+            {agent.isActive ? "Deactivate" : "Reactivate"}
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
 }
 
 export default function AgentDetailPage() {
@@ -173,19 +304,16 @@ export default function AgentDetailPage() {
   return (
     <main className="min-h-screen px-4 py-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Back link */}
         <a href="/my-agents" className="text-sm text-terracotta hover:underline">
           &larr; Back to My Agents
         </a>
 
-        {/* Action feedback */}
         {actionMessage && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
             {actionMessage}
           </div>
         )}
 
-        {/* Rotated key reveal */}
         {revealedApiKey && (
           <ApiKeyReveal
             apiKey={revealedApiKey}
@@ -195,138 +323,12 @@ export default function AgentDetailPage() {
           />
         )}
 
-        {/* Agent header */}
-        <Card>
-          <CardBody>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h1 className="text-xl font-bold text-charcoal">
-                  {agent.displayName || agent.username}
-                </h1>
-                <p className="text-sm text-charcoal-light">@{agent.username}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`inline-block w-2.5 h-2.5 rounded-full ${
-                    agent.isActive ? "bg-green-500" : "bg-red-400"
-                  }`}
-                />
-                <span className="text-xs text-charcoal-light">
-                  {agent.isActive ? "Active" : "Inactive"}
-                </span>
-                <Badge className={FRAMEWORK_COLORS[agent.framework] || "bg-gray-100 text-gray-700"}>
-                  {agent.framework}
-                </Badge>
-              </div>
-            </div>
+        <AgentInfoCard
+          agent={agent}
+          onRotateKey={handleRotateKey}
+          onToggleActive={handleToggleActive}
+        />
 
-            {/* Stats grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-              <div className="bg-charcoal/5 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-charcoal">{agent.creditBalance}</p>
-                <p className="text-xs text-charcoal-light">Credits</p>
-              </div>
-              <div className="bg-charcoal/5 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-charcoal">
-                  {parseFloat(agent.reputationScore).toFixed(0)}
-                </p>
-                <p className="text-xs text-charcoal-light">Reputation</p>
-              </div>
-              <div className="bg-charcoal/5 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-charcoal">
-                  {formatTimeAgo(agent.lastHeartbeatAt)}
-                </p>
-                <p className="text-xs text-charcoal-light">Last Active</p>
-              </div>
-              <div className="bg-charcoal/5 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-charcoal">
-                  {formatDate(agent.createdAt)}
-                </p>
-                <p className="text-xs text-charcoal-light">Created</p>
-              </div>
-            </div>
-
-            {/* Details */}
-            <div className="space-y-3">
-              {/* Claim status */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-charcoal-light w-24">Status:</span>
-                <Badge className={
-                  agent.claimStatus === "verified"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-yellow-100 text-yellow-700"
-                }>
-                  {agent.claimStatus}
-                </Badge>
-              </div>
-
-              {/* API key prefix */}
-              {agent.apiKeyPrefix && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-charcoal-light w-24">Key prefix:</span>
-                  <code className="text-xs bg-charcoal/5 px-2 py-0.5 rounded font-mono">
-                    {agent.apiKeyPrefix}...
-                  </code>
-                </div>
-              )}
-
-              {/* Model info */}
-              {(agent.modelProvider || agent.modelName) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-charcoal-light w-24">Model:</span>
-                  <span className="text-xs text-charcoal">
-                    {[agent.modelProvider, agent.modelName].filter(Boolean).join(" / ")}
-                  </span>
-                </div>
-              )}
-
-              {/* Specializations */}
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-charcoal-light w-24 pt-0.5">Domains:</span>
-                <div className="flex flex-wrap gap-1">
-                  {agent.specializations.map((spec) => (
-                    <span
-                      key={spec}
-                      className="text-xs px-2 py-0.5 rounded-full bg-terracotta/10 text-terracotta"
-                    >
-                      {spec.replace(/_/g, " ")}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Soul summary */}
-              {agent.soulSummary && (
-                <div>
-                  <span className="text-xs text-charcoal-light">About:</span>
-                  <p className="text-sm text-charcoal mt-1">{agent.soulSummary}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 mt-5 pt-4 border-t border-charcoal/10">
-              <Button
-                onClick={handleRotateKey}
-                className="text-xs py-1.5 bg-charcoal/10 text-charcoal hover:bg-charcoal/20"
-              >
-                Rotate Key
-              </Button>
-              <Button
-                onClick={handleToggleActive}
-                className={`text-xs py-1.5 ${
-                  agent.isActive
-                    ? "bg-red-50 text-red-600 hover:bg-red-100"
-                    : "bg-green-50 text-green-600 hover:bg-green-100"
-                }`}
-              >
-                {agent.isActive ? "Deactivate" : "Reactivate"}
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Onboarding Guide */}
         <AgentOnboardingGuide
           agentUsername={agent.username}
           framework={agent.framework}

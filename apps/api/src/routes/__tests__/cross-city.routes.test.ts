@@ -76,22 +76,22 @@ describe("Cross-City Routes", () => {
       mockGetComparativeMetrics.mockResolvedValue({
         cities: [
           {
-            id: "chicago",
-            name: "City of Chicago",
+            id: "newyork",
+            name: "City of New York",
             problems: 274,
-            problemsPerCapita: 9.98,
+            problemsPerCapita: 3.29,
             observations: 150,
             validatorCount: 10,
-            validatorDensity: 0.3642,
+            validatorDensity: 0.1200,
           },
           {
-            id: "portland",
-            name: "City of Portland",
+            id: "sanfrancisco",
+            name: "City of San Francisco",
             problems: 65,
-            problemsPerCapita: 9.96,
+            problemsPerCapita: 7.44,
             observations: 30,
             validatorCount: 5,
-            validatorDensity: 0.7663,
+            validatorDensity: 0.5721,
           },
         ],
       });
@@ -106,7 +106,7 @@ describe("Cross-City Routes", () => {
 
       expect(body.ok).toBe(true);
       expect(body.data.cities).toHaveLength(2);
-      expect(body.data.cities[0]!.id).toBe("chicago");
+      expect(body.data.cities[0]!.id).toBe("newyork");
       expect(body.data.cities[0]!.problemsPerCapita).toBeGreaterThan(0);
     });
 
@@ -123,8 +123,8 @@ describe("Cross-City Routes", () => {
       mockGetSingleMetric.mockResolvedValue({
         metric: "problems_per_capita",
         cities: [
-          { id: "chicago", name: "City of Chicago", value: 9.98 },
-          { id: "portland", name: "City of Portland", value: 9.96 },
+          { id: "newyork", name: "City of New York", value: 3.29 },
+          { id: "sanfrancisco", name: "City of San Francisco", value: 7.44 },
         ],
       });
 
@@ -162,7 +162,7 @@ describe("Cross-City Routes", () => {
       for (const metric of validMetrics) {
         mockGetSingleMetric.mockResolvedValue({
           metric,
-          cities: [{ id: "chicago", name: "City of Chicago", value: 42 }],
+          cities: [{ id: "newyork", name: "City of New York", value: 42 }],
         });
 
         const res = await app.request(`/cross-city/compare/${metric}`);

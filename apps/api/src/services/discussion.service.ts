@@ -34,7 +34,7 @@ const KNOWN_DOMAINS = [
 ];
 
 // Known cities from Open311 configs
-const KNOWN_CITIES = ["portland", "chicago", "denver"];
+const KNOWN_CITIES = ["sanfrancisco", "newyork", "seattle"];
 
 let _guardrailQueue: Queue | null = null;
 function getGuardrailQueue(): Queue {

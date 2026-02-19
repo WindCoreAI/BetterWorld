@@ -102,7 +102,7 @@ describe("Discussion Routes (Sprint 16)", () => {
         id: "thread-1",
         scopeType: "domain",
         scopeValue: "clean_water",
-        title: "Water quality in Portland",
+        title: "Water quality in San Francisco",
         content: "I noticed water quality issues...",
         authorHumanId: "user-123",
         authorDisplayName: "Test User",
@@ -117,7 +117,7 @@ describe("Discussion Routes (Sprint 16)", () => {
         body: JSON.stringify({
           scopeType: "domain",
           scopeValue: "clean_water",
-          title: "Water quality in Portland",
+          title: "Water quality in San Francisco",
           content: "I noticed water quality issues in several neighborhoods.",
         }),
       });
@@ -232,9 +232,9 @@ describe("Discussion Routes (Sprint 16)", () => {
       mockCreateThread.mockResolvedValueOnce({
         id: "thread-2",
         scopeType: "city",
-        scopeValue: "portland",
-        title: "Portland community updates",
-        content: "Sharing updates from our Portland community meetings.",
+        scopeValue: "sanfrancisco",
+        title: "San Francisco community updates",
+        content: "Sharing updates from our San Francisco community meetings.",
         authorHumanId: "user-123",
         authorDisplayName: "Test User",
         guardrailStatus: "pending",
@@ -247,9 +247,9 @@ describe("Discussion Routes (Sprint 16)", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scopeType: "city",
-          scopeValue: "portland",
-          title: "Portland community updates",
-          content: "Sharing updates from our Portland community meetings.",
+          scopeValue: "sanfrancisco",
+          title: "San Francisco community updates",
+          content: "Sharing updates from our San Francisco community meetings.",
         }),
       });
 

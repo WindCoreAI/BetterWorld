@@ -9,15 +9,38 @@ import pino from "pino";
 
 import { addClient, removeClient, handleMessage, addHumanClient, removeHumanClient, handleHumanMessage } from "./feed.js";
 import { initDb, initRedis, getDb } from "../lib/container.js";
+import { ALLOWED_ORIGINS } from "../middleware/cors.js";
 
 const logger = pino({ name: "ws-server" });
+
+/** T033: Maximum WebSocket message size in bytes (64KB) */
+const MAX_MESSAGE_BYTES = 65536;
 
 const app = new Hono();
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
+/**
+ * T032: Validate WebSocket Origin header against CORS whitelist.
+ * Rejects CSWSH (Cross-Site WebSocket Hijacking) attempts.
+ * Returns true if Origin is valid, false otherwise.
+ */
+function validateOrigin(origin: string | undefined): boolean {
+  if (!origin) return false;
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
 // WebSocket feed endpoint with auth
 app.get(
   "/ws/feed",
+  (c, next) => {
+    // T032: Origin validation before WebSocket upgrade
+    const origin = c.req.header("origin");
+    if (!validateOrigin(origin)) {
+      logger.warn({ origin: origin ?? "missing" }, "WebSocket /ws/feed rejected: unauthorized Origin");
+      return c.json({ error: "Forbidden: invalid Origin" }, 403);
+    }
+    return next();
+  },
   upgradeWebSocket(async (c) => {
     const token = c.req.query("token");
 
@@ -79,6 +102,12 @@ app.get(
       },
       onMessage(evt, ws) {
         const data = typeof evt.data === "string" ? evt.data : evt.data.toString();
+        // T033: Reject oversized messages but keep connection open
+        if (Buffer.byteLength(data, "utf-8") > MAX_MESSAGE_BYTES) {
+          logger.warn({ agentId, bytes: Buffer.byteLength(data, "utf-8") }, "WebSocket message too large (>64KB)");
+          ws.send(JSON.stringify({ error: "Message too large" }));
+          return;
+        }
         handleMessage(ws, data);
       },
       onClose(_evt, ws) {
@@ -94,6 +123,15 @@ app.get(
 // Sprint 16: Human WebSocket endpoint with JWT auth
 app.get(
   "/ws/human",
+  (c, next) => {
+    // T032: Origin validation before WebSocket upgrade
+    const origin = c.req.header("origin");
+    if (!validateOrigin(origin)) {
+      logger.warn({ origin: origin ?? "missing" }, "WebSocket /ws/human rejected: unauthorized Origin");
+      return c.json({ error: "Forbidden: invalid Origin" }, 403);
+    }
+    return next();
+  },
   upgradeWebSocket(async (c) => {
     const token = c.req.query("token");
 
@@ -133,6 +171,12 @@ app.get(
       },
       onMessage(evt, ws) {
         const data = typeof evt.data === "string" ? evt.data : evt.data.toString();
+        // T033: Reject oversized messages but keep connection open
+        if (Buffer.byteLength(data, "utf-8") > MAX_MESSAGE_BYTES) {
+          logger.warn({ humanId, bytes: Buffer.byteLength(data, "utf-8") }, "WebSocket message too large (>64KB)");
+          ws.send(JSON.stringify({ error: "Message too large" }));
+          return;
+        }
         handleHumanMessage(ws, data);
       },
       onClose(_evt, ws) {

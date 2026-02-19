@@ -28,6 +28,11 @@
   "pnpm": {
     "overrides": {
       "tar": ">=7.5.8"
+    },
+    "auditConfig": {
+      "ignoreCves": [
+        "CVE-2026-26996"
+      ]
     }
   },
   "devDependencies": {

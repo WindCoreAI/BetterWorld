@@ -34,6 +34,8 @@ export const QUEUE_NAMES = {
   POWER_AUDIT: "power-audit",
   AGENT_FINGERPRINT: "agent-fingerprint",
   FEED_EVENT_PROCESSOR: "feed-event-processor",
+  // Sprint 20: Security Hardening
+  ACCOUNT_DELETION: "account-deletion",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

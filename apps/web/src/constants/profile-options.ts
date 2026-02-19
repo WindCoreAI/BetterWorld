@@ -212,13 +212,13 @@ export const COUNTRIES = [
 // Major cities for countries where BetterWorld operates + common world cities
 export const CITIES_BY_COUNTRY: Record<string, string[]> = {
   "United States": [
+    "San Francisco",
+    "New York",
+    "Seattle",
     "Portland",
     "Chicago",
     "Denver",
-    "New York",
     "Los Angeles",
-    "San Francisco",
-    "Seattle",
     "Austin",
     "Boston",
     "Washington D.C.",

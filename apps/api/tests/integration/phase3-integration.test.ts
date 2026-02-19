@@ -60,22 +60,22 @@ describe("Phase 3 Cross-Story Integration", () => {
   it("should transform Open311 request and validate the resulting problem data", () => {
     const request: Open311ServiceRequest = {
       service_request_id: "INTEG-001",
-      service_code: "4fd3b167e750846744000005",
+      service_code: "graffiti",
       service_name: "Graffiti Removal",
       status: "open",
       description: "Graffiti on wall at community center",
-      lat: 41.8781,
-      long: -87.6298,
-      address: "123 Main St, Chicago, IL",
+      lat: 40.7128,
+      long: -74.006,
+      address: "123 Main St, New York, NY",
     };
 
-    const config = OPEN311_CITY_CONFIGS.chicago;
+    const config = OPEN311_CITY_CONFIGS.newyork;
     const problem = transformRequestToProblem(request, config);
 
     expect(problem).not.toBeNull();
     expect(problem!.domain).toBe("environmental_protection");
     expect(problem!.municipalSourceId).toBe("INTEG-001");
-    expect(problem!.municipalSourceType).toBe("chicago");
+    expect(problem!.municipalSourceType).toBe("newyork");
     expect(problem!.reportedByAgentId).toBe(SYSTEM_MUNICIPAL_AGENT_ID);
 
     // The transformed data should pass GPS validation

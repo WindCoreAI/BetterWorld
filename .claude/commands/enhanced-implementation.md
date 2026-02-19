@@ -1,6 +1,5 @@
 ---
 description: Full implementation pipeline — executes all tasks, then iterates through validate → review → code-quality cycles until the feature is production-ready. Use after speckit specify, plan, and tasks are complete.
-context: fork
 handoffs:
   - label: Finish Branch
     agent: finishing-a-development-branch

@@ -168,7 +168,8 @@ export async function setLastSyncTimestamp(
   timestamp: string,
 ): Promise<void> {
   try {
-    await redis.set(`open311:last-sync:${cityId}`, timestamp);
+    // T036: 7-day TTL prevents indefinite retention of sync timestamps (Sprint 20 Security Hardening)
+    await redis.set(`open311:last-sync:${cityId}`, timestamp, "EX", 604800);
   } catch (err) {
     logger.warn(
       { error: err instanceof Error ? err.message : "Unknown", cityId },
