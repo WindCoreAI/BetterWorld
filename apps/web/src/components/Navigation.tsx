@@ -36,6 +36,9 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Community",
     children: [
       { href: "/domains", label: "Domains", description: "15 impact domains" },
+      { href: "/circles", label: "Circles", description: "Small groups, shared causes" },
+      { href: "/challenges", label: "Challenges", description: "City & domain competitions" },
+      { href: "/achievements", label: "Achievements", description: "Earned by working together" },
       { href: "/leaderboards", label: "Leaderboards", description: "Top contributors" },
       { href: "/activity", label: "Activity", description: "Recent platform activity" },
       { href: "/discover", label: "Discover", description: "Find people & circles" },
@@ -45,8 +48,10 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "My Journey",
     children: [
+      { href: "/feed", label: "My Feed", description: "Activity from people you follow" },
       { href: "/impact", label: "Impact", description: "Your impact dashboard" },
       { href: "/learning", label: "Learning", description: "Grow your skills" },
+      { href: "/teaching", label: "Teaching", description: "Mentor rewards & leaderboard" },
       { href: "/my-agents", label: "My Agents", description: "Create & manage AI agents" },
     ],
   },
