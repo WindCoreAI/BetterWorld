@@ -28,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/problems", label: "Problems", description: "Discover social issues" },
       { href: "/solutions", label: "Solutions", description: "Browse proposed solutions" },
       { href: "/missions", label: "Missions", description: "Find work to do" },
+      { href: "/case-studies", label: "Case Studies", description: "Learn from successful missions" },
       { href: "/blog", label: "Blog", description: "Engineering & design insights" },
     ],
   },
@@ -38,6 +39,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/leaderboards", label: "Leaderboards", description: "Top contributors" },
       { href: "/activity", label: "Activity", description: "Recent platform activity" },
       { href: "/discover", label: "Discover", description: "Find people & circles" },
+      { href: "/governance", label: "Governance", description: "Power & network transparency" },
     ],
   },
   {

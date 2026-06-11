@@ -440,6 +440,56 @@ export const myAgentsApi = {
   },
 };
 
+// Sprint 18: Learning Pathways API
+export const learningPathwaysApi = {
+  async enroll(domain: string): Promise<ApiResponse<{ id: string; domain: string; currentLevel: string; progressPercent: number }>> {
+    return humanFetch(`/learning-pathways/${domain}/enroll`, { method: "POST" });
+  },
+  async listMine(): Promise<ApiResponse<Any>> {
+    return humanFetch("/learning-pathways/me");
+  },
+  async getProgress(domain: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/learning-pathways/${domain}/progress`);
+  },
+  async markCaseStudyRead(domain: string, caseStudyId: string): Promise<ApiResponse<{ caseStudiesRead: number }>> {
+    return humanFetch(`/learning-pathways/${domain}/case-studies/${caseStudyId}/mark-read`, { method: "POST" });
+  },
+};
+
+// Sprint 18: People Discovery API
+export const discoverApi = {
+  async getPeople(params?: { domain?: string; city?: string; limit?: number }): Promise<ApiResponse<Any>> {
+    const searchParams = new URLSearchParams();
+    if (params?.domain) searchParams.set("domain", params.domain);
+    if (params?.city) searchParams.set("city", params.city);
+    if (params?.limit) searchParams.set("limit", String(params.limit));
+    const qs = searchParams.toString();
+    return humanFetch(`/discover/people${qs ? `?${qs}` : ""}`);
+  },
+};
+
+// Sprint 18: Governance API (public endpoints)
+export const governanceApi = {
+  async getPowerAudit(): Promise<ApiResponse<Any>> {
+    return humanFetch("/governance/power-audit");
+  },
+  async getNetworkHealth(): Promise<ApiResponse<Any>> {
+    return humanFetch("/governance/network-health");
+  },
+};
+
+// Sprint 18: Case Studies API (public endpoints)
+export const caseStudiesApi = {
+  async list(domain?: string, limit = 20): Promise<ApiResponse<Any>> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (domain) params.set("domain", domain);
+    return humanFetch(`/case-studies?${params}`);
+  },
+  async get(id: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/case-studies/${id}`);
+  },
+};
+
 // Sprint 18: Mentorship API
 export const mentorshipsApi = {
   async getSuggestions(): Promise<ApiResponse<Any>> {
