@@ -1,9 +1,17 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
+/**
+ * Token for admin requests.
+ *
+ * An operator signs in like everyone else — what makes them an admin is their
+ * account (see ADMIN_EMAILS on the API), so their normal access token is the
+ * admin token. A separately stored service token, if one was pasted on the
+ * legacy login page, takes precedence.
+ */
 export function getAdminToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("bw_admin_token");
+  return localStorage.getItem("bw_admin_token") ?? localStorage.getItem("bw_human_access_token");
 }
 
 export function getAgentToken(): string | null {
@@ -125,4 +133,14 @@ export function getHumanAuthHeaders(): Record<string, string> {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
+}
+
+/**
+ * Authorization header only — for requests whose body is not JSON.
+ * A multipart upload must let the browser set Content-Type itself (it carries
+ * the boundary); sending "application/json" makes the server unable to parse it.
+ */
+export function getHumanBearerHeaders(): Record<string, string> {
+  const token = getHumanToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }

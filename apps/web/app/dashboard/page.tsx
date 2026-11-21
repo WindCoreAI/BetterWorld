@@ -25,6 +25,7 @@ import { useMyReputation } from "../../src/hooks/useReputation";
 import { useStreak } from "../../src/hooks/useStreak";
 import { dashboardApi } from "../../src/lib/humanApi";
 import { useOnboardingGuard } from "../../src/lib/onboardingGuard";
+import { consumeReturnTo } from "../../src/lib/returnTo";
 
 function DashboardSpinner() {
   return (
@@ -90,6 +91,14 @@ export default function DashboardPage() {
       router.push(redirectTo);
     }
   }, [onboardingChecking, needsOnboarding, isAuthenticated, router, redirectTo]);
+
+  // Every sign-in / sign-up / onboarding flow ends here. If the person was on
+  // their way somewhere (e.g. a mission they wanted to claim), send them on.
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || onboardingChecking || needsOnboarding) return;
+    const returnTo = consumeReturnTo();
+    if (returnTo) router.replace(returnTo);
+  }, [authLoading, isAuthenticated, onboardingChecking, needsOnboarding, router]);
 
   const {
     data: dashboard,

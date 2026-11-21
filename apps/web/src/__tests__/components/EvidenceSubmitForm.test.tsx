@@ -1,116 +1,111 @@
 /**
  * EvidenceSubmitForm Component Test (Sprint 15 — T057, FR-031)
  *
- * Tests file input validation, GPS detection state, and form submission.
+ * One file per submission (that is what the server stores), a size limit, and
+ * the selected file reported to the page for its preview and checklist.
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { EvidenceSubmitForm } from "../../components/evidence/EvidenceSubmitForm";
+
+function chooseFile(file: File) {
+  const input = screen.getByLabelText("Evidence photo") as HTMLInputElement;
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  fireEvent.change(input);
+  return input;
+}
+
+const photo = () => new File(["photo-bytes"], "drain.jpg", { type: "image/jpeg" });
 
 describe("EvidenceSubmitForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render the form with file input and submit button", async () => {
-    const { EvidenceSubmitForm } = await import("../../components/evidence/EvidenceSubmitForm");
-    const onSubmit = vi.fn();
-    render(<EvidenceSubmitForm missionId="test" claimId="claim-1" onSubmit={onSubmit} />);
+  it("renders a single-file picker that offers both camera and library", () => {
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={vi.fn()} />);
 
-    expect(screen.getByText("Evidence Files")).toBeDefined();
-    expect(screen.getByText("Submit Evidence")).toBeDefined();
+    const input = screen.getByLabelText("Evidence photo") as HTMLInputElement;
+    expect(input.type).toBe("file");
+    expect(input.multiple).toBe(false);
+    // `capture` would force the camera and block choosing an existing photo
+    expect(input.hasAttribute("capture")).toBe(false);
+    expect(screen.getByRole("button", { name: "Submit Evidence" })).toBeInTheDocument();
   });
 
-  it("should disable submit button when no files selected", async () => {
-    const { EvidenceSubmitForm } = await import("../../components/evidence/EvidenceSubmitForm");
-    const onSubmit = vi.fn();
-    render(<EvidenceSubmitForm missionId="test" claimId="claim-1" onSubmit={onSubmit} />);
+  it("keeps submit disabled until a file is chosen", () => {
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Submit Evidence" })).toBeDisabled();
 
-    const submitButton = screen.getByText("Submit Evidence");
-    expect(submitButton.hasAttribute("disabled") || submitButton.getAttribute("disabled") !== null).toBe(true);
+    chooseFile(photo());
+    expect(screen.getByRole("button", { name: "Submit Evidence" })).toBeEnabled();
   });
 
-  it("should show error for more than 5 files", async () => {
-    const { EvidenceSubmitForm } = await import("../../components/evidence/EvidenceSubmitForm");
-    const onSubmit = vi.fn();
-    render(<EvidenceSubmitForm missionId="test" claimId="claim-1" onSubmit={onSubmit} />);
+  it("reports the chosen file to the page", () => {
+    const onFileSelected = vi.fn();
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={vi.fn()} onFileSelected={onFileSelected} />);
 
-    // Create 6 mock files
-    const files = Array.from({ length: 6 }, (_, i) =>
-      new File(["content"], `photo${i}.jpg`, { type: "image/jpeg" }),
-    );
-    const dataTransfer = new DataTransfer();
-    files.forEach((f) => dataTransfer.items.add(f));
-
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) {
-      Object.defineProperty(fileInput, "files", { value: dataTransfer.files });
-      fireEvent.change(fileInput);
-    }
-
-    await waitFor(() => {
-      const errorEl = screen.queryByText(/Maximum 5 files/i);
-      expect(errorEl).toBeDefined();
-    });
+    const file = photo();
+    chooseFile(file);
+    expect(onFileSelected).toHaveBeenLastCalledWith(file);
   });
 
-  it("should show error for files exceeding 10MB", async () => {
-    const { EvidenceSubmitForm } = await import("../../components/evidence/EvidenceSubmitForm");
-    const onSubmit = vi.fn();
-    render(<EvidenceSubmitForm missionId="test" claimId="claim-1" onSubmit={onSubmit} />);
+  it("refuses a file over 10MB and says why", () => {
+    const onFileSelected = vi.fn();
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={vi.fn()} onFileSelected={onFileSelected} />);
 
-    // Create a large file (11MB)
-    const largeContent = new ArrayBuffer(11 * 1024 * 1024);
-    const largeFile = new File([largeContent], "large.jpg", { type: "image/jpeg" });
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(largeFile);
+    const large = new File([new ArrayBuffer(11 * 1024 * 1024)], "huge.jpg", { type: "image/jpeg" });
+    chooseFile(large);
 
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) {
-      Object.defineProperty(fileInput, "files", { value: dataTransfer.files });
-      fireEvent.change(fileInput);
-    }
-
-    await waitFor(() => {
-      const errorEl = screen.queryByText(/exceeds 10MB/i);
-      expect(errorEl).toBeDefined();
-    });
+    expect(screen.getByRole("alert")).toHaveTextContent(/larger than 10MB/i);
+    expect(onFileSelected).toHaveBeenLastCalledWith(null);
+    expect(screen.getByRole("button", { name: "Submit Evidence" })).toBeDisabled();
   });
 
-  it("should call onSubmit with FormData when form is submitted", async () => {
-    const { EvidenceSubmitForm } = await import("../../components/evidence/EvidenceSubmitForm");
+  it("submits the file and notes as multipart form data", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<EvidenceSubmitForm missionId="test" claimId="claim-1" onSubmit={onSubmit} />);
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={onSubmit} />);
 
-    // Add a valid file
-    const file = new File(["test content"], "photo.jpg", { type: "image/jpeg" });
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
+    const file = photo();
+    chooseFile(file);
+    fireEvent.change(screen.getByLabelText("Notes (optional)"), { target: { value: "  Cleared half a bag of leaves.  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit Evidence" }));
 
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) {
-      Object.defineProperty(fileInput, "files", { value: dataTransfer.files });
-      fireEvent.change(fileInput);
-    }
-
-    // Submit the form
-    const form = document.querySelector("form");
-    if (form) {
-      fireEvent.submit(form);
-
-      await waitFor(() => {
-        expect(onSubmit).toHaveBeenCalled();
-        const formData = onSubmit.mock.calls[0][0];
-        expect(formData instanceof FormData).toBe(true);
-      });
-    }
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const formData = onSubmit.mock.calls[0]![0] as FormData;
+    expect(formData).toBeInstanceOf(FormData);
+    expect(formData.getAll("files")).toHaveLength(1);
+    expect((formData.get("files") as File).name).toBe("drain.jpg");
+    expect(formData.get("notes")).toBe("Cleared half a bag of leaves.");
   });
 
-  it("should be disabled when disabled prop is true", async () => {
-    const { EvidenceSubmitForm } = await import("../../components/evidence/EvidenceSubmitForm");
-    const onSubmit = vi.fn();
-    render(<EvidenceSubmitForm missionId="test" claimId="claim-1" onSubmit={onSubmit} disabled={true} />);
+  it("omits empty notes", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={onSubmit} />);
 
-    const submitButton = screen.getByText("Submit Evidence");
-    expect(submitButton.hasAttribute("disabled") || submitButton.getAttribute("disabled") !== null).toBe(true);
+    chooseFile(photo());
+    fireEvent.click(screen.getByRole("button", { name: "Submit Evidence" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect((onSubmit.mock.calls[0]![0] as FormData).has("notes")).toBe(false);
+  });
+
+  it("shows the reason when the submission is refused and lets the person try again", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error("No active claim on this mission"));
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={onSubmit} />);
+
+    chooseFile(photo());
+    fireEvent.click(screen.getByRole("button", { name: "Submit Evidence" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No active claim on this mission");
+    expect(screen.getByRole("button", { name: "Submit Evidence" })).toBeEnabled();
+  });
+
+  it("is inert when disabled", () => {
+    render(<EvidenceSubmitForm missionId="m1" claimId="" onSubmit={vi.fn()} disabled />);
+
+    expect(screen.getByLabelText("Evidence photo")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit Evidence" })).toBeDisabled();
   });
 });
