@@ -6,7 +6,7 @@
  */
 
 import { humans } from "@betterworld/db";
-import { loadConfig } from "@betterworld/shared";
+import { isAdminEmail, loadConfig } from "@betterworld/shared";
 import { eq } from "drizzle-orm";
 import { createMiddleware } from "hono/factory";
 import * as jose from "jose";
@@ -55,7 +55,9 @@ export function humanAuth() {
       const { payload } = await jose.jwtVerify(token, secret);
 
       const userId = payload.userId as string;
-      if (!userId) {
+      // A refresh token is signed with the same secret and also carries userId;
+      // it must only be usable at the refresh endpoint, never as an access token.
+      if (!userId || payload.type === "refresh") {
         return c.json(
           {
             ok: false,
@@ -89,6 +91,7 @@ export function humanAuth() {
           displayName: humans.displayName,
           role: humans.role,
           isActive: humans.isActive,
+          emailVerified: humans.emailVerified,
         })
         .from(humans)
         .where(eq(humans.id, userId))
@@ -124,7 +127,8 @@ export function humanAuth() {
         id: human.id,
         email: human.email,
         displayName: human.displayName,
-        role: human.role,
+        // Operators listed in ADMIN_EMAILS act as admins without a database edit.
+        role: human.emailVerified && isAdminEmail(human.email) ? "admin" : human.role,
       });
 
       // Sprint 16: Track lastActiveAt and detect comebacks (non-blocking)
