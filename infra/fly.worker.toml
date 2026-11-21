@@ -4,8 +4,12 @@ primary_region = "iad"
 [build]
   dockerfile = "infra/Dockerfile.worker"
 
-[processes]
-  worker = "node apps/api/dist/workers/all-workers.js"
+# The image's CMD starts all workers (tsx on source, same as the API image).
+# A previous version overrode it here with `node apps/api/dist/workers/all-workers.js`,
+# a file no build step ever produced, so the worker app could not start.
+#
+# Single-machine alternative: skip this app entirely and set EMBEDDED_WORKERS=true
+# on the API app; the API process then runs the workers itself.
 
 # No HTTP service — background worker only
 

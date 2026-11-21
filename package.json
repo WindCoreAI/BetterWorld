@@ -17,6 +17,7 @@
     "db:push": "pnpm --filter @betterworld/db db:push",
     "db:seed": "pnpm --filter @betterworld/db db:seed",
     "db:studio": "pnpm --filter @betterworld/db db:studio",
+    "loop:check": "node scripts/loop-check.mjs",
     "e2e": "pnpm exec playwright test --project=golden-path",
     "e2e:suites": "pnpm exec playwright test --project=suites",
     "e2e:all": "pnpm exec playwright test"

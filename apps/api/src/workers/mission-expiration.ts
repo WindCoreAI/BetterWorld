@@ -6,6 +6,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import Redis from "ioredis";
 
 import { initDb, getDb } from "../lib/container.js";
+import { escalateStalePeerReviews } from "../lib/evidence-outcome.js";
 import { logger } from "../middleware/logger.js";
 
 // --- Types ---
@@ -19,11 +20,53 @@ export interface ExpirationResult {
   expiredCount: number;
   skippedCount: number;
   releasedClaimsCount: number;
+  /** Claims released because the person's own deadline passed. */
+  overdueClaimsReleased?: number;
+  /** Evidence moved from peer review to the operator's queue after waiting too long. */
+  peerReviewsEscalated?: number;
 }
 
 // --- Core processing logic ---
 
 const BATCH_SIZE = 100;
+
+/**
+ * Release claims whose deadline has passed without a submission, so the slot
+ * goes back to the marketplace and stops counting against the person's limit
+ * of three active missions. (Claims with evidence awaiting verification are
+ * "submitted", not "active", and are left alone.)
+ */
+export async function releaseOverdueClaims(db: PostgresJsDatabase): Promise<number> {
+  return db.transaction(async (tx) => {
+    const released = (await tx.execute(
+      sql`UPDATE mission_claims
+          SET status = 'released', updated_at = NOW()
+          WHERE status = 'active' AND deadline_at < NOW()
+          RETURNING mission_id`,
+    )) as unknown as Array<{ mission_id: string }>;
+
+    if (released.length === 0) return 0;
+
+    const perMission = new Map<string, number>();
+    for (const { mission_id } of released) {
+      perMission.set(mission_id, (perMission.get(mission_id) ?? 0) + 1);
+    }
+
+    for (const [missionId, count] of perMission) {
+      await tx
+        .update(missions)
+        .set({
+          currentClaimCount: sql`GREATEST(${missions.currentClaimCount} - ${count}, 0)`,
+          status: sql`CASE WHEN ${missions.status} = 'claimed' THEN 'open'::mission_status ELSE ${missions.status} END`,
+          updatedAt: new Date(),
+        })
+        .where(eq(missions.id, missionId));
+    }
+
+    logger.info({ released: released.length, missions: perMission.size }, "Overdue claims released");
+    return released.length;
+  });
+}
 
 export async function processMissionExpiration(
   dbOverride?: PostgresJsDatabase | null,
@@ -173,6 +216,37 @@ export async function processMissionExpiration(
   return result;
 }
 
+/**
+ * The scheduled sweep: release overdue claims, escalate evidence that has
+ * waited too long for peer reviewers, then expire missions past their date.
+ * Each step is independent — a failure in one is logged and does not stop the others.
+ */
+export async function runHousekeepingSweep(
+  dbOverride?: PostgresJsDatabase | null,
+): Promise<ExpirationResult> {
+  const db = dbOverride ?? getDb();
+  if (!db) {
+    throw new Error("Database not initialized — call initDb() before processing jobs");
+  }
+
+  let overdueClaimsReleased = 0;
+  let peerReviewsEscalated = 0;
+
+  try {
+    overdueClaimsReleased = await releaseOverdueClaims(db);
+  } catch (err) {
+    logger.error({ error: (err as Error).message }, "Releasing overdue claims failed");
+  }
+  try {
+    peerReviewsEscalated = await escalateStalePeerReviews(db);
+  } catch (err) {
+    logger.error({ error: (err as Error).message }, "Escalating stale peer reviews failed");
+  }
+
+  const result = await processMissionExpiration(db);
+  return { ...result, overdueClaimsReleased, peerReviewsEscalated };
+}
+
 // --- Queue Monitoring Metrics ---
 
 export interface WorkerMetrics {
@@ -217,10 +291,10 @@ export function createMissionExpirationWorker(): Worker<ExpirationJobData> {
   }
   initDb(databaseUrl);
 
-  // Processor wrapper: delegates to processMissionExpiration and updates metrics
+  // Processor wrapper: delegates to the housekeeping sweep and updates metrics
   const processor = async (_job: Job<ExpirationJobData>) => {
     const startTime = Date.now();
-    const result = await processMissionExpiration();
+    const result = await runHousekeepingSweep();
     const processingTimeMs = Date.now() - startTime;
 
     metrics.totalProcessingTimeMs += processingTimeMs;

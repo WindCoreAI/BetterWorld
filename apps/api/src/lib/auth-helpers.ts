@@ -20,13 +20,21 @@ export async function generateTokenPair(userId: string, email?: string) {
   const accessPayload: Record<string, unknown> = { userId };
   if (email) accessPayload.email = email;
 
+  // A unique id per token: without it, two sign-ins for the same account within
+  // one second produced byte-identical tokens, and the second one failed with a
+  // 500 on the sessions table's unique token-hash constraint.
   const accessToken = await new jose.SignJWT(accessPayload)
     .setProtectedHeader({ alg: "HS256" })
+    .setSubject(userId)
+    .setIssuedAt()
+    .setJti(crypto.randomUUID())
     .setExpirationTime(config.ACCESS_TOKEN_EXPIRY)
     .sign(secret);
 
   const refreshToken = await new jose.SignJWT({ userId, type: "refresh" })
     .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setJti(crypto.randomUUID())
     .setExpirationTime(config.REFRESH_TOKEN_EXPIRY)
     .sign(secret);
 

@@ -6,6 +6,8 @@
  * GET /api/v1/evidence/:evidenceId - Get evidence detail
  */
 
+import crypto from "crypto";
+
 import { evidence, missions, missionClaims, missionTemplates, verificationAuditLog } from "@betterworld/db";
 import { AppError } from "@betterworld/shared";
 import { and, eq, desc, lt } from "drizzle-orm";
@@ -23,6 +25,7 @@ import {
   MAX_FILE_SIZE,
   MAX_FILES_PER_SUBMISSION,
 } from "../../lib/evidence-helpers.js";
+import { routeEvidenceToHumanReview } from "../../lib/evidence-outcome.js";
 import { processImage } from "../../lib/image-processing.js";
 import { uploadFile, buildStoragePath, getSignedUrl } from "../../lib/storage.js";
 import { parseUuidParam } from "../../lib/validation.js";
@@ -132,29 +135,29 @@ async function processAndUploadFile(
   let mediumUrl: string | null = null;
   let contentUrl: string | null = null;
 
+  // The database stores storage KEYS; URLs are signed on read (see lib/storage.ts).
+  // A per-upload prefix keeps a re-submission from overwriting an earlier file.
+  const uploadId = crypto.randomUUID().slice(0, 8);
+  const name = `${uploadId}_${primaryFile.name}`;
+
+  const originalPath = buildStoragePath(missionId, claimId, "original", name);
+  const originalResult = await uploadFile(originalPath, fileBuffer, primaryFile.type);
+  contentUrl = originalResult.key;
+
   if (primaryFile.type.startsWith("image/")) {
     try {
       const processed = await processImage(fileBuffer);
-      const originalPath = buildStoragePath(missionId, claimId, "original", primaryFile.name);
-      const originalResult = await uploadFile(originalPath, fileBuffer, primaryFile.type);
-      contentUrl = originalResult.url;
 
-      const thumbPath = buildStoragePath(missionId, claimId, "thumbnail", `thumb_${primaryFile.name}.webp`);
+      const thumbPath = buildStoragePath(missionId, claimId, "thumbnail", `thumb_${name}.webp`);
       const thumbResult = await uploadFile(thumbPath, processed.thumbnail, "image/webp");
-      thumbnailUrl = thumbResult.url;
+      thumbnailUrl = thumbResult.key;
 
-      const medPath = buildStoragePath(missionId, claimId, "medium", `med_${primaryFile.name}.webp`);
+      const medPath = buildStoragePath(missionId, claimId, "medium", `med_${name}.webp`);
       const medResult = await uploadFile(medPath, processed.medium, "image/webp");
-      mediumUrl = medResult.url;
+      mediumUrl = medResult.key;
     } catch {
-      const originalPath = buildStoragePath(missionId, claimId, "original", primaryFile.name);
-      const originalResult = await uploadFile(originalPath, fileBuffer, primaryFile.type);
-      contentUrl = originalResult.url;
+      // Renditions are best-effort (e.g. a format sharp cannot decode); the original is stored.
     }
-  } else {
-    const originalPath = buildStoragePath(missionId, claimId, "original", primaryFile.name);
-    const originalResult = await uploadFile(originalPath, fileBuffer, primaryFile.type);
-    contentUrl = originalResult.url;
   }
 
   return { contentUrl, thumbnailUrl, mediumUrl };
@@ -210,7 +213,8 @@ async function enqueueBeforeAfterComparison(pairId: string, afterEvidenceId: str
 }
 
 // --- Helper: Enqueue for AI verification ---
-async function enqueueVerification(evidenceId: string): Promise<void> {
+/** Returns false when the job could not be queued; the caller then sends the evidence to human review. */
+async function enqueueVerification(evidenceId: string): Promise<boolean> {
   try {
     const { getEvidenceVerificationQueue } = await import("../../lib/evidence-queue.js");
     const queue = getEvidenceVerificationQueue();
@@ -218,8 +222,9 @@ async function enqueueVerification(evidenceId: string): Promise<void> {
       attempts: 3,
       backoff: { type: "exponential", delay: 1000 },
     });
+    return true;
   } catch {
-    // Queue not available in dev/test - non-fatal
+    return false;
   }
 }
 
@@ -291,7 +296,8 @@ async function validateMissionAndClaim(
     .from(missions).where(eq(missions.id, missionId)).limit(1);
 
   if (!mission) throw new AppError("NOT_FOUND", "Mission not found");
-  if (mission.expiresAt < new Date()) throw new AppError("CONFLICT", "Mission has expired");
+  // Not gated on the mission's own expiry: someone who claimed in time has until
+  // their claim deadline (checked below) to submit, as the expiry sweep assumes.
 
   // Fetch template GPS radius if mission was created from a template
   let gpsRadiusMeters: number | null = null;
@@ -310,7 +316,22 @@ async function validateMissionAndClaim(
     .where(and(eq(missionClaims.missionId, missionId), eq(missionClaims.humanId, humanId), eq(missionClaims.status, "active")))
     .limit(1);
 
-  if (!claim) throw new AppError("FORBIDDEN", "No active claim on this mission");
+  if (!claim) {
+    // Tell the person why, instead of a bare "no active claim".
+    const [latest] = await db
+      .select({ status: missionClaims.status })
+      .from(missionClaims)
+      .where(and(eq(missionClaims.missionId, missionId), eq(missionClaims.humanId, humanId)))
+      .orderBy(desc(missionClaims.claimedAt))
+      .limit(1);
+    if (latest?.status === "submitted") {
+      throw new AppError("CONFLICT", "Evidence for this mission is already submitted and awaiting verification");
+    }
+    if (latest?.status === "verified") {
+      throw new AppError("CONFLICT", "This mission is already verified as completed");
+    }
+    throw new AppError("FORBIDDEN", "No active claim on this mission");
+  }
   if (claim.deadlineAt < new Date()) throw new AppError("CONFLICT", "Claim deadline has passed");
 
   return { mission, claim, gpsRadiusMeters };
@@ -412,13 +433,30 @@ evidenceRoutes.post("/:missionId/evidence", humanAuth(), async (c) => {
     photoSequenceType,
   }).returning();
 
+  // The submission is the claim's deliverable: mark the claim "submitted" so it
+  // stops counting against the person's three active missions and cannot be
+  // submitted (and rewarded) twice. A "before" photo is only half of a pair, so
+  // the claim stays open for the "after". Verification moves it on from here:
+  // verified → claim verified, rejected → claim active again.
+  const completesClaim = !mission.isHoneypot && photoSequenceType !== "before";
+  if (completesClaim) {
+    await db
+      .update(missionClaims)
+      .set({ status: "submitted", progressPercent: 100, updatedAt: new Date() })
+      .where(and(eq(missionClaims.id, claim.id), eq(missionClaims.status, "active")));
+  }
+
   if (mission.isHoneypot) {
     await handleHoneypotDetection(db, evidenceRecord!.id, human.id);
   } else if (photoSequenceType === "after" && pairId) {
     // Before/after pair: enqueue comparison instead of standard verification
     await enqueueBeforeAfterComparison(pairId, evidenceRecord!.id);
-  } else {
-    await enqueueVerification(evidenceRecord!.id);
+  } else if (photoSequenceType !== "before") {
+    const queued = await enqueueVerification(evidenceRecord!.id);
+    if (!queued) {
+      // No queue, no AI verdict coming: put it in front of a person now.
+      await routeEvidenceToHumanReview(db, evidenceRecord!.id, "Verification queue unavailable");
+    }
   }
 
   // Enqueue fraud scoring for all submissions (honeypot and normal)

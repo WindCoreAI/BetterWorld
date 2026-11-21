@@ -30,8 +30,14 @@ vi.mock("@betterworld/guardrails", () => ({
   getCachedEvaluation: vi.fn().mockResolvedValue(null),
   setCachedEvaluation: vi.fn().mockResolvedValue(undefined),
   determineTrustTier: vi.fn().mockReturnValue("verified"),
+  resolveTrustTier: vi.fn().mockReturnValue("verified"),
   getThresholds: vi.fn().mockReturnValue({ autoApprove: 0.70, autoRejectMax: 0.40 }),
   computeCompositeScore: vi.fn().mockReturnValue(75),
+  decideGuardrailOutcome: vi.fn().mockReturnValue({
+    decision: "approved",
+    reason: "score_above_approve_threshold",
+  }),
+  LayerBUnavailableError: class LayerBUnavailableError extends Error {},
 }));
 
 vi.mock("@betterworld/shared", () => ({

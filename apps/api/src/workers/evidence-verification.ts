@@ -2,12 +2,19 @@
  * Evidence Verification Worker (Sprint 8: Evidence Verification)
  *
  * BullMQ worker on "evidence-ai-verify" queue.
- * Uses Claude Sonnet Vision to analyze evidence and route based on confidence.
+ * Uses Claude Vision to analyze evidence and route based on confidence:
+ *   >= 0.80  verified (reward paid, claim closed)
+ *   <  0.50  rejected (claim reopened for another attempt)
+ *   between  human review — peers when the community can supply them, the operator otherwise
+ *
+ * The AI only ever decides about a photo it was actually shown. No AI key, an
+ * exhausted budget, an unreadable file, a non-image file or a provider error
+ * all end in human review; none of them leaves evidence waiting on nobody.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { evidence, missions, verificationAuditLog } from "@betterworld/db";
-import { QUEUE_NAMES, visionVerificationResponseSchema } from "@betterworld/shared";
+import { evidence, missions } from "@betterworld/db";
+import { QUEUE_NAMES, isAiConfigured, visionVerificationResponseSchema } from "@betterworld/shared";
 import { Worker, type Job } from "bullmq";
 import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -15,17 +22,23 @@ import Redis from "ioredis";
 import pino from "pino";
 
 import { initDb, getDb, getRedis } from "../lib/container.js";
-import { selectPeerReviewers } from "../lib/peer-assignment.js";
-import { updateReputation } from "../lib/reputation-engine.js";
-import { distributeEvidenceReward } from "../lib/reward-helpers.js";
-import { getSignedUrl } from "../lib/storage.js";
-import { recordActivity } from "../lib/streak-tracker.js";
-import { broadcast } from "../ws/feed.js";
+import { finalizeEvidence, routeEvidenceToHumanReview } from "../lib/evidence-outcome.js";
+import { readStoredFile } from "../lib/storage.js";
 
 const logger = pino({ name: "evidence-verification-worker" });
 
 const SONNET_MODEL = process.env.CLAUDE_SONNET_MODEL ?? "claude-sonnet-4-5-20250929";
 const COST_PER_IMAGE_CENTS = 5; // ~$0.05/image
+
+/** Image formats the vision model accepts. */
+const VISION_MEDIA_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
+type VisionMediaType = (typeof VISION_MEDIA_TYPES)[number];
+
+/** The API rejects images above 5 MB; base64 adds a third, so stay well below. */
+const MAX_VISION_IMAGE_BYTES = 3_500_000;
+
+export const AUTO_VERIFY_MIN_SCORE = 0.8;
+export const AUTO_REJECT_BELOW_SCORE = 0.5;
 
 export interface VerifyJobData {
   evidenceId: string;
@@ -99,67 +112,42 @@ async function incrementVisionCost(redis: Redis | null): Promise<void> {
   }
 }
 
-
 /**
  * Route evidence based on AI verification score.
  */
 async function routeByScore(
   db: PostgresJsDatabase,
   evidenceId: string,
-  evidenceRow: { missionId: string; submittedByHumanId: string },
   score: number,
-  output: VerifyToolOutput,
+  output: Pick<VerifyToolOutput, "reasoning">,
 ): Promise<void> {
-  if (score >= 0.80) {
-    await db.update(evidence).set({
-      verificationStage: "verified",
-      finalVerdict: "verified",
-      finalConfidence: String(score.toFixed(2)),
-      updatedAt: new Date(),
-    }).where(eq(evidence.id, evidenceId));
-
-    try { await distributeEvidenceReward(db, evidenceId); } catch { /* Non-fatal */ }
-
-    // Update reputation and streak after successful verification
-    try {
-      await updateReputation(db, evidenceRow.submittedByHumanId, "evidence_verified", evidenceId, "evidence");
-      await recordActivity(db, evidenceRow.submittedByHumanId);
-    } catch { /* Non-fatal: reputation/streak update failure shouldn't block verification */ }
-
-    await db.insert(verificationAuditLog).values({
-      evidenceId, decisionSource: "ai", decision: "approved",
-      score: String(score.toFixed(2)), reasoning: output.reasoning,
-      metadata: { autoApprove: true, model: SONNET_MODEL },
+  if (score >= AUTO_VERIFY_MIN_SCORE) {
+    await finalizeEvidence(db, {
+      evidenceId,
+      verdict: "verified",
+      confidence: score,
+      source: "ai",
+      reasoning: output.reasoning,
+      auditMetadata: { autoApprove: true, model: SONNET_MODEL },
     });
-
-    broadcast({ type: "evidence:verified", data: { evidenceId, missionId: evidenceRow.missionId, humanId: evidenceRow.submittedByHumanId, finalConfidence: score } });
     logger.info({ evidenceId, score }, "Evidence auto-approved by AI");
-  } else if (score < 0.50) {
-    await db.update(evidence).set({
-      verificationStage: "rejected",
-      finalVerdict: "rejected",
-      finalConfidence: String(score.toFixed(2)),
-      updatedAt: new Date(),
-    }).where(eq(evidence.id, evidenceId));
-
-    await db.insert(verificationAuditLog).values({
-      evidenceId, decisionSource: "ai", decision: "rejected",
-      score: String(score.toFixed(2)), reasoning: output.reasoning,
-      metadata: { autoReject: true, model: SONNET_MODEL },
+  } else if (score < AUTO_REJECT_BELOW_SCORE) {
+    await finalizeEvidence(db, {
+      evidenceId,
+      verdict: "rejected",
+      confidence: score,
+      source: "ai",
+      reasoning: output.reasoning,
+      auditMetadata: { autoReject: true, model: SONNET_MODEL },
     });
-
-    broadcast({ type: "evidence:rejected", data: { evidenceId, missionId: evidenceRow.missionId, humanId: evidenceRow.submittedByHumanId, reason: output.reasoning } });
     logger.info({ evidenceId, score }, "Evidence auto-rejected by AI");
   } else {
-    await routeToPeerReview(db, evidenceId, evidenceRow.submittedByHumanId, output.reasoning);
-
-    await db.insert(verificationAuditLog).values({
-      evidenceId, decisionSource: "ai", decision: "escalated",
-      score: String(score.toFixed(2)), reasoning: output.reasoning,
-      metadata: { routedToPeerReview: true, model: SONNET_MODEL },
-    });
-
-    logger.info({ evidenceId, score }, "Evidence routed to peer review");
+    const stage = await routeEvidenceToHumanReview(
+      db,
+      evidenceId,
+      `AI confidence ${score.toFixed(2)} is between the reject and approve thresholds: ${output.reasoning}`,
+    );
+    logger.info({ evidenceId, score, stage }, "Evidence routed to human review");
   }
 }
 
@@ -172,6 +160,7 @@ async function fetchEvidenceAndMission(db: PostgresJsDatabase, evidenceId: strin
       id: evidence.id,
       missionId: evidence.missionId,
       contentUrl: evidence.contentUrl,
+      mediumUrl: evidence.mediumUrl,
       evidenceType: evidence.evidenceType,
       latitude: evidence.latitude,
       longitude: evidence.longitude,
@@ -202,51 +191,22 @@ async function fetchEvidenceAndMission(db: PostgresJsDatabase, evidenceId: strin
 }
 
 /**
- * Build Claude Vision content blocks (image + text prompt).
+ * Load an image the vision model can accept. Prefers the resized "medium"
+ * rendition (smaller, always WebP) and falls back to the original.
  */
-async function buildVisionContentBlocks(
-  evidenceRow: { evidenceType: string | null; contentUrl: string | null; latitude: string | null; longitude: string | null; capturedAt: Date | null; id: string },
-  mission: { title: string; description: string; evidenceRequired: unknown; requiredLatitude: string | null; requiredLongitude: string | null },
-): Promise<Anthropic.MessageCreateParams["messages"][0]["content"]> {
-  const contentBlocks: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
-  const isImageEvidence = ["photo", "image"].includes(evidenceRow.evidenceType ?? "");
-
-  if (isImageEvidence && evidenceRow.contentUrl) {
-    try {
-      const imageUrl = await getSignedUrl(evidenceRow.contentUrl, 600);
-      const imageResponse = await fetch(imageUrl);
-      if (imageResponse.ok) {
-        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-        const base64Data = imageBuffer.toString("base64");
-        const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
-        const mediaType = contentType as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-        contentBlocks.push({
-          type: "image",
-          source: { type: "base64", media_type: mediaType, data: base64Data },
-        });
-        logger.info({ evidenceId: evidenceRow.id }, "Image included in AI verification request");
-      } else {
-        logger.warn({ evidenceId: evidenceRow.id, status: imageResponse.status }, "Failed to fetch image, using metadata only");
-      }
-    } catch (err) {
-      logger.warn({ evidenceId: evidenceRow.id, error: err instanceof Error ? err.message : "Unknown" }, "Error fetching image, using metadata only");
-    }
+async function loadVisionImage(
+  candidates: Array<string | null | undefined>,
+): Promise<{ data: string; mediaType: VisionMediaType } | null> {
+  for (const stored of candidates) {
+    if (!stored) continue;
+    const file = await readStoredFile(stored);
+    if (!file) continue;
+    const mediaType = file.contentType.split(";")[0]!.trim() as VisionMediaType;
+    if (!VISION_MEDIA_TYPES.includes(mediaType)) continue;
+    if (file.buffer.length > MAX_VISION_IMAGE_BYTES) continue;
+    return { data: file.buffer.toString("base64"), mediaType };
   }
-
-  contentBlocks.push({
-    type: "text",
-    text: `Mission: "${mission.title}"
-Description: ${mission.description}
-Evidence requirements: ${JSON.stringify(mission.evidenceRequired)}
-Evidence type: ${evidenceRow.evidenceType}
-GPS coordinates: ${evidenceRow.latitude}, ${evidenceRow.longitude}
-Mission location: ${mission.requiredLatitude}, ${mission.requiredLongitude}
-Captured at: ${evidenceRow.capturedAt?.toISOString() ?? "unknown"}
-
-Please verify this evidence submission using the verify_evidence tool.`,
-  });
-
-  return contentBlocks;
+  return null;
 }
 
 /**
@@ -271,6 +231,11 @@ export async function processEvidenceVerification(
 
   const { evidenceRow, mission } = result;
 
+  if (!isAiConfigured()) {
+    await routeEvidenceToHumanReview(db, evidenceId, "AI verification is not configured on this instance");
+    return;
+  }
+
   await db
     .update(evidence)
     .set({ verificationStage: "ai_processing", updatedAt: new Date() })
@@ -278,92 +243,133 @@ export async function processEvidenceVerification(
 
   const budgetAvailable = await checkVisionBudget(redis);
   if (!budgetAvailable) {
-    logger.warn({ evidenceId }, "Vision budget exceeded, routing to peer review");
-    await routeToPeerReview(db, evidenceId, evidenceRow.submittedByHumanId, "Budget exceeded");
+    logger.warn({ evidenceId }, "Vision budget exceeded, routing to human review");
+    await routeEvidenceToHumanReview(db, evidenceId, "Daily AI verification budget reached");
     return;
   }
 
+  // The model may only judge what it can see. Videos, documents and images we
+  // cannot load go to people.
+  const isImageEvidence = ["photo", "image"].includes(evidenceRow.evidenceType ?? "");
+  const image = isImageEvidence
+    ? await loadVisionImage([evidenceRow.mediumUrl, evidenceRow.contentUrl])
+    : null;
+
+  if (!image) {
+    await routeEvidenceToHumanReview(
+      db,
+      evidenceId,
+      isImageEvidence
+        ? "The submitted image could not be loaded for AI verification"
+        : `AI verification does not support ${evidenceRow.evidenceType} evidence`,
+    );
+    return;
+  }
+
+  const verdict = await askVisionModel(image, evidenceRow, mission);
+  if (verdict.called) {
+    await incrementVisionCost(redis);
+  }
+
+  if (!verdict.ok) {
+    logger.warn({ evidenceId, reason: verdict.reason }, "No usable AI verdict — routing to human review");
+    if (verdict.note) {
+      await db
+        .update(evidence)
+        .set({ aiVerificationReasoning: verdict.note, updatedAt: new Date() })
+        .where(eq(evidence.id, evidenceId));
+    }
+    await routeEvidenceToHumanReview(db, evidenceId, verdict.reason);
+    return;
+  }
+
+  await db
+    .update(evidence)
+    .set({
+      aiVerificationScore: String(verdict.score.toFixed(2)),
+      aiVerificationReasoning: verdict.output.reasoning,
+      updatedAt: new Date(),
+    })
+    .where(eq(evidence.id, evidenceId));
+
+  await routeByScore(db, evidenceId, verdict.score, verdict.output);
+}
+
+type VisionVerdict =
+  | { ok: true; called: true; score: number; output: VerifyToolOutput }
+  | { ok: false; called: boolean; reason: string; note?: string };
+
+/**
+ * Ask the vision model about one image. Never throws: every failure comes back
+ * as a reason, and the caller hands the evidence to a person.
+ */
+async function askVisionModel(
+  image: { data: string; mediaType: VisionMediaType },
+  evidenceRow: { id: string; evidenceType: string | null; latitude: string | null; longitude: string | null; capturedAt: Date | null },
+  mission: { title: string; description: string; evidenceRequired: unknown; requiredLatitude: string | null; requiredLongitude: string | null },
+): Promise<VisionVerdict> {
+  let response: Anthropic.Message;
   try {
     const anthropic = new Anthropic();
-    const contentBlocks = await buildVisionContentBlocks(evidenceRow, mission);
 
-    const response = await anthropic.messages.create({
+    response = await anthropic.messages.create({
       model: SONNET_MODEL,
       max_tokens: 1024,
       system: "You are an evidence verification assistant. Analyze the submitted evidence for a social good mission. Be thorough but fair.",
       tools: [VERIFY_TOOL],
       tool_choice: { type: "tool", name: "verify_evidence" },
-      messages: [{ role: "user", content: contentBlocks }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: image.mediaType, data: image.data } },
+            {
+              type: "text",
+              text: `Mission: "${mission.title}"
+Description: ${mission.description}
+Evidence requirements: ${JSON.stringify(mission.evidenceRequired)}
+Evidence type: ${evidenceRow.evidenceType}
+GPS coordinates: ${evidenceRow.latitude}, ${evidenceRow.longitude}
+Mission location: ${mission.requiredLatitude}, ${mission.requiredLongitude}
+Captured at: ${evidenceRow.capturedAt?.toISOString() ?? "unknown"}
+
+Please verify this evidence submission using the verify_evidence tool.`,
+            },
+          ],
+        },
+      ],
     });
-
-    await incrementVisionCost(redis);
-
-    const toolUse = response.content.find((block) => block.type === "tool_use");
-    if (!toolUse || toolUse.type !== "tool_use") {
-      logger.warn({ evidenceId }, "No tool_use in response, routing to peer review");
-      await routeToPeerReview(db, evidenceId, evidenceRow.submittedByHumanId, "AI response parsing failed");
-      return;
-    }
-
-    // Sprint 20: Validate vision verification response with strict Zod schema (FR-002)
-    const parseResult = visionVerificationResponseSchema.safeParse(toolUse.input);
-    if (!parseResult.success) {
-      logger.error(
-        { evidenceId, zodErrors: parseResult.error.flatten() },
-        "Vision verification response failed Zod validation — routing to manual review",
-      );
-      await db.update(evidence).set({
-        verificationStage: "peer_review",
-        aiVerificationReasoning: "AI verification response failed schema validation",
-        updatedAt: new Date(),
-      }).where(eq(evidence.id, evidenceId));
-      await routeToPeerReview(db, evidenceId, evidenceRow.submittedByHumanId, "Zod validation failed");
-      return;
-    }
-
-    const output = parseResult.data as VerifyToolOutput;
-    const score = Math.max(0, Math.min(1, output.overallConfidence));
-
-    await db
-      .update(evidence)
-      .set({
-        aiVerificationScore: String(score.toFixed(2)),
-        aiVerificationReasoning: output.reasoning,
-        updatedAt: new Date(),
-      })
-      .where(eq(evidence.id, evidenceId));
-
-    await routeByScore(db, evidenceId, evidenceRow, score, output);
   } catch (error) {
+    // The SDK has already retried rate limits, 5xx and network errors. Whatever
+    // is left (bad key, retired model, refused request, persistent outage) will
+    // not be fixed by running the job again, so a person takes over.
+    const message = error instanceof Error ? error.message : "Unknown";
+    logger.error({ evidenceId: evidenceRow.id, error: message }, "AI verification call failed");
+    return { ok: false, called: false, reason: `AI verification failed: ${message}` };
+  }
+
+  const toolUse = response.content.find((block) => block.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    return { ok: false, called: true, reason: "AI response could not be parsed" };
+  }
+
+  // Sprint 20: Validate vision verification response with strict Zod schema (FR-002)
+  const parseResult = visionVerificationResponseSchema.safeParse(toolUse.input);
+  if (!parseResult.success) {
     logger.error(
-      { evidenceId, error: error instanceof Error ? error.message : "Unknown" },
-      "AI verification failed",
+      { evidenceId: evidenceRow.id, zodErrors: parseResult.error.flatten() },
+      "Vision verification response failed Zod validation",
     );
-    await routeToPeerReview(db, evidenceId, evidenceRow.submittedByHumanId, "AI verification error");
-    throw error;
+    return {
+      ok: false,
+      called: true,
+      reason: "AI response failed schema validation",
+      note: "AI verification response failed schema validation",
+    };
   }
-}
 
-async function routeToPeerReview(
-  db: PostgresJsDatabase,
-  evidenceId: string,
-  submitterHumanId: string,
-  _reason: string,
-): Promise<void> {
-  await db
-    .update(evidence)
-    .set({
-      verificationStage: "peer_review",
-      updatedAt: new Date(),
-    })
-    .where(eq(evidence.id, evidenceId));
-
-  // Attempt to select peer reviewers (best effort)
-  try {
-    await selectPeerReviewers(db, submitterHumanId);
-  } catch {
-    // Non-fatal: reviewers will pick up from queue
-  }
+  const output = parseResult.data as VerifyToolOutput;
+  return { ok: true, called: true, score: Math.max(0, Math.min(1, output.overallConfidence)), output };
 }
 
 // --- Before/After Pair Comparison (Sprint 12 — T057) ---
@@ -386,6 +392,7 @@ async function processBeforeAfterComparison(
       id: evidence.id,
       missionId: evidence.missionId,
       contentUrl: evidence.contentUrl,
+      mediumUrl: evidence.mediumUrl,
       photoSequenceType: evidence.photoSequenceType,
       submittedByHumanId: evidence.submittedByHumanId,
       latitude: evidence.latitude,
@@ -402,33 +409,31 @@ async function processBeforeAfterComparison(
     return;
   }
 
+  if (!isAiConfigured()) {
+    await routeEvidenceToHumanReview(db, afterRow.id, "AI verification is not configured on this instance");
+    return;
+  }
+
   // Check pHash similarity — flag if before/after are too similar (possible fraud)
   try {
     const { calculatePhash, hammingDistance } = await import("../lib/phash.js");
-    if (beforeRow.contentUrl && afterRow.contentUrl) {
-      const beforeUrl = await getSignedUrl(beforeRow.contentUrl, 600);
-      const afterUrl = await getSignedUrl(afterRow.contentUrl, 600);
-      const [beforeResp, afterResp] = await Promise.all([
-        fetch(beforeUrl), fetch(afterUrl),
+    const [beforeFile, afterFile] = await Promise.all([
+      beforeRow.contentUrl ? readStoredFile(beforeRow.contentUrl) : null,
+      afterRow.contentUrl ? readStoredFile(afterRow.contentUrl) : null,
+    ]);
+    if (beforeFile && afterFile) {
+      const [beforeHash, afterHash] = await Promise.all([
+        calculatePhash(beforeFile.buffer), calculatePhash(afterFile.buffer),
       ]);
-      if (beforeResp.ok && afterResp.ok) {
-        const [beforeBuf, afterBuf] = await Promise.all([
-          Buffer.from(await beforeResp.arrayBuffer()),
-          Buffer.from(await afterResp.arrayBuffer()),
-        ]);
-        const [beforeHash, afterHash] = await Promise.all([
-          calculatePhash(beforeBuf), calculatePhash(afterBuf),
-        ]);
-        const distance = hammingDistance(beforeHash, afterHash);
-        if (distance < 5) {
-          logger.warn({ pairId, distance }, "Before/after photos too similar — flagging as potential fraud");
-          await db.update(evidence).set({
-            verificationStage: "peer_review",
-            aiVerificationReasoning: `Before/after photos suspiciously similar (hamming distance: ${distance}). Flagged for peer review.`,
-            updatedAt: new Date(),
-          }).where(eq(evidence.id, afterRow.id));
-          return;
-        }
+      const distance = hammingDistance(beforeHash, afterHash);
+      if (distance < 5) {
+        logger.warn({ pairId, distance }, "Before/after photos too similar — flagging as potential fraud");
+        await db.update(evidence).set({
+          aiVerificationReasoning: `Before/after photos suspiciously similar (hamming distance: ${distance}). Flagged for human review.`,
+          updatedAt: new Date(),
+        }).where(eq(evidence.id, afterRow.id));
+        await routeEvidenceToHumanReview(db, afterRow.id, `Before/after photos are nearly identical (hamming distance ${distance})`);
+        return;
       }
     }
   } catch (err) {
@@ -438,8 +443,8 @@ async function processBeforeAfterComparison(
   // Budget check
   const budgetAvailable = await checkVisionBudget(redis);
   if (!budgetAvailable) {
-    logger.warn({ pairId }, "Vision budget exceeded for pair comparison, routing to peer review");
-    await routeToPeerReview(db, afterRow.id, afterRow.submittedByHumanId, "Budget exceeded");
+    logger.warn({ pairId }, "Vision budget exceeded for pair comparison, routing to human review");
+    await routeEvidenceToHumanReview(db, afterRow.id, "Daily AI verification budget reached");
     return;
   }
 
@@ -457,44 +462,26 @@ async function processBeforeAfterComparison(
       ? `${mission.title}: ${mission.description}`
       : "Social good mission";
 
-    // Fetch images as base64
-    let beforeBase64 = "";
-    let afterBase64 = "";
-    let beforeMediaType = "image/jpeg";
-    let afterMediaType = "image/jpeg";
+    const [beforeImage, afterImage] = await Promise.all([
+      loadVisionImage([beforeRow.mediumUrl, beforeRow.contentUrl]),
+      loadVisionImage([afterRow.mediumUrl, afterRow.contentUrl]),
+    ]);
 
-    if (beforeRow.contentUrl) {
-      const url = await getSignedUrl(beforeRow.contentUrl, 600);
-      const resp = await fetch(url);
-      if (resp.ok) {
-        beforeBase64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
-        beforeMediaType = resp.headers.get("content-type") || "image/jpeg";
-      }
-    }
-    if (afterRow.contentUrl) {
-      const url = await getSignedUrl(afterRow.contentUrl, 600);
-      const resp = await fetch(url);
-      if (resp.ok) {
-        afterBase64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
-        afterMediaType = resp.headers.get("content-type") || "image/jpeg";
-      }
-    }
-
-    if (!beforeBase64 || !afterBase64) {
-      logger.warn({ pairId }, "Could not fetch images for comparison, routing to peer review");
-      await routeToPeerReview(db, afterRow.id, afterRow.submittedByHumanId, "Image fetch failed");
+    if (!beforeImage || !afterImage) {
+      logger.warn({ pairId }, "Could not load images for comparison, routing to human review");
+      await routeEvidenceToHumanReview(db, afterRow.id, "The before/after images could not be loaded for AI verification");
       return;
     }
 
     await incrementVisionCost(redis);
 
     const result = await comparePhotos(
-      beforeBase64, beforeMediaType,
-      afterBase64, afterMediaType,
+      beforeImage.data, beforeImage.mediaType,
+      afterImage.data, afterImage.mediaType,
       missionContext,
     );
 
-    // Update both evidence records with comparison results
+    // Update the "after" evidence record with comparison results
     const score = result.confidence;
     await db.update(evidence).set({
       aiVerificationScore: String(score.toFixed(2)),
@@ -502,28 +489,16 @@ async function processBeforeAfterComparison(
       updatedAt: new Date(),
     }).where(eq(evidence.id, afterRow.id));
 
-    // Route based on decision
-    await routeByScore(db, afterRow.id, afterRow, score, {
-      relevanceScore: result.improvementScore,
-      gpsPlausibility: 1,
-      timestampPlausibility: 1,
-      authenticityScore: result.confidence,
-      requirementChecklist: [],
-      overallConfidence: result.confidence,
-      reasoning: result.reasoning,
-    });
+    await routeByScore(db, afterRow.id, score, { reasoning: result.reasoning });
 
     logger.info(
       { pairId, decision: result.decision, improvementScore: result.improvementScore },
       "Before/after pair comparison completed",
     );
   } catch (err) {
-    logger.error(
-      { pairId, error: (err as Error).message },
-      "Before/after comparison failed",
-    );
-    await routeToPeerReview(db, afterRow.id, afterRow.submittedByHumanId, "Comparison error");
-    throw err;
+    const message = (err as Error).message;
+    logger.error({ pairId, error: message }, "Before/after comparison failed — routing to human review");
+    await routeEvidenceToHumanReview(db, afterRow.id, `AI comparison failed: ${message}`);
   }
 }
 
@@ -558,15 +533,29 @@ export function createEvidenceVerificationWorker(): Worker<VerifyJobData> {
     logger.info({ jobId: job.id }, "Evidence verification job completed");
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", async (job, err) => {
     const attemptsMade = job?.attemptsMade ?? 0;
     const maxAttempts = job?.opts?.attempts ?? 3;
 
     if (attemptsMade >= maxAttempts) {
       logger.error(
         { jobId: job?.id, attemptsMade, error: err.message },
-        "DEAD LETTER: Evidence verification job exhausted all retries",
+        "DEAD LETTER: Evidence verification job exhausted all retries — sending to human review",
       );
+      // Last line of defence (e.g. the database was down for every attempt):
+      // never leave evidence waiting on a job that will not run again.
+      const evidenceId = job?.data?.evidenceId ?? job?.data?.afterEvidenceId;
+      const db = getDb();
+      if (db && evidenceId) {
+        try {
+          await routeEvidenceToHumanReview(db, evidenceId, `Verification job failed: ${err.message}`);
+        } catch (routeErr) {
+          logger.error(
+            { evidenceId, error: (routeErr as Error).message },
+            "Could not route dead-lettered evidence to human review",
+          );
+        }
+      }
     } else {
       logger.warn(
         { jobId: job?.id, attemptsMade, error: err.message },

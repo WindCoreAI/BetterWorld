@@ -118,6 +118,82 @@ jobs:
         run: pnpm db:migrate
       - run: pnpm test:integration
 
+  core-loop:
+    # The whole product in one check, against a real database, queue and workers
+    # with nothing mocked: sign-up → agent → problem → guardrails → solution →
+    # mission → claim → photo evidence → verification → reward → impact.
+    # Runs without an AI key or email provider, i.e. the way a fresh self-hosted
+    # instance starts, so the human-review paths are exercised end to end.
+    name: Core Loop (end to end, no mocks)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: betterworld_test
+          POSTGRES_USER: betterworld
+          POSTGRES_PASSWORD: betterworld_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://betterworld:betterworld_test@localhost:5432/betterworld_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-test-jwt-secret-minimum-16-chars
+      NODE_ENV: test
+      EMBEDDED_WORKERS: "true"
+      ADMIN_EMAILS: operator@loop.test
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install PostGIS in postgres service
+        run: |
+          PGCONTAINER=$(docker ps --filter "publish=5432" --format "{{.ID}}")
+          docker exec "$PGCONTAINER" sh -c "apt-get update && apt-get install -y --no-install-recommends postgresql-16-postgis-3"
+      - name: Setup database extensions
+        run: psql "$DATABASE_URL" -f scripts/init-db.sql
+      - name: Run database migrations
+        run: pnpm db:migrate
+      - name: Start API with embedded workers
+        run: |
+          cd apps/api
+          nohup ./node_modules/.bin/tsx src/index.ts > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:4000/api/v1/health > /dev/null; then
+              echo "API is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not start"
+          cat "$RUNNER_TEMP/api.log"
+          exit 1
+      - name: Run the core loop
+        env:
+          API_LOG: ${{ runner.temp }}/api.log
+        run: node scripts/loop-check.mjs
+      - name: API log (on failure)
+        if: failure()
+        run: tail -n 300 "$RUNNER_TEMP/api.log"
+
   guardrail-regression:
     name: Guardrail Regression Suite (200+ adversarial cases)
     runs-on: ubuntu-latest
@@ -174,7 +250,10 @@ jobs:
 
   e2e:
     name: E2E Golden Path (FR-032)
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, and the Playwright version in the
+    # lockfile cannot install its browser dependencies there ("Playwright does
+    # not support chromium on ubuntu26.04-x64"). Unpin when Playwright is upgraded.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: pgvector/pgvector:pg16

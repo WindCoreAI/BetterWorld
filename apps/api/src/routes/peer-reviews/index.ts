@@ -11,7 +11,6 @@ import {
   peerReviews,
   missions,
   reviewHistory,
-  verificationAuditLog,
 } from "@betterworld/db";
 import { AppError } from "@betterworld/shared";
 import { and, eq, desc, lt, sql, isNull, ne } from "drizzle-orm";
@@ -22,12 +21,13 @@ import { z } from "zod";
 import type { AppEnv } from "../../app.js";
 import { getDb, getRedis } from "../../lib/container.js";
 import { haversineDistance } from "../../lib/evidence-helpers.js";
+import { finalizeEvidence, type EvidenceVerdict } from "../../lib/evidence-outcome.js";
 import { updateReputation } from "../../lib/reputation-engine.js";
-import { distributeEvidenceReward, distributePeerReviewReward } from "../../lib/reward-helpers.js";
+import { distributePeerReviewReward } from "../../lib/reward-helpers.js";
+import { getSignedUrl } from "../../lib/storage.js";
 import { recordActivity } from "../../lib/streak-tracker.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import { humanAuth } from "../../middleware/humanAuth.js";
-import { broadcast } from "../../ws/feed.js";
 
 const peerReviewRoutes = new Hono<AppEnv>();
 
@@ -104,7 +104,7 @@ peerReviewRoutes.get("/pending", humanAuth(), async (c) => {
   const hasMore = rows.length > limit;
   const items = hasMore ? rows.slice(0, limit) : rows;
 
-  const reviews = items.map((row) => {
+  const reviews = await Promise.all(items.map(async (row) => {
     const eLat = row.evidenceLatitude ? Number(row.evidenceLatitude) : null;
     const eLng = row.evidenceLongitude ? Number(row.evidenceLongitude) : null;
     const mLat = row.missionLatitude ? Number(row.missionLatitude) : null;
@@ -122,8 +122,9 @@ peerReviewRoutes.get("/pending", humanAuth(), async (c) => {
         ? row.missionDescription.slice(0, 300) + "..."
         : row.missionDescription,
       evidenceType: row.evidenceType,
-      contentUrl: row.contentUrl,
-      thumbnailUrl: row.thumbnailUrl,
+      // Short-lived links: reviewers must be able to actually see the evidence
+      contentUrl: row.contentUrl ? await getSignedUrl(row.contentUrl) : null,
+      thumbnailUrl: row.thumbnailUrl ? await getSignedUrl(row.thumbnailUrl) : null,
       missionLatitude: mLat,
       missionLongitude: mLng,
       evidenceLatitude: eLat,
@@ -131,7 +132,7 @@ peerReviewRoutes.get("/pending", humanAuth(), async (c) => {
       gpsDistanceMeters,
       submittedAt: row.submittedAt,
     };
-  });
+  }));
 
   const lastItem = items[items.length - 1];
 
@@ -159,14 +160,18 @@ interface EvidenceRowForVerdict {
   aiVerificationScore: string | null;
 }
 
-async function computeAndApplyVerdict(
-  db: ReturnType<typeof getDb>,
+/**
+ * Combine peer votes (60%) with the AI score (40%) into a final verdict.
+ * Pure: reads the votes, decides, and leaves applying the verdict to
+ * finalizeEvidence so the claim, mission and reward are handled in one place.
+ */
+async function computePeerVerdict(
+  db: PostgresJsDatabase,
   evidenceId: string,
   newCount: number,
   evidenceRow: EvidenceRowForVerdict,
-): Promise<void> {
-  if (!db) return;
-  if (newCount < evidenceRow.peerReviewsNeeded) return;
+): Promise<EvidenceVerdict | null> {
+  if (newCount < evidenceRow.peerReviewsNeeded) return null;
 
   const allReviews = await db
     .select({ verdict: peerReviews.verdict, confidence: peerReviews.confidence })
@@ -186,36 +191,41 @@ async function computeAndApplyVerdict(
   const aiScore = evidenceRow.aiVerificationScore ? Number(evidenceRow.aiVerificationScore) : 0.5;
   const finalConfidence = aiScore * 0.4 + peerConfidence * 0.6;
   const finalVerdict = finalConfidence >= 0.6 && peerVerdict === "approved" ? "verified" : "rejected";
-  const newStage = finalVerdict === "verified" ? "verified" : "rejected";
 
-  await db.update(evidence).set({
-    peerVerdict,
-    peerAverageConfidence: String(peerConfidence.toFixed(2)),
-    finalVerdict,
-    finalConfidence: String(finalConfidence.toFixed(2)),
-    verificationStage: newStage,
-    updatedAt: new Date(),
-  }).where(eq(evidence.id, evidenceId));
-
-  await db.insert(verificationAuditLog).values({
+  return {
     evidenceId,
-    decisionSource: "peer",
-    decision: finalVerdict === "verified" ? "approved" : "rejected",
-    score: String(finalConfidence.toFixed(2)),
+    verdict: finalVerdict,
+    confidence: finalConfidence,
+    source: "peer",
     reasoning: `Peer verdict: ${peerVerdict}, confidence: ${peerConfidence.toFixed(2)}, final: ${finalConfidence.toFixed(2)}`,
-    metadata: { peerReviewCount: newCount, peerConfidence, aiScore, finalConfidence },
-  });
+    auditMetadata: { peerReviewCount: newCount, peerConfidence, aiScore, finalConfidence },
+    evidenceFields: {
+      peerVerdict,
+      peerAverageConfidence: String(peerConfidence.toFixed(2)),
+    },
+  };
+}
 
-  if (finalVerdict === "verified") {
-    try { await distributeEvidenceReward(db, evidenceId); } catch { /* Non-fatal */ }
-    // Update submitter reputation and streak after peer-review approval
-    try {
-      await updateReputation(db as PostgresJsDatabase, evidenceRow.submittedByHumanId, "peer_review_verified", evidenceId, "evidence");
-      await recordActivity(db as PostgresJsDatabase, evidenceRow.submittedByHumanId);
-    } catch { /* Non-fatal */ }
-    broadcast({ type: "evidence:verified", data: { evidenceId, missionId: evidenceRow.missionId, humanId: evidenceRow.submittedByHumanId, finalConfidence } });
-  } else {
-    broadcast({ type: "evidence:rejected", data: { evidenceId, missionId: evidenceRow.missionId, humanId: evidenceRow.submittedByHumanId, reason: `Peer review verdict: ${peerVerdict}` } });
+// --- Vote rate limit: 30 per hour per reviewer ---
+
+const VOTES_PER_HOUR = 30;
+
+async function assertVoteRateLimit(humanId: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  const count = await redis.get(`rate:peer:vote:${humanId}`);
+  if (count && parseInt(count, 10) >= VOTES_PER_HOUR) {
+    throw new AppError("RATE_LIMITED", `Vote rate limit exceeded (${VOTES_PER_HOUR}/hour)`);
+  }
+}
+
+async function recordVote(humanId: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  const voteKey = `rate:peer:vote:${humanId}`;
+  const count = await redis.incr(voteKey);
+  if (count === 1) {
+    await redis.expire(voteKey, 3600);
   }
 }
 
@@ -236,14 +246,7 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
   const human = c.get("human");
 
   // Rate limit: 30 votes per hour
-  const redis = getRedis();
-  if (redis) {
-    const voteKey = `rate:peer:vote:${human.id}`;
-    const count = await redis.get(voteKey);
-    if (count && parseInt(count, 10) >= 30) {
-      throw new AppError("RATE_LIMITED", "Vote rate limit exceeded (30/hour)");
-    }
-  }
+  await assertVoteRateLimit(human.id);
 
   const body = await c.req.json();
   const parsed = voteSchema.safeParse(body);
@@ -298,8 +301,8 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
     throw new AppError("CONFLICT", "Already voted on this evidence");
   }
 
-  // Create peer review record, increment count, add history, and compute verdict in a transaction
-  const { review, newCount: _newCount } = await db.transaction(async (tx) => {
+  // Record the vote, increment the count and add history atomically
+  const { review, newCount } = await db.transaction(async (tx) => {
     const [reviewRow] = await tx
       .insert(peerReviews)
       .values({
@@ -311,14 +314,15 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
       })
       .returning();
 
-    const txNewCount = evidenceRow.peerReviewCount + 1;
-    await tx
+    // Take the count from the database so concurrent votes cannot miscount
+    const [counted] = await tx
       .update(evidence)
       .set({
         peerReviewCount: sql`${evidence.peerReviewCount} + 1`,
         updatedAt: new Date(),
       })
-      .where(eq(evidence.id, evidenceId));
+      .where(eq(evidence.id, evidenceId))
+      .returning({ peerReviewCount: evidence.peerReviewCount });
 
     await tx.insert(reviewHistory).values({
       reviewerHumanId: human.id,
@@ -326,11 +330,15 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
       evidenceId,
     });
 
-    // Compute and apply verdict if enough reviews collected
-    await computeAndApplyVerdict(tx as unknown as ReturnType<typeof getDb>, evidenceId, txNewCount, evidenceRow);
-
-    return { review: reviewRow, newCount: txNewCount };
+    return { review: reviewRow, newCount: counted?.peerReviewCount ?? evidenceRow.peerReviewCount + 1 };
   });
+
+  // Enough votes → reach a verdict and close the loop (claim, mission, reward).
+  // finalizeEvidence is idempotent, so two "last" votes racing here are harmless.
+  const peerVerdict = await computePeerVerdict(db, evidenceId, newCount, evidenceRow);
+  if (peerVerdict) {
+    await finalizeEvidence(db, peerVerdict);
+  }
 
   // Distribute peer review reward (outside transaction — non-critical)
   let rewardAmount = 2;
@@ -358,14 +366,7 @@ peerReviewRoutes.post("/:evidenceId/vote", humanAuth(), async (c) => {
     // Non-fatal
   }
 
-  // Increment rate limit
-  if (redis) {
-    const voteKey = `rate:peer:vote:${human.id}`;
-    const count = await redis.incr(voteKey);
-    if (count === 1) {
-      await redis.expire(voteKey, 3600);
-    }
-  }
+  await recordVote(human.id);
 
   return c.json(
     {

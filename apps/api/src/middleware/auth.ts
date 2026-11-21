@@ -1,7 +1,7 @@
 /* eslint-disable complexity, max-lines-per-function */
 import crypto from "crypto";
 
-import { AppError, loadConfig } from "@betterworld/shared";
+import { AppError, isAdminEmail, loadConfig } from "@betterworld/shared";
 import type { ClaimStatus } from "@betterworld/shared";
 import bcrypt from "bcrypt";
 import { createMiddleware } from "hono/factory";
@@ -177,7 +177,28 @@ export function requireAgent() {
 }
 
 /**
- * Require a valid admin JWT.
+ * Whether a human account is an operator: either its stored role is "admin",
+ * or its verified email is listed in ADMIN_EMAILS.
+ */
+export function isOperatorAccount(human: {
+  role: string;
+  email: string;
+  emailVerified: boolean;
+}): boolean {
+  if (human.role === "admin") return true;
+  return human.emailVerified && isAdminEmail(human.email);
+}
+
+/**
+ * Require an operator.
+ *
+ * Accepts the access token of a signed-in human who is an operator (see
+ * isOperatorAccount) — so the person running an instance reviews content with
+ * their normal login. Tokens that carry an explicit `role: "admin"` claim are
+ * still accepted for service-to-service use.
+ *
+ * Until this accepted normal sign-ins there was no way to obtain a token the
+ * review queue would accept: no endpoint ever issued one.
  */
 export function requireAdmin() {
   return createMiddleware<AuthEnv>(async (c, next) => {
@@ -189,27 +210,70 @@ export function requireAdmin() {
     const token = authHeader.slice(7);
     const secret = new TextEncoder().encode(getConfig().JWT_SECRET);
 
+    let payload: jose.JWTPayload;
     try {
-      const { payload } = await jose.jwtVerify(token, secret);
-      const sub = payload.sub as string;
-      const role = payload.role as string;
-      const email = payload.email as string;
-      const displayName = payload.displayName as string;
-
-      if (role !== "admin") {
-        throw new AppError("FORBIDDEN", "Admin access required");
-      }
-
-      c.set("user", { sub, role, email, displayName });
-      c.set("authRole", "admin");
+      ({ payload } = await jose.jwtVerify(token, secret));
     } catch (err) {
-      if (err instanceof AppError) throw err;
       if (err instanceof jose.errors.JWTExpired) {
         throw new AppError("TOKEN_EXPIRED", "JWT has expired");
       }
       throw new AppError("UNAUTHORIZED", "Invalid JWT");
     }
 
+    // Service token with an explicit admin role claim
+    if (payload.role === "admin" && typeof payload.sub === "string") {
+      c.set("user", {
+        sub: payload.sub,
+        role: "admin",
+        email: payload.email as string,
+        displayName: payload.displayName as string,
+      });
+      c.set("authRole", "admin");
+      await next();
+      return;
+    }
+
+    // Signed-in human: look the account up and check it is an operator
+    const userId = typeof payload.userId === "string" ? payload.userId : undefined;
+    if (!userId || payload.type === "refresh") {
+      throw new AppError("FORBIDDEN", "Admin access required");
+    }
+
+    const { getDb } = await import("../lib/container.js");
+    const db = getDb();
+    if (!db) {
+      throw new AppError("SERVICE_UNAVAILABLE", "Database not available");
+    }
+
+    const { eq } = await import("drizzle-orm");
+    const { humans } = await import("@betterworld/db");
+    const [human] = await db
+      .select({
+        id: humans.id,
+        email: humans.email,
+        displayName: humans.displayName,
+        role: humans.role,
+        isActive: humans.isActive,
+        emailVerified: humans.emailVerified,
+      })
+      .from(humans)
+      .where(eq(humans.id, userId))
+      .limit(1);
+
+    if (!human || !human.isActive) {
+      throw new AppError("UNAUTHORIZED", "Account not found or deactivated");
+    }
+    if (!isOperatorAccount(human)) {
+      throw new AppError("FORBIDDEN", "Admin access required");
+    }
+
+    c.set("user", {
+      sub: human.id,
+      role: "admin",
+      email: human.email,
+      displayName: human.displayName,
+    });
+    c.set("authRole", "admin");
     await next();
   });
 }
@@ -235,8 +299,15 @@ export function optionalAuth() {
 
       try {
         const { payload } = await jose.jwtVerify(token, secret);
+        if (payload.type === "refresh") {
+          // Refresh tokens are only valid at the refresh endpoint.
+          throw new Error("refresh token presented as access token");
+        }
         c.set("user", {
-          sub: payload.sub as string,
+          // Human access tokens carry `userId`, not `sub`. Without this fallback
+          // every signed-in human shared one identity ("undefined") — and with it
+          // one rate-limit bucket for the whole platform.
+          sub: (payload.sub ?? payload.userId) as string,
           role: payload.role as string,
           email: payload.email as string,
           displayName: payload.displayName as string,

@@ -141,6 +141,13 @@
       "when": 1771500000000,
       "tag": "0019_agent_owner_required",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1771600000000,
+      "tag": "0020_security_hardening",
+      "breakpoints": true
     }
   ]
 }

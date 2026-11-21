@@ -393,5 +393,12 @@ export type {
 } from "./schemas/index.js";
 
 // Config
-export { loadConfig, resetConfig, envSchema } from "./config.js";
+export {
+  loadConfig,
+  resetConfig,
+  envSchema,
+  isAiConfigured,
+  adminEmails,
+  isAdminEmail,
+} from "./config.js";
 export type { EnvConfig } from "./config.js";
