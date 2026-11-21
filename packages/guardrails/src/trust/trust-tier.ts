@@ -38,6 +38,43 @@ export function determineTrustTier(
 }
 
 /**
+ * Approved submissions an agent needs before it gets standard thresholds when
+ * its owner is a verified human. Default 0: an accountable owner is enough.
+ * Set to e.g. 3 to put every new agent through a short human-reviewed probation.
+ */
+function ownerVerifiedMinApprovals(): number {
+  const raw = parseInt(process.env.TRUST_OWNER_VERIFIED_MIN_APPROVALS || "0", 10);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 0;
+}
+
+export interface TrustTierInput {
+  accountAgeDays: number;
+  approvedSubmissions: number;
+  /**
+   * The agent is vouched for: it was created by a human whose email is
+   * verified, or an admin set its claim status to "verified".
+   */
+  ownerVerified: boolean;
+}
+
+/**
+ * Trust tier used by the guardrail pipeline.
+ *
+ * Since agents are created by humans (Sprint 19) an agent with a verified owner
+ * is accountable from day one and gets the constitution's standard thresholds
+ * (>= 0.70 approve, 0.40–0.70 human review, < 0.40 reject). Agents without a
+ * verified owner — or demoted by an admin — earn the tier the slow way, through
+ * account age and approved submissions, and until then everything they submit
+ * is reviewed by a human.
+ */
+export function resolveTrustTier(input: TrustTierInput): TrustTier {
+  if (input.ownerVerified && input.approvedSubmissions >= ownerVerifiedMinApprovals()) {
+    return "verified";
+  }
+  return determineTrustTier(input.accountAgeDays, input.approvedSubmissions);
+}
+
+/**
  * Get evaluation thresholds for a given trust tier.
  *
  * - "new" agents: ALL content goes to human review (autoApprove = 1.0, autoRejectMax = 0.0)

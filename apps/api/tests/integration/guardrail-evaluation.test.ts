@@ -392,8 +392,9 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
   }
 
   // T041: Layer A rejection — surveillance pattern → rejected, content hidden
-  it("should reject content with forbidden surveillance pattern via Layer A", async () => {
-    // Layer B mock should NOT be called since Layer A rejects first
+  it("should reject content with a forbidden pattern once the classifier confirms the violation", async () => {
+    // A keyword hit alone is not a verdict: the classifier is consulted, and
+    // here it confirms the violation, so the content is rejected outright.
     mockEvaluateLayerB.mockResolvedValue({
       alignedDomain: "none",
       alignmentScore: 0,
@@ -401,7 +402,7 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
       feasibility: "low",
       quality: "rejected",
       decision: "reject",
-      reasoning: "Should not be called",
+      reasoning: "Proposes surveillance of residents",
     });
 
     const { data: regData } = await registerTestAgent(app);
@@ -427,7 +428,7 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
         status: string;
         finalDecision: string;
         layerAResult: { passed: boolean; forbiddenPatterns: string[] };
-        layerBResult: null;
+        layerBResult: unknown;
       };
     };
 
@@ -436,8 +437,8 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
     expect(statusData.data.layerAResult.passed).toBe(false);
     expect(statusData.data.layerAResult.forbiddenPatterns).toContain("surveillance");
 
-    // Layer B should NOT have been called (Layer A short-circuits)
-    expect(mockEvaluateLayerB).not.toHaveBeenCalled();
+    // The classifier was asked exactly once
+    expect(mockEvaluateLayerB).toHaveBeenCalledTimes(1);
 
     // Verify the problem's guardrail_status is rejected in DB
     const db = getTestDb();
@@ -448,6 +449,66 @@ describe("Guardrail Evaluation (US2) - Harmful Content Blocking", () => {
       .limit(1);
 
     expect(updatedProblem?.guardrailStatus).toBe("rejected");
+
+    // Confirmed violations do not take up reviewer time
+    const queued = await db
+      .select({ id: flaggedContent.id })
+      .from(flaggedContent)
+      .where(eq(flaggedContent.contentId, problem.id));
+    expect(queued).toHaveLength(0);
+  }, 10000);
+
+  it("should send a keyword hit to human review when the classifier sees a legitimate problem", async () => {
+    // "disease surveillance" trips the surveillance rule, but it is a public
+    // health problem this platform exists to address. Before, the regex alone
+    // rejected it for good; now a person decides — and even a confident
+    // classifier cannot auto-approve content that matched a forbidden pattern.
+    mockEvaluateLayerB.mockResolvedValue({
+      alignedDomain: "healthcare_improvement",
+      alignmentScore: 0.93,
+      harmRisk: "low",
+      feasibility: "high",
+      quality: "clear public health problem",
+      decision: "approve",
+      reasoning: "Describes a gap in outbreak detection, not surveillance of individuals",
+    });
+
+    const { data: regData } = await registerTestAgent(app);
+    const apiKey = regData.data.apiKey;
+    const agentId = regData.data.agentId;
+    await makeAgentVerified(agentId); // would auto-approve at 0.93 without the keyword hit
+
+    const title = "Disease surveillance gaps delayed the cholera response";
+    const description = "Clinics in the district report cases on paper, so the outbreak was detected three weeks late.";
+    const problem = await createTestProblem(agentId, title, description);
+
+    const evalRes = await submitEvaluation(apiKey, agentId, problem.id, { title, description });
+    expect(evalRes.status).toBe(202);
+    const evalData = (await evalRes.json()) as { data: { evaluationId: string } };
+
+    const statusData = (await pollUntilCompleted(evalData.data.evaluationId, apiKey)) as {
+      data: { finalDecision: string; layerAResult: { passed: boolean; forbiddenPatterns: string[] } };
+    };
+
+    expect(statusData.data.layerAResult.passed).toBe(false);
+    expect(statusData.data.layerAResult.forbiddenPatterns).toContain("surveillance");
+    expect(statusData.data.finalDecision).toBe("flagged");
+
+    const db = getTestDb();
+    const [updatedProblem] = await db
+      .select({ guardrailStatus: problems.guardrailStatus })
+      .from(problems)
+      .where(eq(problems.id, problem.id))
+      .limit(1);
+    // Not public while it waits, and not thrown away either
+    expect(updatedProblem?.guardrailStatus).toBe("flagged");
+
+    const queued = await db
+      .select({ status: flaggedContent.status })
+      .from(flaggedContent)
+      .where(eq(flaggedContent.contentId, problem.id));
+    expect(queued).toHaveLength(1);
+    expect(queued[0]?.status).toBe("pending_review");
   }, 10000);
 
   // T042: Layer B low score for new agent → flagged for human review (new agents never auto-reject)
@@ -674,9 +735,12 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
     return statusData;
   }
 
-  // T071: LLM API failure handling — retries exhaust, evaluation stays in initial state
+  // T071: LLM API failure handling — transient failures are retried; when the
+  // retries run out the content goes to human review instead of staying
+  // "pending" forever (which is what used to happen: the evaluation was left in
+  // its initial state and neither the author nor an admin could ever see it move).
   // Skipped in CI: 15s sleep for retry backoff makes this too slow/expensive for GitHub Actions
-  it.skipIf(!!process.env.CI)("should handle LLM API failure with retries and leave evaluation in initial state", async () => {
+  it.skipIf(!!process.env.CI)("should retry an LLM API failure and then hand the content to human review", async () => {
     // Mock Layer B to always throw (simulating LLM API failure)
     mockEvaluateLayerB.mockRejectedValue(new Error("Anthropic API error: 500"));
 
@@ -704,32 +768,40 @@ describe("Guardrail Evaluation (US5) - Resilience", () => {
     // Use generous timeout to account for backoff delays
     await sleep(15000);
 
-    // Verify the job ended up in failed state
-    const job = await queue.getJob(evaluationId);
-    expect(job).toBeDefined();
-    expect(job!.failedReason).toContain("Anthropic API error: 500");
-    expect(job!.attemptsMade).toBe(3);
+    // LLM was called 3 times (one per attempt): the first two failures were retried
+    expect(mockEvaluateLayerB).toHaveBeenCalledTimes(3);
 
-    // Verify the evaluation record in DB still has the initial placeholder state
-    // (worker threw before updating the record)
+    // The evaluation is complete, with the outcome "a human must look at this"
     const db = getTestDb();
     const [evalRecord] = await db
       .select({
         finalDecision: guardrailEvaluations.finalDecision,
         completedAt: guardrailEvaluations.completedAt,
+        layerBResult: guardrailEvaluations.layerBResult,
       })
       .from(guardrailEvaluations)
       .where(eq(guardrailEvaluations.id, evaluationId))
       .limit(1);
 
     expect(evalRecord).toBeDefined();
-    // The initial placeholder decision is "flagged" (set during record creation)
     expect(evalRecord!.finalDecision).toBe("flagged");
-    // completedAt should still be null since the worker never completed
-    expect(evalRecord!.completedAt).toBeNull();
+    expect(evalRecord!.completedAt).not.toBeNull();
+    expect(evalRecord!.layerBResult).toBeNull(); // no classifier verdict was ever produced
 
-    // LLM was called 3 times (one per attempt)
-    expect(mockEvaluateLayerB).toHaveBeenCalledTimes(3);
+    // The content left "pending" and is waiting in the admin review queue
+    const [stuckProblem] = await db
+      .select({ guardrailStatus: problems.guardrailStatus })
+      .from(problems)
+      .where(eq(problems.id, problem.id))
+      .limit(1);
+    expect(stuckProblem?.guardrailStatus).toBe("flagged");
+
+    const queued = await db
+      .select({ status: flaggedContent.status })
+      .from(flaggedContent)
+      .where(eq(flaggedContent.contentId, problem.id));
+    expect(queued).toHaveLength(1);
+    expect(queued[0]?.status).toBe("pending_review");
   }, 30000);
 
   // T072: Worker crash recovery — verify worker processes jobs reliably after restart

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { determineTrustTier, getThresholds } from "../../src/trust/trust-tier";
+import { afterEach, describe, it, expect } from "vitest";
+import { determineTrustTier, getThresholds, resolveTrustTier } from "../../src/trust/trust-tier";
 
 describe("Trust Tier Logic", () => {
   describe("determineTrustTier", () => {
@@ -132,5 +132,41 @@ describe("Trust Tier Logic", () => {
         expect(applyThresholds(score, verifiedThresholds)).toBe(verifiedDecision);
       },
     );
+  });
+
+  describe("resolveTrustTier (the tier the pipeline actually uses)", () => {
+    afterEach(() => {
+      delete process.env.TRUST_OWNER_VERIFIED_MIN_APPROVALS;
+    });
+
+    it("gives an agent with a verified owner standard thresholds from its first submission", () => {
+      expect(resolveTrustTier({ accountAgeDays: 0, approvedSubmissions: 0, ownerVerified: true })).toBe("verified");
+    });
+
+    it("keeps an agent without a verified owner in review until it has earned the tier", () => {
+      expect(resolveTrustTier({ accountAgeDays: 0, approvedSubmissions: 0, ownerVerified: false })).toBe("new");
+      expect(resolveTrustTier({ accountAgeDays: 30, approvedSubmissions: 2, ownerVerified: false })).toBe("new");
+      expect(resolveTrustTier({ accountAgeDays: 5, approvedSubmissions: 10, ownerVerified: false })).toBe("new");
+    });
+
+    it("lets an agent without a verified owner earn the tier through age and approvals", () => {
+      expect(resolveTrustTier({ accountAgeDays: 8, approvedSubmissions: 3, ownerVerified: false })).toBe("verified");
+    });
+
+    it("supports a human-reviewed probation for owner-verified agents via TRUST_OWNER_VERIFIED_MIN_APPROVALS", () => {
+      process.env.TRUST_OWNER_VERIFIED_MIN_APPROVALS = "3";
+
+      expect(resolveTrustTier({ accountAgeDays: 0, approvedSubmissions: 0, ownerVerified: true })).toBe("new");
+      expect(resolveTrustTier({ accountAgeDays: 0, approvedSubmissions: 2, ownerVerified: true })).toBe("new");
+      // …and the probation ends on approvals alone: no waiting period for an accountable owner
+      expect(resolveTrustTier({ accountAgeDays: 0, approvedSubmissions: 3, ownerVerified: true })).toBe("verified");
+    });
+
+    it("ignores a nonsensical probation setting", () => {
+      process.env.TRUST_OWNER_VERIFIED_MIN_APPROVALS = "not-a-number";
+      expect(resolveTrustTier({ accountAgeDays: 0, approvedSubmissions: 0, ownerVerified: true })).toBe("verified");
+      process.env.TRUST_OWNER_VERIFIED_MIN_APPROVALS = "-2";
+      expect(resolveTrustTier({ accountAgeDays: 0, approvedSubmissions: 0, ownerVerified: true })).toBe("verified");
+    });
   });
 });

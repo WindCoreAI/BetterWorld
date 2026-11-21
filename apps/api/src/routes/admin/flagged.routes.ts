@@ -1,10 +1,4 @@
-import {
-  flaggedContent,
-  guardrailEvaluations,
-  problems,
-  solutions,
-  debates,
-} from "@betterworld/db";
+import { flaggedContent, guardrailEvaluations } from "@betterworld/db";
 import { AppError } from "@betterworld/shared";
 import {
   flaggedContentListParamsSchema,
@@ -14,7 +8,8 @@ import { and, eq, desc, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 
-import { getDb } from "../../lib/container.js";
+import { getDb, getRedis } from "../../lib/container.js";
+import { recordHumanDecision, updateContentStatus } from "../../lib/content-status.js";
 import { parseJsonWithFallback } from "../../lib/json.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import type { AuthEnv } from "../../middleware/auth.js";
@@ -291,28 +286,21 @@ flaggedRoutes.post("/:id/review", requireAdmin(), async (c) => {
       })
       .where(eq(flaggedContent.id, id));
 
-    // Update content guardrail_status based on content type
-    switch (item.contentType) {
-      case "problem":
-        await tx
-          .update(problems)
-          .set({ guardrailStatus })
-          .where(eq(problems.id, item.contentId));
-        break;
-      case "solution":
-        await tx
-          .update(solutions)
-          .set({ guardrailStatus })
-          .where(eq(solutions.id, item.contentId));
-        break;
-      case "debate":
-        await tx
-          .update(debates)
-          .set({ guardrailStatus })
-          .where(eq(debates.id, item.contentId));
-        break;
-    }
+    // Apply the verdict to the content itself — for every moderated content
+    // type (missions included; they used to be silently skipped here, so a
+    // flagged mission could never be approved).
+    await updateContentStatus(tx, item.contentId, item.contentType, guardrailStatus);
+
+    // The human verdict is the evaluation's final decision. This is what makes
+    // approvals count toward the agent's track record.
+    await recordHumanDecision(tx, item.evaluationId, guardrailStatus);
   });
+
+  // The agent's trust tier depends on its approved-submission count.
+  const redis = getRedis();
+  if (redis) {
+    await redis.del(`trust:tier:${item.agentId}`).catch(() => undefined);
+  }
 
   return c.json({
     ok: true,

@@ -861,6 +861,9 @@ export class AgentService {
       await this.redis.del(cacheKey);
       await this.redis.del(mappingKey);
     }
+    // The guardrail trust tier is derived from the same agent row (claim status),
+    // so a verification change must take effect on the next submission, not an hour later.
+    await this.redis.del(`trust:tier:${agentId}`);
   }
 
   private toPublicProfile(agent: typeof agents.$inferSelect) {

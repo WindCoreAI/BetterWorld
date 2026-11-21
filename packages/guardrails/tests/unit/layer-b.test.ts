@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Use vi.hoisted so mockCreate is available when vi.mock factory runs (hoisted above imports)
-const { mockCreate } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
-}));
+const { mockCreate } = vi.hoisted(() => {
+  // The classifier refuses to run without a configured key (it reports
+  // "unavailable" so the caller can route to human review). The SDK is mocked,
+  // so any well-formed key will do.
+  process.env.ANTHROPIC_API_KEY = "sk-ant-test-key-for-unit-tests";
+  return { mockCreate: vi.fn() };
+});
 
 vi.mock("@anthropic-ai/sdk", () => ({
   default: vi.fn().mockImplementation(() => ({
@@ -13,11 +17,62 @@ vi.mock("@anthropic-ai/sdk", () => ({
   })),
 }));
 
-import { evaluateLayerB } from "../../src/layer-b/classifier";
+import { evaluateLayerB, LayerBUnavailableError } from "../../src/layer-b/classifier";
 
 describe("Layer B: LLM Classifier", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test-key-for-unit-tests";
+  });
+
+  describe("Availability (callers route to human review instead of retrying)", () => {
+    it("reports unavailable without calling the provider when no key is configured", async () => {
+      delete process.env.ANTHROPIC_API_KEY;
+
+      await expect(evaluateLayerB("Community garden for a food desert")).rejects.toBeInstanceOf(
+        LayerBUnavailableError,
+      );
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("treats a blank key as not configured", async () => {
+      process.env.ANTHROPIC_API_KEY = "   ";
+
+      await expect(evaluateLayerB("Community garden for a food desert")).rejects.toBeInstanceOf(
+        LayerBUnavailableError,
+      );
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it.each([400, 401, 403, 404])(
+      "reports unavailable when the provider rejects the request with HTTP %i",
+      async (status) => {
+        mockCreate.mockRejectedValue(Object.assign(new Error("provider said no"), { status }));
+
+        await expect(evaluateLayerB("Community garden for a food desert")).rejects.toBeInstanceOf(
+          LayerBUnavailableError,
+        );
+      },
+    );
+
+    it.each([429, 500, 529])(
+      "rethrows a transient provider failure (HTTP %i) so the queue can retry",
+      async (status) => {
+        const transient = Object.assign(new Error("try again"), { status });
+        mockCreate.mockRejectedValue(transient);
+
+        const failure = await evaluateLayerB("Community garden for a food desert").catch((e) => e);
+        expect(failure).toBe(transient);
+        expect(failure).not.toBeInstanceOf(LayerBUnavailableError);
+      },
+    );
+
+    it("rethrows a network error so the queue can retry", async () => {
+      const network = new Error("socket hang up");
+      mockCreate.mockRejectedValue(network);
+
+      await expect(evaluateLayerB("Community garden for a food desert")).rejects.toBe(network);
+    });
   });
 
   describe("Valid Content Classification", () => {

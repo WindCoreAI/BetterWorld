@@ -6,9 +6,36 @@ import { promptTemplate } from "./prompt-template";
 
 const logger = pino({ name: "guardrails:layer-b" });
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+/**
+ * Thrown when the classifier cannot produce a verdict for a reason that
+ * retrying will not fix: no API key, a rejected key, an unknown or retired
+ * model, or a request the provider refuses. Callers route the content to human
+ * review instead of retrying.
+ */
+export class LayerBUnavailableError extends Error {
+  constructor(message: string, readonly cause?: unknown) {
+    super(message);
+    this.name = "LayerBUnavailableError";
+  }
+}
+
+/** HTTP statuses from the provider that will not succeed on retry. */
+const PERMANENT_PROVIDER_STATUSES = new Set([400, 401, 403, 404]);
+
+function isAiKeyConfigured(): boolean {
+  const key = process.env.ANTHROPIC_API_KEY?.trim();
+  return !!key && key.startsWith("sk-ant-");
+}
+
+// Created on first use so that importing this module never fails (or silently
+// captures an empty key) in a process that starts before its environment is loaded.
+let anthropicClient: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return anthropicClient;
+}
 
 const SOLUTION_SCORING_ADDENDUM = `
 
@@ -46,19 +73,37 @@ export async function evaluateLayerB(content: string, contentType?: ContentType)
     ? promptTemplate.system + SOLUTION_SCORING_ADDENDUM
     : promptTemplate.system;
 
-  const message = await anthropic.messages.create({
-    model: process.env.CLAUDE_HAIKU_MODEL || "claude-haiku-4-5-20251001",
-    max_tokens: 600,
-    temperature: 0.3, // Low temperature for consistency
-    system: systemPrompt,
-    messages: [
-      ...promptTemplate.fewShotExamples,
-      {
-        role: "user",
-        content,
-      },
-    ],
-  });
+  if (!isAiKeyConfigured()) {
+    throw new LayerBUnavailableError("No AI provider key configured (ANTHROPIC_API_KEY)");
+  }
+
+  let message: Anthropic.Message;
+  try {
+    message = await getClient().messages.create({
+      model: process.env.CLAUDE_HAIKU_MODEL || "claude-haiku-4-5-20251001",
+      max_tokens: 600,
+      temperature: 0.3, // Low temperature for consistency
+      system: systemPrompt,
+      messages: [
+        ...promptTemplate.fewShotExamples,
+        {
+          role: "user",
+          content,
+        },
+      ],
+    });
+  } catch (error) {
+    const status = (error as { status?: unknown } | null)?.status;
+    if (typeof status === "number" && PERMANENT_PROVIDER_STATUSES.has(status)) {
+      logger.error(
+        { status, error: error instanceof Error ? error.message : String(error) },
+        "Layer B provider call rejected — not retryable, routing to human review",
+      );
+      throw new LayerBUnavailableError(`AI provider rejected the request (HTTP ${status})`, error);
+    }
+    // Rate limits, 5xx and network errors are worth a retry: let the queue back off.
+    throw error;
+  }
 
   // Extract text response
   const responseText = message.content[0]?.type === "text" ? message.content[0].text : "";

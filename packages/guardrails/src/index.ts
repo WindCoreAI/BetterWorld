@@ -13,7 +13,7 @@ export { evaluateLayerA } from "./layer-a/rule-engine";
 export { forbiddenPatterns } from "./layer-a/patterns";
 
 // Layer B: LLM Classifier
-export { evaluateLayerB } from "./layer-b/classifier";
+export { evaluateLayerB, LayerBUnavailableError } from "./layer-b/classifier";
 export { promptTemplate } from "./layer-b/prompt-template";
 export { fewShotExamples } from "./layer-b/few-shot-examples";
 
@@ -25,8 +25,12 @@ export {
 } from "./cache/cache-manager";
 
 // Trust Tiers
-export { determineTrustTier, getThresholds } from "./trust/trust-tier";
-export type { TrustTierThresholds } from "./trust/trust-tier";
+export { determineTrustTier, resolveTrustTier, getThresholds } from "./trust/trust-tier";
+export type { TrustTierThresholds, TrustTierInput } from "./trust/trust-tier";
+
+// Decision: combine Layer A + Layer B into one outcome
+export { decideGuardrailOutcome, CONSTITUTIONAL_REJECT_BELOW } from "./decision";
+export type { GuardrailOutcome, GuardrailDecision, GuardrailDecisionInput } from "./decision";
 
 // Scoring
 export { computeCompositeScore } from "./scoring/solution-scoring";

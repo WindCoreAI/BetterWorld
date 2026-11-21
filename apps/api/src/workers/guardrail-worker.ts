@@ -1,11 +1,8 @@
 /* eslint-disable complexity, max-lines-per-function */
 import {
   guardrailEvaluations,
-  flaggedContent,
-  missions,
   problems,
   solutions,
-  debates,
   agents,
 } from "@betterworld/db";
 import {
@@ -14,12 +11,13 @@ import {
   generateCacheKey,
   getCachedEvaluation,
   setCachedEvaluation,
-  determineTrustTier,
+  resolveTrustTier,
   getThresholds,
-  computeCompositeScore,
+  decideGuardrailOutcome,
+  LayerBUnavailableError,
 } from "@betterworld/guardrails";
 import { QUEUE_NAMES } from "@betterworld/shared";
-import type { PeerConsensusJobData } from "@betterworld/shared";
+import type { LayerBResult, PeerConsensusJobData, TrustTier } from "@betterworld/shared";
 import { Queue, Worker, type Job } from "bullmq";
 import { eq , sql } from "drizzle-orm";
 import Redis from "ioredis";
@@ -28,6 +26,7 @@ import pino from "pino";
 
 import { checkBudgetAvailable, recordAiCost } from "../lib/budget.js";
 import { initDb, getDb, getRedis } from "../lib/container.js";
+import { flagForHumanReview, updateContentStatus, type DbOrTx } from "../lib/content-status.js";
 import { getFlag } from "../services/feature-flags.js";
 import { routeSubmission } from "../services/traffic-router.js";
 
@@ -68,6 +67,120 @@ export interface ProcessingResult {
   processingTimeMs: number;
 }
 
+/**
+ * Trust tier for the author of a submission (cached for 1 hour).
+ *
+ * An agent whose claim status is "verified" — created by a human with a
+ * verified email, or verified by an admin — gets standard thresholds. Others
+ * earn the tier through account age and approved submissions; approvals made
+ * by human reviewers count (recordHumanDecision writes them back).
+ */
+async function resolveAgentTrustTier(
+  db: NonNullable<ReturnType<typeof getDb>>,
+  redis: ReturnType<typeof getRedis>,
+  agentId: string,
+): Promise<TrustTier> {
+  const tierCacheKey = `trust:tier:${agentId}`;
+  const cached = redis ? await redis.get(tierCacheKey) : null;
+  if (cached === "new" || cached === "verified") return cached;
+
+  let tier: TrustTier = "new";
+
+  const [agentRow] = await db
+    .select({
+      createdAt: agents.createdAt,
+      claimStatus: agents.claimStatus,
+    })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+
+  if (agentRow) {
+    const ageDays = Math.floor(
+      (Date.now() - new Date(agentRow.createdAt).getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // Count approved evaluations for this agent
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(guardrailEvaluations)
+      .where(
+        sql`${guardrailEvaluations.agentId} = ${agentId} AND ${guardrailEvaluations.finalDecision} = 'approved'`,
+      );
+
+    tier = resolveTrustTier({
+      accountAgeDays: ageDays,
+      approvedSubmissions: countResult?.count ?? 0,
+      ownerVerified: agentRow.claimStatus === "verified",
+    });
+  }
+
+  if (redis) {
+    await redis.setex(tierCacheKey, 3600, tier);
+  }
+  return tier;
+}
+
+interface LayerBOutcome {
+  /** null when the classifier could not produce a verdict. */
+  result: LayerBResult | null;
+  cacheHit: boolean;
+  cacheKey: string | null;
+  unavailableReason?: string;
+}
+
+/**
+ * Run the classifier, or explain why it could not run.
+ *
+ * Never leaves a submission in limbo: a missing key, an exhausted budget, a
+ * provider that rejects the request, or a provider that keeps failing all end
+ * in "unavailable", and the caller sends the content to human review.
+ * Transient failures are rethrown while retries remain so the queue backs off.
+ */
+async function runLayerB(job: Job<EvaluationJobData>): Promise<LayerBOutcome> {
+  const { evaluationId, content, contentType } = job.data;
+
+  const budgetAvailable = await checkBudgetAvailable();
+  if (!budgetAvailable) {
+    logger.warn({ evaluationId }, "Budget cap reached — skipping Layer B, flagging for admin review");
+    return { result: null, cacheHit: false, cacheKey: null, unavailableReason: "budget_cap_reached" };
+  }
+
+  const cacheKey = generateCacheKey(content);
+  const cached = await getCachedEvaluation(content);
+  if (cached) {
+    logger.info({ evaluationId, cacheKey }, "Cache hit - reusing previous evaluation");
+    return { result: cached, cacheHit: true, cacheKey };
+  }
+
+  try {
+    const result = await evaluateLayerB(content, contentType);
+    await setCachedEvaluation(content, result);
+    // Record AI cost (~0.3 cents per call as safety margin)
+    await recordAiCost(1);
+    return { result, cacheHit: false, cacheKey };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+
+    if (err instanceof LayerBUnavailableError) {
+      logger.warn({ evaluationId, reason: message }, "Layer B unavailable — routing to human review");
+      return { result: null, cacheHit: false, cacheKey, unavailableReason: message };
+    }
+
+    const maxAttempts = job.opts?.attempts ?? 1;
+    const isLastAttempt = (job.attemptsMade ?? 0) + 1 >= maxAttempts;
+    if (isLastAttempt) {
+      logger.error(
+        { evaluationId, attemptsMade: job.attemptsMade, error: message },
+        "Layer B failed on the final attempt — routing to human review",
+      );
+      return { result: null, cacheHit: false, cacheKey, unavailableReason: `classifier_error: ${message}` };
+    }
+
+    throw err; // retry with backoff
+  }
+}
+
 export async function processEvaluation(job: Job<EvaluationJobData>): Promise<ProcessingResult> {
   const { evaluationId, contentId, contentType, content, agentId } = job.data;
   const startTime = Date.now();
@@ -79,154 +192,50 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
 
   logger.info({ evaluationId, contentType, agentId }, "Processing evaluation");
 
-  // Determine agent trust tier (cached for 1 hour)
   const redis = getRedis();
-  const tierCacheKey = `trust:tier:${agentId}`;
-  let trustTier = redis ? await redis.get(tierCacheKey) : null;
+  const trustTier = await resolveAgentTrustTier(db, redis, agentId);
 
-  if (!trustTier) {
-    const [agentRow] = await db
-      .select({
-        createdAt: agents.createdAt,
-      })
-      .from(agents)
-      .where(eq(agents.id, agentId))
-      .limit(1);
-
-    trustTier = "new";
-    if (agentRow) {
-      const ageDays = Math.floor(
-        (Date.now() - new Date(agentRow.createdAt).getTime()) / (1000 * 60 * 60 * 24),
-      );
-
-      // Count approved evaluations for this agent
-      const [countResult] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(guardrailEvaluations)
-        .where(
-          sql`${guardrailEvaluations.agentId} = ${agentId} AND ${guardrailEvaluations.finalDecision} = 'approved'`,
-        );
-
-      const approvedCount = countResult?.count ?? 0;
-      trustTier = determineTrustTier(ageDays, approvedCount);
-    }
-
-    // Cache for 1 hour if Redis is available
-    if (redis) {
-      await redis.setex(tierCacheKey, 3600, trustTier);
-    }
-  }
-
-  // Layer A: Rule engine (fast pre-filter, <10ms target)
+  // Layer A: Rule engine (fast keyword pre-filter, <10ms target)
   const layerAResult = await evaluateLayerA(content);
 
-  if (!layerAResult.passed) {
-    // Auto-reject: forbidden pattern detected
-    logger.info(
-      { evaluationId, patterns: layerAResult.forbiddenPatterns },
-      "Layer A rejected: forbidden pattern detected"
-    );
+  // Layer B: LLM classifier (cached, budgeted, may be unavailable)
+  const layerB = await runLayerB(job);
+  const layerBResult = layerB.result;
+  const { cacheHit, cacheKey } = layerB;
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(guardrailEvaluations)
-        .set({
-          layerAResult: JSON.stringify(layerAResult),
-          finalDecision: "rejected",
-          trustTier,
-          completedAt: new Date(),
-          evaluationDurationMs: Date.now() - startTime,
-        })
-        .where(eq(guardrailEvaluations.id, evaluationId));
+  const thresholds = getThresholds(trustTier);
+  const outcome = decideGuardrailOutcome({
+    layerA: layerAResult,
+    layerB: layerBResult,
+    thresholds,
+    contentType,
+  });
+  const finalDecision = outcome.decision;
+  const score = layerBResult?.alignmentScore ?? null;
 
-      await updateContentStatus(tx, contentId, contentType, "rejected");
-    });
-    return { cacheHit: false, layerARejected: true, processingTimeMs: Date.now() - startTime };
+  if (layerBResult?.solutionScores && outcome.composite !== undefined) {
+    layerBResult.solutionScores.composite = outcome.composite;
   }
 
-  // Budget check: skip Layer B if daily cap reached
-  const budgetAvailable = await checkBudgetAvailable();
-  if (!budgetAvailable) {
-    logger.warn({ evaluationId }, "Budget cap reached — skipping Layer B, flagging for admin review");
+  logger.info(
+    {
+      evaluationId,
+      trustTier,
+      score,
+      thresholds,
+      finalDecision,
+      reason: outcome.reason,
+      forbiddenPatterns: layerAResult.forbiddenPatterns,
+    },
+    "Decision made",
+  );
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(guardrailEvaluations)
-        .set({
-          layerAResult: JSON.stringify(layerAResult),
-          finalDecision: "flagged",
-          trustTier,
-          completedAt: new Date(),
-          evaluationDurationMs: Date.now() - startTime,
-        })
-        .where(eq(guardrailEvaluations.id, evaluationId));
-
-      await updateContentStatus(tx, contentId, contentType, "flagged");
-
-      await tx.insert(flaggedContent).values({
-        evaluationId,
-        contentId,
-        contentType,
-        agentId,
-        status: "pending_review",
-      });
-    });
-
-    return { cacheHit: false, layerARejected: false, processingTimeMs: Date.now() - startTime };
-  }
-
-  // Layer B: LLM classifier (check cache first)
-  const cacheKey = generateCacheKey(content);
-  let layerBResult = await getCachedEvaluation(content);
-  const cacheHit = layerBResult !== null;
-
-  if (!layerBResult) {
-    layerBResult = await evaluateLayerB(content, contentType);
-    await setCachedEvaluation(content, layerBResult);
-    // Record AI cost (~0.3 cents per call as safety margin)
-    await recordAiCost(1);
-  }
-
-  if (cacheHit) {
-    logger.info({ evaluationId, cacheKey }, "Cache hit - reusing previous evaluation");
-  }
-
-  // Determine final decision based on score and trust tier thresholds
-  const score = layerBResult.alignmentScore;
-  const thresholds = getThresholds(trustTier as "new" | "verified");
-  let finalDecision: "approved" | "flagged" | "rejected";
-
-  if (score >= thresholds.autoApprove) {
-    finalDecision = "approved";
-  } else if (score >= thresholds.autoRejectMax) {
-    finalDecision = "flagged";
-  } else {
-    finalDecision = "rejected";
-  }
-
-  // For solutions: apply composite score-based decision routing
-  if (contentType === "solution" && layerBResult.solutionScores) {
-    const { impact, feasibility, costEfficiency } = layerBResult.solutionScores;
-    const composite = computeCompositeScore(impact, feasibility, costEfficiency);
-    layerBResult.solutionScores.composite = composite;
-
-    // Score-based routing for solutions (in addition to alignment check)
-    if (finalDecision === "approved") {
-      if (composite < 40) {
-        finalDecision = "rejected";
-      } else if (composite < 60) {
-        finalDecision = "flagged";
-      }
-    }
-  }
-
-  logger.info({ evaluationId, trustTier, score, thresholds, finalDecision }, "Decision made");
-
-  // Sprint 12: Production traffic routing — replaces Sprint 11 shadow-only enqueue
-  // Determine whether this submission should route to peer consensus for production decisions
+  // Sprint 12: Production traffic routing — peer consensus can make the production
+  // decision instead of Layer B. Only for content both layers handled cleanly:
+  // keyword hits and classifier outages always go the direct (human review) route.
   let routingDecision: "layer_b" | "peer_consensus" = "layer_b";
 
-  if (contentType !== "mission") {
+  if (contentType !== "mission" && layerBResult && layerAResult.passed) {
     try {
       const routeResult = await routeSubmission(contentId, trustTier, redis);
       routingDecision = routeResult.route;
@@ -244,7 +253,46 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
     }
   }
 
-  if (routingDecision === "peer_consensus") {
+  /** Persist the scores the classifier produced, independent of the routing decision. */
+  const persistScores = async (tx: DbOrTx) => {
+    if (!layerBResult || score === null) return;
+
+    if (contentType === "solution" && layerBResult.solutionScores) {
+      const { impact, feasibility, costEfficiency, composite } = layerBResult.solutionScores;
+      await tx
+        .update(solutions)
+        .set({
+          impactScore: String(impact),
+          feasibilityScore: String(feasibility),
+          costEfficiencyScore: String(costEfficiency),
+          compositeScore: String(composite),
+          alignmentScore: String(score),
+        })
+        .where(eq(solutions.id, contentId));
+    }
+
+    if (contentType === "problem") {
+      await tx
+        .update(problems)
+        .set({
+          alignmentScore: String(score),
+          alignmentDomain: layerBResult.alignedDomain,
+        })
+        .where(eq(problems.id, contentId));
+    }
+  };
+
+  /** Apply the decision to the content and, when flagged, queue it for human review. */
+  const applyDecision = async (tx: DbOrTx) => {
+    if (finalDecision === "flagged") {
+      await flagForHumanReview(tx, { evaluationId, contentId, contentType, agentId });
+      logger.info({ evaluationId, score, reason: outcome.reason }, "Content flagged for human review");
+    } else {
+      await updateContentStatus(tx, contentId, contentType, finalDecision);
+    }
+  };
+
+  if (routingDecision === "peer_consensus" && layerBResult && score !== null) {
     // PEER CONSENSUS PATH: Hold Layer B result, let peer consensus make the production decision
     // Record the evaluation with Layer B results but do NOT apply finalDecision to content yet
     await db.transaction(async (tx) => {
@@ -265,31 +313,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
         })
         .where(eq(guardrailEvaluations.id, evaluationId));
 
-      // For solutions: persist scores immediately (not dependent on routing decision)
-      if (contentType === "solution" && layerBResult.solutionScores) {
-        const { impact, feasibility, costEfficiency, composite } = layerBResult.solutionScores;
-        await tx
-          .update(solutions)
-          .set({
-            impactScore: String(impact),
-            feasibilityScore: String(feasibility),
-            costEfficiencyScore: String(costEfficiency),
-            compositeScore: String(composite),
-            alignmentScore: String(score),
-          })
-          .where(eq(solutions.id, contentId));
-      }
-
-      // For problems: persist alignment info immediately
-      if (contentType === "problem") {
-        await tx
-          .update(problems)
-          .set({
-            alignmentScore: String(score),
-            alignmentDomain: layerBResult.alignedDomain,
-          })
-          .where(eq(problems.id, contentId));
-      }
+      await persistScores(tx);
     });
 
     // Enqueue peer consensus job for production decision-making
@@ -301,7 +325,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
         submissionType: contentType as "problem" | "solution" | "debate",
         agentId,
         content,
-        domain: layerBResult?.alignedDomain || "community_building",
+        domain: layerBResult.alignedDomain || "community_building",
         layerBDecision: finalDecision,
         layerBAlignmentScore: score,
       };
@@ -325,7 +349,6 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
         "Failed to enqueue peer consensus — falling back to Layer B",
       );
 
-      // Apply Layer B decision as fallback
       await db.transaction(async (tx) => {
         await tx
           .update(guardrailEvaluations)
@@ -335,30 +358,20 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
           })
           .where(eq(guardrailEvaluations.id, evaluationId));
 
-        await updateContentStatus(tx, contentId, contentType, finalDecision);
-
-        if (finalDecision === "flagged") {
-          await tx.insert(flaggedContent).values({
-            evaluationId,
-            contentId,
-            contentType,
-            agentId,
-            status: "pending_review",
-          });
-        }
+        await applyDecision(tx);
       });
     }
   } else {
-    // LAYER B PATH: Apply Layer B decision directly (existing behavior)
+    // DIRECT PATH: apply the decision now
     await db.transaction(async (tx) => {
       await tx
         .update(guardrailEvaluations)
         .set({
           layerAResult: JSON.stringify(layerAResult),
-          layerBResult: JSON.stringify(layerBResult),
+          layerBResult: layerBResult ? JSON.stringify(layerBResult) : null,
           finalDecision,
-          alignmentScore: String(score),
-          alignmentDomain: layerBResult.alignedDomain,
+          alignmentScore: score !== null ? String(score) : null,
+          alignmentDomain: layerBResult?.alignedDomain ?? null,
           cacheHit,
           cacheKey,
           trustTier,
@@ -368,45 +381,8 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
         })
         .where(eq(guardrailEvaluations.id, evaluationId));
 
-      await updateContentStatus(tx, contentId, contentType, finalDecision);
-
-      // For solutions: persist scores
-      if (contentType === "solution" && layerBResult.solutionScores) {
-        const { impact, feasibility, costEfficiency, composite } = layerBResult.solutionScores;
-        await tx
-          .update(solutions)
-          .set({
-            impactScore: String(impact),
-            feasibilityScore: String(feasibility),
-            costEfficiencyScore: String(costEfficiency),
-            compositeScore: String(composite),
-            alignmentScore: String(score),
-          })
-          .where(eq(solutions.id, contentId));
-      }
-
-      // For problems: persist alignment info
-      if (contentType === "problem") {
-        await tx
-          .update(problems)
-          .set({
-            alignmentScore: String(score),
-            alignmentDomain: layerBResult.alignedDomain,
-          })
-          .where(eq(problems.id, contentId));
-      }
-
-      // If flagged, create entry in flagged_content table for admin review
-      if (finalDecision === "flagged") {
-        await tx.insert(flaggedContent).values({
-          evaluationId,
-          contentId,
-          contentType,
-          agentId,
-          status: "pending_review",
-        });
-        logger.info({ evaluationId, score }, "Content flagged for human review");
-      }
+      await applyDecision(tx);
+      await persistScores(tx);
     });
 
     // Discussion content callback: notify author and participants
@@ -429,41 +405,43 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
     }
 
     // Also enqueue shadow peer validation if enabled (for Layer B-routed items)
-    try {
-      const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
+    if (layerBResult && score !== null) {
+      try {
+        const peerValidationEnabled = await getFlag(redis, "PEER_VALIDATION_ENABLED");
 
-      if (peerValidationEnabled) {
-        const peerQueue = getPeerConsensusQueue();
+        if (peerValidationEnabled) {
+          const peerQueue = getPeerConsensusQueue();
 
-        const peerJobData: PeerConsensusJobData = {
-          submissionId: contentId,
-          submissionType: contentType as "problem" | "solution" | "debate",
-          agentId,
-          content,
-          domain: layerBResult?.alignedDomain || "community_building",
-          layerBDecision: finalDecision,
-          layerBAlignmentScore: score,
-        };
+          const peerJobData: PeerConsensusJobData = {
+            submissionId: contentId,
+            submissionType: contentType as "problem" | "solution" | "debate",
+            agentId,
+            content,
+            domain: layerBResult.alignedDomain || "community_building",
+            layerBDecision: finalDecision,
+            layerBAlignmentScore: score,
+          };
 
-        await peerQueue.add("peer-consensus", peerJobData, {
-          jobId: `peer-${contentType}-${contentId}`,
-          attempts: 3,
-          backoff: { type: "exponential", delay: 5000 },
-          removeOnComplete: { count: 100 },
-          removeOnFail: { count: 50 },
-        });
+          await peerQueue.add("peer-consensus", peerJobData, {
+            jobId: `peer-${contentType}-${contentId}`,
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5000 },
+            removeOnComplete: { count: 100 },
+            removeOnFail: { count: 50 },
+          });
 
-        logger.info(
-          { evaluationId, contentId, contentType, finalDecision },
-          "Peer consensus job enqueued (shadow mode for Layer B-routed item)",
+          logger.info(
+            { evaluationId, contentId, contentType, finalDecision },
+            "Peer consensus job enqueued (shadow mode for Layer B-routed item)",
+          );
+        }
+      } catch (peerErr) {
+        // Shadow mode is non-blocking
+        logger.warn(
+          { evaluationId, error: (peerErr as Error).message },
+          "Failed to enqueue peer consensus job (shadow — non-blocking)",
         );
       }
-    } catch (peerErr) {
-      // Shadow mode is non-blocking
-      logger.warn(
-        { evaluationId, error: (peerErr as Error).message },
-        "Failed to enqueue peer consensus job (shadow — non-blocking)",
-      );
     }
   }
 
@@ -473,83 +451,12 @@ export async function processEvaluation(job: Job<EvaluationJobData>): Promise<Pr
     "Evaluation complete"
   );
 
-  return { cacheHit, layerARejected: false, processingTimeMs };
-}
-
-async function updateContentStatus(
-  db: ReturnType<typeof initDb>,
-  contentId: string,
-  contentType: string,
-  status: "approved" | "rejected" | "flagged"
-): Promise<void> {
-  switch (contentType) {
-    case "problem":
-      await db
-        .update(problems)
-        .set({ guardrailStatus: status })
-        .where(eq(problems.id, contentId));
-      break;
-    case "solution":
-    case "human_solution":
-      await db
-        .update(solutions)
-        .set({ guardrailStatus: status })
-        .where(eq(solutions.id, contentId));
-      break;
-    case "debate":
-      await db
-        .update(debates)
-        .set({ guardrailStatus: status })
-        .where(eq(debates.id, contentId));
-      break;
-    case "mission":
-    case "human_mission_proposal":
-      await db
-        .update(missions)
-        .set({ guardrailStatus: status })
-        .where(eq(missions.id, contentId));
-      break;
-    case "discussion_thread": {
-      const { discussionThreads } = await import("@betterworld/db");
-      await db
-        .update(discussionThreads)
-        .set({ guardrailStatus: status })
-        .where(eq(discussionThreads.id, contentId));
-      break;
-    }
-    case "discussion_reply": {
-      const { discussionReplies } = await import("@betterworld/db");
-      await db
-        .update(discussionReplies)
-        .set({ guardrailStatus: status })
-        .where(eq(discussionReplies.id, contentId));
-      break;
-    }
-    // Sprint 18: Cooperative Depth & Governance content types
-    case "circle_post": {
-      const { circlePosts } = await import("@betterworld/db");
-      await db
-        .update(circlePosts)
-        .set({ guardrailStatus: status })
-        .where(eq(circlePosts.id, contentId));
-      break;
-    }
-    case "help_offer_message": {
-      const { missionHelpOffers } = await import("@betterworld/db");
-      await db
-        .update(missionHelpOffers)
-        .set({ guardrailStatus: status })
-        .where(eq(missionHelpOffers.id, contentId));
-      break;
-    }
-    case "help_request_note":
-      // Help request notes are stored inline on mission_claims — no separate status update needed
-      // The guardrail check is purely for content moderation; the note is already stored
-      break;
-    case "gratitude_narrative":
-      // Narratives are stored on endorsements — status update handled by the calling route
-      break;
-  }
+  return {
+    cacheHit,
+    // Kept for the worker's metrics: a keyword hit the classifier confirmed as a violation.
+    layerARejected: !layerAResult.passed && finalDecision === "rejected",
+    processingTimeMs,
+  };
 }
 
 // --- Queue Monitoring Metrics (T066) ---
@@ -627,19 +534,26 @@ export function createGuardrailWorker(): Worker<EvaluationJobData> {
         "DEAD LETTER: Job exhausted all retries — requires manual review"
       );
 
-      // Mark evaluation as rejected to prevent zombie records
+      // The pipeline could not reach a verdict. Hand the content to a human
+      // reviewer rather than leaving it "pending" forever: before this, the
+      // evaluation row was marked rejected while the content itself stayed
+      // pending and invisible to both its author and the admin queue.
       try {
         const db = getDb();
         if (db && job?.data?.evaluationId) {
-          await db
-            .update(guardrailEvaluations)
-            .set({
-              finalDecision: "rejected",
-              completedAt: new Date(),
-              evaluationDurationMs: -1, // Sentinel: indicates failure, not actual duration
-            })
-            .where(eq(guardrailEvaluations.id, job.data.evaluationId));
-          logger.info({ evaluationId: job.data.evaluationId }, "Dead-lettered evaluation marked as rejected");
+          const { evaluationId, contentId, contentType, agentId } = job.data;
+          await db.transaction(async (tx) => {
+            await tx
+              .update(guardrailEvaluations)
+              .set({
+                finalDecision: "flagged",
+                completedAt: new Date(),
+                evaluationDurationMs: -1, // Sentinel: indicates failure, not actual duration
+              })
+              .where(eq(guardrailEvaluations.id, evaluationId));
+            await flagForHumanReview(tx, { evaluationId, contentId, contentType, agentId });
+          });
+          logger.info({ evaluationId }, "Dead-lettered evaluation sent to human review");
         }
       } catch (dbErr) {
         logger.error(
