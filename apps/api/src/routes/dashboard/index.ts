@@ -4,18 +4,22 @@
  * Uses humans.tokenBalance as authoritative balance source.
  */
 
-import { agents, humanProfiles, humans, tokenTransactions } from "@betterworld/db";
+import { agents, humanProfiles, humans, missionClaims, missions, streaks, tokenTransactions } from "@betterworld/db";
 import { parsePostGISPoint } from "@betterworld/shared/utils/geocode";
 import { calculateProfileCompleteness, type ProfileInput } from "@betterworld/shared/utils/profileCompleteness";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
 import { getDb } from "../../lib/container.js";
+import { getTokenTotals } from "../../lib/token-totals.js";
 import { humanAuth } from "../../middleware/humanAuth";
 import { logger } from "../../middleware/logger.js";
 
 const app = new Hono<AppEnv>();
+
+/** How many of a person's missions in progress the dashboard lists. */
+const IN_PROGRESS_LIMIT = 5;
 
 // GET /dashboard - Get Dashboard Data (T079)
 app.get("/", humanAuth(), async (c) => {
@@ -25,7 +29,11 @@ app.get("/", humanAuth(), async (c) => {
     const db = getDb();
     if (!db) return c.json({ ok: false, error: { code: "SERVICE_UNAVAILABLE" as const, message: "Database not available" }, requestId: c.get("requestId") }, 503);
 
-    const [userResult, profileResult, spentResult, agentCountResult] = await Promise.all([
+    // Everything a person sees about their own activity is read from the record
+    // of truth (ledger, claims, streaks). The counters on the profile row were
+    // maintained in one place or none, and need a profile row to exist at all,
+    // so they showed a stale "Earned", 0 active missions and a 0-day streak.
+    const [userResult, profileResult, totals, agentCountResult, claimCounts, inProgress, streakResult] = await Promise.all([
       db.select({
         id: humans.id,
         email: humans.email,
@@ -36,13 +44,37 @@ app.get("/", humanAuth(), async (c) => {
         tokenBalance: humans.tokenBalance,
       }).from(humans).where(eq(humans.id, human.id)).limit(1),
       db.select().from(humanProfiles).where(eq(humanProfiles.humanId, human.id)).limit(1),
-      db.select({ total: sql<number>`COALESCE(SUM(ABS(${tokenTransactions.amount})), 0)` })
-        .from(tokenTransactions)
-        .where(sql`${tokenTransactions.humanId} = ${human.id} AND ${tokenTransactions.amount} < 0`),
+      getTokenTotals(db, human.id),
       // Sprint 19: Agent count for dashboard card
       db.select({ count: sql<number>`count(*)::int` })
         .from(agents)
         .where(eq(agents.ownerHumanId, human.id)),
+      // In progress = claimed (evidence still owed) or submitted (waiting for a
+      // verdict); completed = verified.
+      db.select({
+        active: sql<number>`count(*) filter (where ${missionClaims.status} in ('active', 'submitted'))::int`,
+        completed: sql<number>`count(*) filter (where ${missionClaims.status} = 'verified')::int`,
+      })
+        .from(missionClaims)
+        .where(eq(missionClaims.humanId, human.id)),
+      // The most recent few of the missions in progress, to link to.
+      db.select({
+        claimId: missionClaims.id,
+        status: missionClaims.status,
+        deadlineAt: missionClaims.deadlineAt,
+        missionId: missions.id,
+        title: missions.title,
+        tokenReward: missions.tokenReward,
+      })
+        .from(missionClaims)
+        .innerJoin(missions, eq(missionClaims.missionId, missions.id))
+        .where(and(eq(missionClaims.humanId, human.id), inArray(missionClaims.status, ["active", "submitted"])))
+        .orderBy(desc(missionClaims.claimedAt))
+        .limit(IN_PROGRESS_LIMIT),
+      db.select({ currentStreak: streaks.currentStreak })
+        .from(streaks)
+        .where(eq(streaks.humanId, human.id))
+        .limit(1),
     ]);
     const [user] = userResult;
     const [profile] = profileResult;
@@ -56,9 +88,8 @@ app.get("/", humanAuth(), async (c) => {
 
     // Use authoritative balance from humans table
     const balance = parseInt((user.tokenBalance || "0").toString(), 10);
-    const totalEarned = profile?.totalTokensEarned || 0;
-
-    const totalSpent = Number(spentResult[0]?.total || 0);
+    const totalEarned = totals.earned;
+    const totalSpent = totals.spent;
 
     let completeness: { score: number; suggestions: string[] } = { score: 0, suggestions: [] };
     if (profile) {
@@ -110,9 +141,17 @@ app.get("/", humanAuth(), async (c) => {
           orientationCompleted: !!profile?.orientationCompletedAt,
         },
         missions: {
-          active: 0,
-          completed: profile?.totalMissionsCompleted || 0,
-          streakDays: profile?.streakDays || 0,
+          active: claimCounts[0]?.active ?? 0,
+          completed: claimCounts[0]?.completed ?? 0,
+          streakDays: streakResult[0]?.currentStreak ?? 0,
+          inProgress: inProgress.map((row) => ({
+            claimId: row.claimId,
+            missionId: row.missionId,
+            title: row.title,
+            status: row.status,
+            deadlineAt: row.deadlineAt,
+            tokenReward: row.tokenReward,
+          })),
         },
         agents: {
           count: agentCountResult[0]?.count ?? 0,

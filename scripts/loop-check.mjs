@@ -365,6 +365,12 @@ async function main() {
     ctx.claimId = res.data.claimId;
     const detail = await call("GET", `/missions/${ctx.missionId}`, { token: ctx.human.token, expect: [200] });
     if (!detail.data.myClaim) throw new Error("mission detail does not show the claim to the person who made it");
+    // …and their own dashboard has to show it, with a way back to it.
+    const mine = (await call("GET", "/dashboard", { token: ctx.human.token, expect: [200] })).data.missions ?? {};
+    if (mine.active !== 1) throw new Error(`dashboard reports ${mine.active} missions in progress, expected 1`);
+    if (!(mine.inProgress ?? []).some((m) => m.missionId === ctx.missionId && m.status === "active")) {
+      throw new Error("dashboard does not list the claimed mission as in progress");
+    }
   });
 
   await step("They submit photo evidence", async () => {
@@ -418,6 +424,20 @@ async function main() {
     const mission = await call("GET", `/missions/${ctx.missionId}`, { expect: [200] });
     if (mission.data.status !== "verified") throw new Error(`mission status is "${mission.data.status}", expected "verified"`);
     return `balance ${ctx.balanceBefore} → ${after}`;
+  });
+
+  await step("Their dashboard tells the same story", async () => {
+    const d = (await call("GET", "/dashboard", { token: ctx.human.token, expect: [200] })).data;
+    const { balance, totalEarned, totalSpent } = d.tokens ?? {};
+    if (totalEarned - totalSpent !== balance) {
+      throw new Error(`earned ${totalEarned} - spent ${totalSpent} does not equal the balance ${balance}`);
+    }
+    if (!(totalEarned > 0)) throw new Error(`dashboard reports ${totalEarned} tokens earned after a paid mission`);
+    const m = d.missions ?? {};
+    if (m.completed !== 1) throw new Error(`dashboard reports ${m.completed} completed missions, expected 1`);
+    if (m.active !== 0) throw new Error(`dashboard still reports ${m.active} missions in progress`);
+    if (!(m.streakDays >= 1)) throw new Error(`dashboard reports a ${m.streakDays}-day streak after a verified mission`);
+    return `earned ${totalEarned}, completed ${m.completed}, streak ${m.streakDays}d`;
   });
 
   await step("The verified action shows up in public impact numbers", async () => {

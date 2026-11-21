@@ -4,11 +4,11 @@ import type { MissionDetail as MissionDetailBase } from "@betterworld/shared";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 import MissionClaimButton from "@/components/missions/MissionClaimButton";
 import MissionStatusBadge from "@/components/missions/MissionStatusBadge";
-import { API_BASE } from "@/lib/api";
+import { missionsApi } from "@/lib/humanApi";
 import { difficultyColors, formatDomain, formatDuration, timeRemaining } from "@/lib/mission-utils";
 
 // JSON-serialized variant of MissionDetail (Date fields become strings)
@@ -21,20 +21,20 @@ type MissionDetailJSON = Omit<MissionDetailBase, "expiresAt" | "createdAt" | "up
 
 const Map = dynamic(() => import("@/components/ui/Map"), { ssr: false, loading: () => <div className="h-64 bg-gray-100" /> });
 
-function ClaimSection({ mission }: { mission: MissionDetailJSON }) {
+function ClaimSection({ mission, onClaimed }: { mission: MissionDetailJSON; onClaimed: () => void }) {
   if (mission.myClaim) {
-    const isActive = mission.myClaim.status === "active";
+    const { status } = mission.myClaim;
     const isPastDeadline = new Date(mission.myClaim.deadlineAt) < new Date();
 
     return (
       <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
         <h2 className="mb-2 text-lg font-semibold text-blue-900">Your Claim</h2>
         <div className="grid grid-cols-3 gap-4">
-          <div><p className="text-xs text-blue-600">Status</p><MissionStatusBadge status={mission.myClaim.status} /></div>
+          <div><p className="text-xs text-blue-600">Status</p><MissionStatusBadge status={status} /></div>
           <div><p className="text-xs text-blue-600">Progress</p><p className="font-medium">{mission.myClaim.progressPercent}%</p></div>
           <div><p className="text-xs text-blue-600">Deadline</p><p className="font-medium">{new Date(mission.myClaim.deadlineAt).toLocaleDateString()}</p></div>
         </div>
-        {isActive && !isPastDeadline && (
+        {status === "active" && !isPastDeadline && (
           <Link
             href={`/missions/${mission.id}/submit`}
             className="mt-4 block w-full rounded-md bg-green-600 px-4 py-2 text-center text-white font-medium hover:bg-green-700 transition-colors"
@@ -42,11 +42,20 @@ function ClaimSection({ mission }: { mission: MissionDetailJSON }) {
             Submit Evidence
           </Link>
         )}
+        {status === "active" && isPastDeadline && (
+          <p className="mt-4 text-sm text-blue-900">The deadline for this claim has passed. It will be released so someone else can take the mission.</p>
+        )}
+        {status === "submitted" && (
+          <p className="mt-4 text-sm text-blue-900">Your evidence is in and waiting to be verified. You will see the result here.</p>
+        )}
+        {status === "verified" && (
+          <p className="mt-4 text-sm font-medium text-emerald-800">Verified. Thank you — this mission is done and your reward has been added to your balance.</p>
+        )}
       </div>
     );
   }
   if (mission.status === "open") {
-    return <MissionClaimButton missionId={mission.id} slotsAvailable={mission.slotsAvailable} />;
+    return <MissionClaimButton missionId={mission.id} slotsAvailable={mission.slotsAvailable} onClaimed={onClaimed} />;
   }
   return null;
 }
@@ -58,24 +67,22 @@ export default function MissionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchMission = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/missions/${id}`, { credentials: "include" });
-        const data = await res.json();
-        if (data.ok) {
-          setMission(data.data);
-        } else {
-          setError(data.error?.message || "Mission not found");
-        }
-      } catch {
-        setError("Failed to load mission");
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) fetchMission();
+  // Sends the session when there is one, so the response includes the viewer's
+  // own claim — that is what shows "Your Claim" and the "Submit Evidence" step.
+  const fetchMission = useCallback(async () => {
+    const res = await missionsApi.get<MissionDetailJSON>(id);
+    if (res.ok && res.data) {
+      setMission(res.data);
+      setError(null);
+    } else {
+      setError(res.error?.message || "Mission not found");
+    }
+    setLoading(false);
   }, [id]);
+
+  useEffect(() => {
+    if (id) void fetchMission();
+  }, [id, fetchMission]);
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-gray-400">Loading...</p></div>;
   if (error || !mission) return <div className="flex min-h-screen items-center justify-center"><p className="text-red-500">{error || "Mission not found"}</p></div>;
@@ -174,7 +181,7 @@ export default function MissionDetailPage() {
           )}
 
           {/* Claim status or CTA */}
-          <ClaimSection mission={mission} />
+          <ClaimSection mission={mission} onClaimed={fetchMission} />
         </div>
       </div>
     </div>

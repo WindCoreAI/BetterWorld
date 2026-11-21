@@ -32,7 +32,8 @@ export default function AdminPage() {
 
       const [pendingResult, totalResult, healthResult] = await Promise.allSettled([
         fetch(`${API_BASE}/api/v1/admin/flagged?status=pending_review&limit=1`, { headers }),
-        fetch(`${API_BASE}/api/v1/admin/flagged?limit=1`, { headers }),
+        // status=all: the endpoint defaults to pending only, which made "Total" equal "Pending"
+        fetch(`${API_BASE}/api/v1/admin/flagged?status=all&limit=1`, { headers }),
         fetch(`${API_BASE}/api/v1/health`),
       ]);
 

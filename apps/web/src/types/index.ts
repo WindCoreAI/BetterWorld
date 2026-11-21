@@ -13,9 +13,11 @@ export interface FlaggedItem {
   id: string;
   evaluationId: string;
   contentId: string;
-  contentType: "problem" | "solution" | "debate";
+  contentType: "problem" | "solution" | "debate" | "mission";
   agentId: string;
   status: "pending_review" | "approved" | "rejected";
   assignedAdminId: string | null;
   createdAt: string;
+  /** One line describing the submission (its title, or the start of its text). */
+  title?: string | null;
 }

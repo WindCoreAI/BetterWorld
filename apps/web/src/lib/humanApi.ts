@@ -4,7 +4,9 @@ import {
   API_BASE,
   clearHumanTokens,
   getHumanAuthHeaders,
+  getHumanBearerHeaders,
   getHumanRefreshToken,
+  getHumanToken,
   setHumanTokens,
 } from "./api";
 import type {
@@ -18,19 +20,52 @@ import type {
   TokenTransaction,
 } from "../types/human";
 
+/** Seconds until the stored access token expires, or null if there is none / it is unreadable. */
+function accessTokenSecondsLeft(): number | null {
+  const token = getHumanToken();
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    return typeof json.exp === "number" ? json.exp - Math.floor(Date.now() / 1000) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Refresh the access token up front when it has expired or is about to.
+ *
+ * Access tokens live 15 minutes. Without this, the first click after a quiet
+ * spell (claim a mission, submit evidence) failed with "please try again",
+ * because a write is deliberately not replayed after a 401.
+ */
+async function ensureFreshToken(): Promise<void> {
+  const left = accessTokenSecondsLeft();
+  if (left !== null && left < 60 && getHumanRefreshToken()) {
+    await humanAuthApi.refresh();
+  }
+}
+
+/** Headers for a request: JSON by default, bearer-only for multipart uploads. */
+function requestHeaders(options: RequestInit): Record<string, string> {
+  const base = options.body instanceof FormData ? getHumanBearerHeaders() : getHumanAuthHeaders();
+  return { ...base, ...((options.headers as Record<string, string> | undefined) ?? {}) };
+}
+
 async function humanFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<ApiResponse<T>> {
+  await ensureFreshToken();
+
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/api/v1${path}`, {
       ...options,
       cache: "no-store",
-      headers: {
-        ...getHumanAuthHeaders(),
-        ...(options.headers ?? {}),
-      },
+      headers: requestHeaders(options),
     });
   } catch {
     // Network error (server down, no connectivity, CORS preflight failure)
@@ -68,10 +103,7 @@ async function humanFetch<T>(
           const retryRes = await fetch(`${API_BASE}/api/v1${path}`, {
             ...options,
             cache: "no-store",
-            headers: {
-              ...getHumanAuthHeaders(),
-              ...(options.headers ?? {}),
-            },
+            headers: requestHeaders(options),
           });
           return retryRes.json();
         } catch {
@@ -646,5 +678,88 @@ export const mentorshipsApi = {
   },
   async getDetail(id: string): Promise<ApiResponse<Any>> {
     return humanFetch(`/mentorships/${id}`);
+  },
+};
+
+// ── Missions API (claim → evidence → verification) ──
+
+export interface MyClaim {
+  id: string;
+  /** active → submitted (evidence awaiting verification) → verified */
+  status: "active" | "submitted" | "verified" | string;
+  claimedAt: string;
+  deadlineAt: string;
+  progressPercent: number;
+  completedAt?: string | null;
+}
+
+export interface ClaimResult {
+  claimId: string;
+  missionId: string;
+  status: string;
+  claimedAt: string;
+  deadlineAt: string;
+}
+
+export interface EvidenceSubmissionResult {
+  evidenceId: string;
+  missionId: string;
+  claimId: string;
+  status: string;
+  filesUploaded: number;
+}
+
+export const missionsApi = {
+  /** Mission detail. Sends the session when there is one, so `myClaim` is filled in. */
+  async get<T = Any>(id: string): Promise<ApiResponse<T>> {
+    return humanFetch(`/missions/${id}`);
+  },
+  async claim(id: string): Promise<ApiResponse<ClaimResult>> {
+    return humanFetch(`/missions/${id}/claim`, { method: "POST" });
+  },
+  /** Multipart upload: `files` (one photo), optional `latitude`, `longitude`, `notes`. */
+  async submitEvidence(id: string, form: FormData): Promise<ApiResponse<EvidenceSubmissionResult>> {
+    return humanFetch(`/missions/${id}/evidence`, { method: "POST", body: form });
+  },
+  async mine(status?: string): Promise<ApiResponse<Any>> {
+    return humanFetch(`/missions/mine${status ? `?status=${encodeURIComponent(status)}` : ""}`);
+  },
+};
+
+// ── Operator: evidence review queue ──
+
+export interface EvidenceReviewItem {
+  evidenceId: string;
+  missionTitle: string;
+  submitterName: string;
+  submitterId: string;
+  appealReason: string | null;
+  aiScore: number | null;
+  aiReasoning: string | null;
+  peerReviews: Array<{ reviewerId: string; verdict: string; confidence: number; reasoning: string }>;
+  evidenceType: string;
+  contentUrl: string | null;
+  thumbnailUrl: string | null;
+  evidenceLatitude: number | null;
+  evidenceLongitude: number | null;
+  missionLatitude: number | null;
+  missionLongitude: number | null;
+  gpsDistanceMeters: number | null;
+  submittedAt: string;
+}
+
+export const evidenceReviewApi = {
+  async pending(): Promise<ApiResponse<{ disputes: EvidenceReviewItem[]; nextCursor: string | null }>> {
+    return humanFetch("/admin/disputes?status=pending&limit=50");
+  },
+  async resolve(
+    evidenceId: string,
+    decision: "approve" | "reject",
+    reasoning: string,
+  ): Promise<ApiResponse<{ evidenceId: string; decision: string; rewardAmount: number | null; claimStatus: string | null }>> {
+    return humanFetch(`/admin/disputes/${evidenceId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ decision, reasoning }),
+    });
   },
 };

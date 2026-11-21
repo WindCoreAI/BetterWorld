@@ -36,7 +36,8 @@ export function FlaggedContentCard({ item, onClaim, onReview }: FlaggedContentCa
   };
 
   const timeAgo = formatRelativeTime(item.createdAt);
-  const urgency = getUrgency(item.createdAt);
+  // How long an item has waited only matters while it is still waiting.
+  const urgency = item.status === "pending_review" ? getUrgency(item.createdAt) : null;
   const typeIcon = contentTypeIcons[item.contentType] ?? "?";
   const typeColor = contentTypeColors[item.contentType] ?? "bg-charcoal/10 text-charcoal";
 
@@ -64,6 +65,9 @@ export function FlaggedContentCard({ item, onClaim, onReview }: FlaggedContentCa
       </CardHeader>
 
       <CardBody>
+        {item.title && (
+          <p className="text-base font-medium text-charcoal mb-2 break-words">{item.title}</p>
+        )}
         <p className="text-sm text-charcoal-light mb-1">
           Content ID: <span className="font-mono text-xs">{item.contentId.slice(0, 8)}...</span>
         </p>
@@ -75,7 +79,7 @@ export function FlaggedContentCard({ item, onClaim, onReview }: FlaggedContentCa
       <CardFooter>
         {item.status === "pending_review" && !item.assignedAdminId && (
           <Button size="sm" variant="secondary" onClick={() => onClaim?.(item.id)}>
-            Claim for Review
+            Review
           </Button>
         )}
         {item.assignedAdminId && item.status === "pending_review" && (

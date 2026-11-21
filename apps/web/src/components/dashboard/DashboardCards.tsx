@@ -95,6 +95,8 @@ export function MissionsCard({
   missions: DashboardData["missions"];
   orientationCompleted: boolean;
 }) {
+  const inProgress = missions.inProgress ?? [];
+
   return (
     <Card>
       <CardBody>
@@ -116,32 +118,69 @@ export function MissionsCard({
           </div>
         ) : missions.active === 0 && missions.completed === 0 ? (
           <div className="text-center py-4">
-            <p className="text-charcoal-light text-sm">
-              Missions coming soon! Complete your profile to be ready for
-              matching.
+            <p className="text-charcoal-light text-sm mb-3">
+              You have not taken on a mission yet. Pick one, do it, and send a
+              photo to earn ImpactTokens.
             </p>
+            <Link
+              href="/missions"
+              className="inline-block px-4 py-2 bg-terracotta text-cream rounded-lg text-sm font-medium hover:bg-terracotta-dark transition-colors"
+            >
+              Find a mission
+            </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-charcoal">
-                {missions.active}
-              </p>
-              <p className="text-xs text-charcoal-light">Active</p>
+          <>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-charcoal">
+                  {missions.active}
+                </p>
+                <p className="text-xs text-charcoal-light">In progress</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-charcoal">
+                  {missions.completed}
+                </p>
+                <p className="text-xs text-charcoal-light">Completed</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-charcoal">
+                  {missions.streakDays}
+                </p>
+                <p className="text-xs text-charcoal-light">Day Streak</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-charcoal">
-                {missions.completed}
-              </p>
-              <p className="text-xs text-charcoal-light">Completed</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-charcoal">
-                {missions.streakDays}
-              </p>
-              <p className="text-xs text-charcoal-light">Day Streak</p>
-            </div>
-          </div>
+
+            {inProgress.length > 0 && (
+              <ul className="mt-4 space-y-2" aria-label="Your missions in progress">
+                {inProgress.map((claim) => (
+                  <li key={claim.claimId} className="flex items-center justify-between gap-3 text-sm">
+                    <Link
+                      href={`/missions/${claim.missionId}`}
+                      className="min-w-0 truncate text-charcoal hover:text-terracotta hover:underline"
+                    >
+                      {claim.title}
+                    </Link>
+                    {claim.status === "active" ? (
+                      <Link
+                        href={`/missions/${claim.missionId}/submit`}
+                        className="flex-shrink-0 text-xs font-medium text-terracotta hover:underline"
+                      >
+                        Submit evidence
+                      </Link>
+                    ) : (
+                      <span className="flex-shrink-0 text-xs text-charcoal-light">Awaiting verification</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <Link href="/missions" className="block mt-4 text-xs text-terracotta hover:underline">
+              Find another mission
+            </Link>
+          </>
         )}
       </CardBody>
     </Card>

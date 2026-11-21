@@ -33,7 +33,9 @@ async function fetchFlagged(
   cursor?: string,
 ): Promise<FlaggedResponse> {
   const params = new URLSearchParams();
-  if (status !== "all") params.set("status", status);
+  // Always sent: the endpoint defaults to pending only, so omitting it made the
+  // "All" tab show the same items as "Pending".
+  params.set("status", status);
   params.set("limit", "10");
   if (cursor) params.set("cursor", cursor);
 
@@ -137,6 +139,10 @@ export default function FlaggedContentListPage() {
               <FlaggedContentCard
                 key={item.id}
                 item={item}
+                // Both buttons open the item; the detail page claims it when a
+                // decision is submitted. ("Claim for Review" used to have no
+                // handler at all, so the queue was a dead end.)
+                onClaim={(id) => router.push(`/admin/flagged/${id}`)}
                 onReview={(id) => router.push(`/admin/flagged/${id}`)}
               />
             ))}

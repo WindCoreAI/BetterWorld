@@ -6,40 +6,47 @@ interface EvidenceSubmitFormProps {
   missionId: string;
   claimId: string;
   onSubmit: (data: FormData) => Promise<void>;
+  /** Tells the page which file is selected (for the preview and checklist). */
+  onFileSelected?: (file: File | null) => void;
   disabled?: boolean;
 }
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export function EvidenceSubmitForm({
   missionId: _missionId,
   claimId: _claimId,
   onSubmit,
+  onFileSelected,
   disabled = false,
 }: EvidenceSubmitFormProps) {
-  const [files, setFiles] = useState<File[]>([]);
+  const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const selectFile = (next: File | null) => {
+    setFile(next);
+    onFileSelected?.(next);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files || []);
-    if (selected.length > 5) {
-      setError("Maximum 5 files per submission");
+    const selected = e.target.files?.[0] ?? null;
+    if (selected && selected.size > MAX_FILE_BYTES) {
+      setError(`"${selected.name}" is larger than 10MB. Choose a smaller file.`);
+      selectFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-    const oversized = selected.find((f) => f.size > 10 * 1024 * 1024);
-    if (oversized) {
-      setError(`File "${oversized.name}" exceeds 10MB limit`);
-      return;
-    }
-    setFiles(selected);
+    selectFile(selected);
     setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length === 0) {
-      setError("Please select at least one file");
+    if (!file) {
+      setError("Please choose a photo first");
       return;
     }
 
@@ -48,7 +55,7 @@ export function EvidenceSubmitForm({
 
     try {
       const formData = new FormData();
-      files.forEach((file) => formData.append("files", file));
+      formData.append("files", file);
       if (notes.trim()) formData.append("notes", notes.trim());
 
       await onSubmit(formData);
@@ -62,35 +69,32 @@ export function EvidenceSubmitForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Evidence Files
+        <label htmlFor="evidence-file" className="block text-sm font-medium text-gray-700 mb-1">
+          Evidence photo
         </label>
+        {/* No `capture` attribute: on a phone this offers both the camera and the
+            photo library, so a photo taken earlier (or offline) can be used. One
+            file, because the server stores one file per submission. */}
         <input
+          id="evidence-file"
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/heic,application/pdf,video/mp4,video/quicktime"
-          capture="environment"
-          multiple
           onChange={handleFileChange}
           disabled={disabled || submitting}
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
         <p className="mt-1 text-xs text-gray-500">
-          1-5 files, max 10MB each. Photos, PDFs, or videos.
+          One file, up to 10MB. A photo works best; PDFs and videos are reviewed by a person.
         </p>
       </div>
 
-      {files.length > 0 && (
-        <div className="text-sm text-gray-600">
-          {files.length} file(s) selected
-        </div>
-      )}
-
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="evidence-notes" className="block text-sm font-medium text-gray-700 mb-1">
           Notes (optional)
         </label>
         <textarea
+          id="evidence-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           maxLength={2000}
@@ -102,14 +106,14 @@ export function EvidenceSubmitForm({
       </div>
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+        <div role="alert" className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
           {error}
         </div>
       )}
 
       <button
         type="submit"
-        disabled={disabled || submitting || files.length === 0}
+        disabled={disabled || submitting || !file}
         className="w-full rounded-md bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
       >
         {submitting ? "Submitting..." : "Submit Evidence"}

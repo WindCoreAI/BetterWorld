@@ -96,6 +96,22 @@ export default function FlaggedContentDetailPage() {
       const token = getAdminToken();
       const reqHeaders = getAuthHeaders(token);
 
+      // The API only accepts a review from the admin who has claimed the item
+      // (so two people do not review the same thing). Nothing in the UI ever
+      // made that claim, so every review was refused. Claim it here first.
+      if (!detail?.assignedAdminId) {
+        const claimRes = await fetch(`${API_BASE}/api/v1/admin/flagged/${id}/claim`, {
+          method: "POST",
+          headers: reqHeaders,
+        });
+        if (!claimRes.ok) {
+          const claimError = (await claimRes.json().catch(() => null)) as ReviewResponse | null;
+          setResult(`Error: ${claimError?.error?.message ?? "Could not claim this item for review"}`);
+          return;
+        }
+        setDetail((current) => (current ? { ...current, assignedAdminId: "me" } : current));
+      }
+
       const res = await fetch(`${API_BASE}/api/v1/admin/flagged/${id}/review`, {
         method: "POST",
         headers: reqHeaders,

@@ -95,9 +95,20 @@ export interface DashboardData {
     orientationCompleted: boolean;
   };
   missions: {
+    /** Claimed or submitted and not yet verified. */
     active: number;
     completed: number;
     streakDays: number;
+    /** The most recent few of the missions counted in `active`. */
+    inProgress?: Array<{
+      claimId: string;
+      missionId: string;
+      title: string;
+      /** active = evidence still owed; submitted = waiting for a verdict */
+      status: "active" | "submitted" | string;
+      deadlineAt: string;
+      tokenReward: number;
+    }>;
   };
   recentActivity: Array<{
     id: string;
