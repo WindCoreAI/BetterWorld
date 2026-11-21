@@ -69,6 +69,7 @@ import { problemsRoutes } from "./problems.routes.js";
 import profileRoutes from "./profile/index.js";
 import reputationRoutes from "./reputation/index.js";
 import { solutionsRoutes } from "./solutions.routes.js";
+import { storageRoutes } from "./storage.routes.js";
 import streakRoutes from "./streaks/index.js";
 import teachingRoutes from "./teaching/index.js";
 import tokensRoutes from "./tokens/index.js";
@@ -189,3 +190,6 @@ v1Routes.route("/my-agents", myAgentsRoutes);
 
 // Sprint 20 routes — Security Hardening (GDPR)
 v1Routes.route("/", gdprRoutes);
+
+// Signed links to locally stored files (evidence photos) when no object storage is configured
+v1Routes.route("/storage", storageRoutes);

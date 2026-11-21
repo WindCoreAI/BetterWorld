@@ -20,7 +20,8 @@ import { z } from "zod";
 import type { AppEnv } from "../../app.js";
 import { getDb } from "../../lib/container.js";
 import { haversineDistance } from "../../lib/evidence-helpers.js";
-import { distributeEvidenceReward } from "../../lib/reward-helpers.js";
+import { finalizeEvidence } from "../../lib/evidence-outcome.js";
+import { getSignedUrl } from "../../lib/storage.js";
 import { parseUuidParam } from "../../lib/validation.js";
 import { humanAuth } from "../../middleware/humanAuth.js";
 import { requireAdmin } from "../../middleware/requireAdmin.js";
@@ -142,8 +143,9 @@ disputeRoutes.get("/", humanAuth(), requireAdmin(), async (c) => {
           confidence: Number(r.confidence),
         })),
         evidenceType: row.evidenceType,
-        contentUrl: row.contentUrl,
-        thumbnailUrl: row.thumbnailUrl,
+        // Short-lived links so the operator can actually see what was submitted
+        contentUrl: row.contentUrl ? await getSignedUrl(row.contentUrl) : null,
+        thumbnailUrl: row.thumbnailUrl ? await getSignedUrl(row.thumbnailUrl) : null,
         evidenceLatitude: eLat,
         evidenceLongitude: eLng,
         missionLatitude: mLat,
@@ -213,55 +215,17 @@ disputeRoutes.post("/:evidenceId/resolve", humanAuth(), requireAdmin(), async (c
     throw new AppError("CONFLICT", "Evidence is not in appealed or admin_review stage");
   }
 
-  let rewardAmount: number | null = null;
-  let rewardDistributed = false;
-
-  if (parsed.data.decision === "approve") {
-    // Approve: set verified, full confidence
-    await db
-      .update(evidence)
-      .set({
-        verificationStage: "verified",
-        finalVerdict: "verified",
-        finalConfidence: "1.00",
-        updatedAt: new Date(),
-      })
-      .where(eq(evidence.id, evidenceId));
-
-    // Distribute full reward
-    try {
-      const result = await distributeEvidenceReward(db, evidenceId);
-      if (result) {
-        rewardAmount = result.rewardAmount;
-        rewardDistributed = true;
-      }
-    } catch {
-      // Non-fatal
-    }
-  } else {
-    // Reject: final rejection
-    await db
-      .update(evidence)
-      .set({
-        verificationStage: "rejected",
-        finalVerdict: "rejected",
-        updatedAt: new Date(),
-      })
-      .where(eq(evidence.id, evidenceId));
-  }
-
-  // Create audit log
-  await db.insert(verificationAuditLog).values({
+  // The operator's decision is final: approve at full confidence (full reward),
+  // or reject. finalizeEvidence also closes or reopens the claim, completes the
+  // mission when its slots are done, and writes the audit entry.
+  const outcome = await finalizeEvidence(db, {
     evidenceId,
-    decisionSource: "admin",
-    decision: parsed.data.decision === "approve" ? "approved" : "rejected",
+    verdict: parsed.data.decision === "approve" ? "verified" : "rejected",
+    confidence: parsed.data.decision === "approve" ? 1 : 0,
+    source: "admin",
     reasoning: parsed.data.reasoning,
     decidedByHumanId: human.id,
-    metadata: {
-      adminAction: "resolve_dispute",
-      rewardDistributed,
-      rewardAmount,
-    },
+    auditMetadata: { adminAction: "resolve_dispute", previousStage: row.verificationStage },
   });
 
   return c.json({
@@ -269,8 +233,10 @@ disputeRoutes.post("/:evidenceId/resolve", humanAuth(), requireAdmin(), async (c
     data: {
       evidenceId,
       decision: parsed.data.decision,
-      rewardDistributed,
-      rewardAmount,
+      rewardDistributed: outcome.rewardAmount !== null,
+      rewardAmount: outcome.rewardAmount,
+      claimStatus: outcome.claimStatus,
+      missionCompleted: outcome.missionCompleted,
     },
     requestId: c.get("requestId"),
   });

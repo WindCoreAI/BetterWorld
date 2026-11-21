@@ -25,7 +25,10 @@ const createMissionBaseSchema = z.object({
   requiredLatitude: z.number().min(-90).max(90).optional(),
   requiredLongitude: z.number().min(-180).max(180).optional(),
   locationRadiusKm: z.number().int().min(1).max(200).default(5),
-  estimatedDurationMinutes: z.number().int().min(15).max(10080),
+  // 5 minutes minimum: the first missions a newcomer sees should be doable on
+  // the spot ("photograph this storm drain"), and the old 15-minute floor made
+  // exactly those impossible to create.
+  estimatedDurationMinutes: z.number().int().min(5).max(10080),
   difficulty: z
     .enum(["beginner", "intermediate", "advanced", "expert"])
     .default("intermediate"),

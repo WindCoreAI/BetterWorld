@@ -18,6 +18,7 @@ import {
 import type { MissionStatus, DifficultyLevel } from "@betterworld/shared";
 import { and, eq, desc, lt, sql, gte, lte, inArray } from "drizzle-orm";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { z } from "zod";
 
 import { getDb } from "../../lib/container.js";
@@ -46,6 +47,19 @@ function resolveLocation(
   }
   const snapped = snapToGrid(lat, lng);
   return { latitude: snapped.latitude, longitude: snapped.longitude, radiusKm: radius, isExact: false };
+}
+
+/**
+ * The signed-in human on a route that does not require authentication.
+ * The global optionalAuth middleware has already verified the bearer token.
+ */
+function optionalHumanId(c: Context<AuthEnv>): string | null {
+  const role = c.get("authRole");
+  const user = c.get("user");
+  if ((role === "human" || role === "admin") && typeof user?.sub === "string" && user.sub) {
+    return user.sub;
+  }
+  return null;
 }
 
 const missionRoutes = new Hono<AuthEnv>();
@@ -421,12 +435,12 @@ missionRoutes.get("/", async (c) => {
   const searchRadius = radiusKm ?? 25;
 
   if (nearMe === "true") {
-    const human = c.get("human");
-    if (human) {
+    const humanId = optionalHumanId(c);
+    if (humanId) {
       const [profile] = await db.select({
         location: humanProfiles.location,
         serviceRadius: humanProfiles.serviceRadius,
-      }).from(humanProfiles).where(eq(humanProfiles.humanId, human.id)).limit(1);
+      }).from(humanProfiles).where(eq(humanProfiles.humanId, humanId)).limit(1);
 
       if (profile?.location) {
         const match = profile.location.match(/^POINT\((-?[\d.]+)\s+(-?[\d.]+)\)$/);
@@ -542,22 +556,28 @@ missionRoutes.get("/:id", async (c) => {
     }
   }
 
-  // Check if requesting human has a claim
+  // The signed-in person's own claim on this mission, if any. This route does
+  // not require auth, so the identity comes from the optional bearer token —
+  // previously it read a context value only set on auth-required routes, so
+  // myClaim was always null and nobody could reach "submit evidence".
   let myClaim = null;
-  const human = c.get("human");
-  if (human) {
+  const humanId = optionalHumanId(c);
+  if (humanId) {
     const [claim] = await db.select({
       id: missionClaims.id,
       status: missionClaims.status,
       claimedAt: missionClaims.claimedAt,
       deadlineAt: missionClaims.deadlineAt,
       progressPercent: missionClaims.progressPercent,
+      completedAt: missionClaims.completedAt,
     }).from(missionClaims)
       .where(and(
         eq(missionClaims.missionId, id),
-        eq(missionClaims.humanId, human.id),
-        inArray(missionClaims.status, ["active", "submitted"]),
-      )).limit(1);
+        eq(missionClaims.humanId, humanId),
+        inArray(missionClaims.status, ["active", "submitted", "verified"]),
+      ))
+      .orderBy(desc(missionClaims.claimedAt))
+      .limit(1);
 
     if (claim) {
       myClaim = claim;
@@ -616,11 +636,11 @@ missionRoutes.post("/:id/claim", humanAuth(), async (c) => {
   const result = await db.transaction(async (tx) => {
     // 1. Lock mission row
     const lockedMissions = await tx.execute(
-      sql`SELECT id, current_claim_count, max_claims, status, guardrail_status
+      sql`SELECT id, current_claim_count, max_claims, status, guardrail_status, (expires_at < NOW()) AS is_expired
           FROM missions WHERE id = ${missionId} FOR UPDATE SKIP LOCKED`
     );
 
-    const lockedMission = (lockedMissions as unknown as Array<{ id: string; current_claim_count: number; max_claims: number; status: string; guardrail_status: string }>)[0];
+    const lockedMission = (lockedMissions as unknown as Array<{ id: string; current_claim_count: number; max_claims: number; status: string; guardrail_status: string; is_expired: boolean }>)[0];
     if (!lockedMission) {
       throw new AppError("CONFLICT", "Mission not found or is being processed — please retry");
     }
@@ -629,6 +649,9 @@ missionRoutes.post("/:id/claim", humanAuth(), async (c) => {
     }
     if (lockedMission.guardrail_status !== "approved") {
       throw new AppError("NOT_FOUND", "Mission is not available");
+    }
+    if (lockedMission.is_expired) {
+      throw new AppError("CONFLICT", "Mission has expired");
     }
 
     // 2. Check slots available
@@ -664,11 +687,14 @@ missionRoutes.post("/:id/claim", humanAuth(), async (c) => {
       })
       .returning();
 
-    // 6. Increment currentClaimCount
+    // 6. Increment currentClaimCount; once every slot is taken the mission is
+    //    "claimed" and leaves the default marketplace listing (which shows "open").
+    const isNowFull = lockedMission.current_claim_count + 1 >= lockedMission.max_claims;
     await tx
       .update(missions)
       .set({
         currentClaimCount: sql`${missions.currentClaimCount} + 1`,
+        ...(isNowFull ? { status: "claimed" as const } : {}),
         updatedAt: new Date(),
       })
       .where(eq(missions.id, missionId));
@@ -731,8 +757,10 @@ missionRoutes.patch("/:id/claims/:claimId", humanAuth(), async (c) => {
         updatedAt: new Date(),
       }).where(eq(missionClaims.id, claimId));
 
+      // Free the slot; a mission that was full is open for someone else again.
       await tx.update(missions).set({
         currentClaimCount: sql`GREATEST(${missions.currentClaimCount} - 1, 0)`,
+        status: sql`CASE WHEN ${missions.status} = 'claimed' THEN 'open'::mission_status ELSE ${missions.status} END`,
         updatedAt: new Date(),
       }).where(eq(missions.id, missionId));
     });
