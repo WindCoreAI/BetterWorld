@@ -1,5 +1,7 @@
-const CACHE_NAME = 'betterworld-v1';
-const API_CACHE = 'betterworld-api-v1';
+const CACHE_NAME = 'betterworld-v2';
+// Bumped from v1: the v1 API cache held responses to signed-in requests keyed
+// by URL alone. Changing the name makes the activate handler below delete it.
+const API_CACHE = 'betterworld-api-v2';
 
 // Install: pre-cache shell
 self.addEventListener('install', (event) => {
@@ -15,8 +17,19 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: network-first for navigation, stale-while-revalidate for API GET reads
-// Non-GET requests (POST/PATCH/DELETE) are NOT intercepted — the browser handles them natively
+// Fetch
+//  - navigation:           network, falling back to a cached page when offline
+//  - anonymous API reads:  network first; the cached copy is used ONLY when the
+//                          network fails, so public pages still open offline
+//  - signed-in API reads:  never intercepted and never cached
+//  - health probes:        never intercepted and never cached
+//  - everything else:      not intercepted
+//
+// API reads used to be answered from the cache first. The cache is keyed by URL
+// and ignores the Authorization header, so (1) every screen was one step stale —
+// claim a mission and the page still offered "Claim Mission" — and (2) on a
+// shared device the next person to sign in was shown the previous person's
+// cached profile, dashboard and balance.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
@@ -32,15 +45,27 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.url.includes('/api/v1/') && request.method === 'GET') {
+    // Personal data: straight to the network, nothing stored.
+    if (request.headers.has('Authorization')) return;
+
+    // A health probe has to describe the network now; a cached "ok" would
+    // report a healthy system while offline.
+    if (new URL(request.url).pathname.endsWith('/api/v1/health')) return;
+
     event.respondWith(
       caches.open(API_CACHE).then(cache =>
-        cache.match(request).then(cached => {
-          const fetchPromise = fetch(request).then(response => {
+        fetch(request)
+          .then(response => {
             if (response.ok) cache.put(request, response.clone());
             return response;
-          }).catch(() => cached);
-          return cached || fetchPromise;
-        })
+          })
+          .catch(() =>
+            cache.match(request).then(cached => {
+              if (cached) return cached;
+              // Same outcome as an un-intercepted request with no network
+              return Response.error();
+            })
+          )
       )
     );
     return;
