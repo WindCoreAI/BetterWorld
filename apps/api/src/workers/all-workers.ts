@@ -1,110 +1,139 @@
 /**
  * Combined worker entrypoint — starts all BullMQ workers in a single process.
  *
- * Used by Dockerfile.worker to run all background workers on Fly.io.
- * Individual workers can still be run standalone during development.
+ * Two ways to run it:
+ *   - standalone:  `tsx src/workers/all-workers.ts`  (Dockerfile.worker, `pnpm dev:workers`)
+ *   - embedded:    the API process calls startAllWorkers() when EMBEDDED_WORKERS
+ *                  is on (the default outside production), so a single process
+ *                  runs the whole platform.
+ *
+ * Every worker is loaded and started in isolation: one worker that cannot be
+ * imported or constructed is logged and skipped, it never prevents the others
+ * (in particular the guardrail and evidence workers) from starting.
  */
+import "../lib/load-env.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import pino from "pino";
 
+import { scheduleHousekeepingJobs } from "./schedules.js";
 import { initSentry, captureException } from "../lib/sentry.js";
 
 const logger = pino({ name: "all-workers" });
 
-async function main() {
+type WorkerFactory = () => unknown;
+
+/** Each entry imports its module lazily so a broken module only costs that worker. */
+const WORKERS: Array<{ name: string; load: () => Promise<WorkerFactory> }> = [
+  { name: "guardrail", load: async () => (await import("./guardrail-worker.js")).createGuardrailWorker },
+  { name: "evidence-verification", load: async () => (await import("./evidence-verification.js")).createEvidenceVerificationWorker },
+  { name: "fraud-scoring", load: async () => (await import("./fraud-scoring.js")).createFraudScoringWorker },
+  { name: "reputation-decay", load: async () => (await import("./reputation-decay.js")).createReputationDecayWorker },
+  { name: "metrics-aggregation", load: async () => (await import("./metrics-aggregation.js")).createMetricsAggregationWorker },
+  { name: "mission-expiration", load: async () => (await import("./mission-expiration.js")).createMissionExpirationWorker },
+  { name: "municipal-ingest", load: async () => (await import("./municipal-ingest.js")).createMunicipalIngestWorker },
+  // Sprint 11: Shadow Mode workers
+  { name: "peer-consensus", load: async () => (await import("./peer-consensus.js")).createPeerConsensusWorker },
+  { name: "evaluation-timeout", load: async () => (await import("./evaluation-timeout.js")).createEvaluationTimeoutWorker },
+  { name: "city-metrics", load: async () => (await import("./city-metrics.js")).createCityMetricsWorker },
+  // Sprint 12: Production Shift workers
+  { name: "economic-health", load: async () => (await import("./economic-health-worker.js")).createEconomicHealthWorker },
+  { name: "spot-check", load: async () => (await import("./spot-check-worker.js")).createSpotCheckWorker },
+  { name: "privacy", load: async () => (await import("./privacy-worker.js")).createPrivacyWorker },
+  // Sprint 13: Phase 3 Integration workers
+  { name: "pattern-aggregation", load: async () => (await import("./pattern-aggregation-worker.js")).createPatternAggregationWorker },
+  { name: "rate-adjustment", load: async () => (await import("./rate-adjustment-worker.js")).createRateAdjustmentWorker },
+  // P0-D2: Token balance reconciliation (hourly)
+  { name: "token-reconciliation", load: async () => (await import("./token-reconciliation.js")).createTokenReconciliationWorker },
+  // Sprint 16: Social Fabric Foundation
+  { name: "care-moments", load: async () => (await import("./care-moment-worker.js")).createCareMomentWorker },
+  { name: "notification-retention", load: async () => (await import("./notification-retention-worker.js")).createNotificationRetentionWorker },
+  // Sprint 17: Community Identity & Visible Growth
+  { name: "milestone-detection", load: async () => (await import("./milestone-detection-worker.js")).createMilestoneDetectionWorker },
+  { name: "intelligence-report", load: async () => (await import("./intelligence-report-worker.js")).createIntelligenceReportWorker },
+  // Sprint 18: Cooperative Depth & Governance
+  { name: "mentorship-expiry", load: async () => (await import("./mentorship-expiry-worker.js")).createMentorshipExpiryWorker },
+  { name: "moderator-eligibility", load: async () => (await import("./moderator-eligibility-worker.js")).createModeratorEligibilityWorker },
+  { name: "case-study-curation", load: async () => (await import("./case-study-curation-worker.js")).createCaseStudyCurationWorker },
+  { name: "achievement-detection", load: async () => (await import("./achievement-detection-worker.js")).createAchievementDetectionWorker },
+  { name: "power-audit", load: async () => (await import("./power-audit-worker.js")).createPowerAuditWorker },
+  { name: "agent-fingerprint", load: async () => (await import("./agent-fingerprint-worker.js")).createAgentFingerprintWorker },
+  { name: "feed-event-processor", load: async () => (await import("./feed-event-processor-worker.js")).createFeedEventProcessorWorker },
+  // Sprint 20: Security Hardening
+  { name: "account-deletion", load: async () => (await import("./account-deletion-worker.js")).createAccountDeletionWorker },
+];
+
+/** Workers the core loop cannot run without. If one of these fails, say so loudly. */
+const ESSENTIAL = new Set(["guardrail", "evidence-verification"]);
+
+export interface WorkerStartupReport {
+  started: string[];
+  failed: Array<{ name: string; error: string }>;
+}
+
+export async function startAllWorkers(): Promise<WorkerStartupReport> {
   // FR-024: Initialize Sentry for worker error tracking
   initSentry();
 
-  logger.info("Starting all BullMQ workers...");
+  // Every worker registers its own SIGTERM/SIGINT handlers.
+  process.setMaxListeners(Math.max(process.getMaxListeners(), WORKERS.length * 2 + 20));
 
-  const { createGuardrailWorker } = await import("./guardrail-worker.js");
-  const { createEvidenceVerificationWorker } = await import("./evidence-verification.js");
-  const { createFraudScoringWorker } = await import("./fraud-scoring.js");
-  const { createReputationDecayWorker } = await import("./reputation-decay.js");
-  const { createMetricsAggregationWorker } = await import("./metrics-aggregation.js");
-  const { createMissionExpirationWorker } = await import("./mission-expiration.js");
-  const { createMunicipalIngestWorker } = await import("./municipal-ingest.js");
-  const { createPeerConsensusWorker } = await import("./peer-consensus.js");
-  const { createEvaluationTimeoutWorker } = await import("./evaluation-timeout.js");
-  const { createCityMetricsWorker } = await import("./city-metrics.js");
-  const { createEconomicHealthWorker } = await import("./economic-health-worker.js");
-  const { createSpotCheckWorker } = await import("./spot-check-worker.js");
-  const { createPrivacyWorker } = await import("./privacy-worker.js");
-  const { createPatternAggregationWorker } = await import("./pattern-aggregation-worker.js");
-  const { createRateAdjustmentWorker } = await import("./rate-adjustment-worker.js");
-  const { createTokenReconciliationWorker } = await import("./token-reconciliation.js");
-  const { createCareMomentWorker } = await import("./care-moment-worker.js");
-  const { createNotificationRetentionWorker } = await import("./notification-retention-worker.js");
-  // Sprint 17: Community Identity & Visible Growth
-  const { createMilestoneDetectionWorker } = await import("./milestone-detection-worker.js");
-  const { createIntelligenceReportWorker } = await import("./intelligence-report-worker.js");
-  // Sprint 18: Cooperative Depth & Governance
-  const { createMentorshipExpiryWorker } = await import("./mentorship-expiry-worker.js");
-  const { createModeratorEligibilityWorker } = await import("./moderator-eligibility-worker.js");
-  const { createCaseStudyCurationWorker } = await import("./case-study-curation-worker.js");
-  const { createAchievementDetectionWorker } = await import("./achievement-detection-worker.js");
-  const { createPowerAuditWorker } = await import("./power-audit-worker.js");
-  const { createAgentFingerprintWorker } = await import("./agent-fingerprint-worker.js");
-  const { createFeedEventProcessorWorker } = await import("./feed-event-processor-worker.js");
-  // Sprint 20: Security Hardening
-  const { createAccountDeletionWorker } = await import("./account-deletion-worker.js");
+  logger.info({ count: WORKERS.length }, "Starting BullMQ workers...");
 
-  const workers = [
-    { name: "guardrail", create: createGuardrailWorker },
-    { name: "evidence-verification", create: createEvidenceVerificationWorker },
-    { name: "fraud-scoring", create: createFraudScoringWorker },
-    { name: "reputation-decay", create: createReputationDecayWorker },
-    { name: "metrics-aggregation", create: createMetricsAggregationWorker },
-    { name: "mission-expiration", create: createMissionExpirationWorker },
-    { name: "municipal-ingest", create: createMunicipalIngestWorker },
-    // Sprint 11: Shadow Mode workers
-    { name: "peer-consensus", create: createPeerConsensusWorker },
-    { name: "evaluation-timeout", create: createEvaluationTimeoutWorker },
-    { name: "city-metrics", create: createCityMetricsWorker },
-    // Sprint 12: Production Shift workers
-    { name: "economic-health", create: createEconomicHealthWorker },
-    { name: "spot-check", create: createSpotCheckWorker },
-    { name: "privacy", create: createPrivacyWorker },
-    // Sprint 13: Phase 3 Integration workers
-    { name: "pattern-aggregation", create: createPatternAggregationWorker },
-    { name: "rate-adjustment", create: createRateAdjustmentWorker },
-    // P0-D2: Token balance reconciliation (hourly)
-    { name: "token-reconciliation", create: createTokenReconciliationWorker },
-    // Sprint 16: Social Fabric Foundation
-    { name: "care-moments", create: createCareMomentWorker },
-    { name: "notification-retention", create: createNotificationRetentionWorker },
-    // Sprint 17: Community Identity & Visible Growth
-    { name: "milestone-detection", create: createMilestoneDetectionWorker },
-    { name: "intelligence-report", create: createIntelligenceReportWorker },
-    // Sprint 18: Cooperative Depth & Governance
-    { name: "mentorship-expiry", create: createMentorshipExpiryWorker },
-    { name: "moderator-eligibility", create: createModeratorEligibilityWorker },
-    { name: "case-study-curation", create: createCaseStudyCurationWorker },
-    { name: "achievement-detection", create: createAchievementDetectionWorker },
-    { name: "power-audit", create: createPowerAuditWorker },
-    { name: "agent-fingerprint", create: createAgentFingerprintWorker },
-    { name: "feed-event-processor", create: createFeedEventProcessorWorker },
-    // Sprint 20: Security Hardening
-    { name: "account-deletion", create: createAccountDeletionWorker },
-  ];
+  const report: WorkerStartupReport = { started: [], failed: [] };
 
-  for (const { name, create } of workers) {
+  for (const { name, load } of WORKERS) {
     try {
+      const create = await load();
       create();
+      report.started.push(name);
       logger.info({ worker: name }, "Worker started");
     } catch (err) {
-      logger.error({ worker: name, error: (err as Error).message }, "Failed to start worker");
+      const message = err instanceof Error ? err.message : String(err);
+      report.failed.push({ name, error: message });
+      logger.error(
+        { worker: name, essential: ESSENTIAL.has(name), error: message },
+        ESSENTIAL.has(name)
+          ? "ESSENTIAL worker failed to start — submissions will not be processed"
+          : "Failed to start worker",
+      );
       // FR-024: Report worker startup failures to Sentry
-      captureException(err instanceof Error ? err : new Error(String(err)), {
+      captureException(err instanceof Error ? err : new Error(message), {
         worker: name,
         phase: "startup",
       });
     }
   }
 
-  logger.info({ count: workers.length }, "All workers initialized");
+  try {
+    await scheduleHousekeepingJobs();
+  } catch (err) {
+    logger.error({ error: (err as Error).message }, "Failed to register housekeeping schedules");
+  }
+
+  logger.info(
+    { started: report.started.length, failed: report.failed.map((f) => f.name) },
+    "Workers initialized",
+  );
+
+  return report;
 }
 
-main().catch((err) => {
-  logger.error({ error: (err as Error).message }, "Fatal: worker startup failed");
-  process.exit(1);
-});
+// Start immediately only when this file is the process entrypoint.
+const isEntrypoint =
+  !!process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isEntrypoint) {
+  startAllWorkers()
+    .then((report) => {
+      if (report.failed.some((f) => ESSENTIAL.has(f.name))) {
+        logger.error("An essential worker failed to start — exiting so the supervisor restarts us");
+        process.exit(1);
+      }
+    })
+    .catch((err) => {
+      logger.error({ error: (err as Error).message }, "Fatal: worker startup failed");
+      process.exit(1);
+    });
+}

@@ -9,12 +9,29 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import * as faceapi from "@vladmandic/face-api";
 import pino from "pino";
 import sharp from "sharp";
 
 const logger = pino({ name: "privacy-pipeline" });
+
+// face-api's Node build needs the native @tensorflow/tfjs-node binding. It is
+// loaded on first use (see ensureFaceModel) so that a missing binding disables
+// face blurring for one photo instead of crashing every process that imports
+// this module — which used to take all background workers down at startup.
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+type FaceApi = typeof import("@vladmandic/face-api");
+
+/** Thrown when blurring was requested but the face detector cannot run at all. */
+export class FaceDetectorUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FaceDetectorUnavailableError";
+  }
+}
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 export interface PrivacyResult {
   buffer: Buffer;
@@ -48,15 +65,14 @@ async function stripExifPii(imageBuffer: Buffer): Promise<Buffer> {
 
 // ── Face Detection Model Initialization ──
 // Load SSD MobileNet v1 model once at startup (FR-020)
-let faceModelLoaded = false;
-let faceModelLoadPromise: Promise<void> | null = null;
+let faceModelLoadPromise: Promise<FaceApi> | null = null;
 
 // Check multiple model locations: assets (Docker baked-in), local node_modules, root node_modules
 const MODEL_DIR = (() => {
   const candidates = [
-    path.resolve(__dirname, "../../assets/models"), // Docker baked-in via download-face-models.js --copy
-    path.resolve(__dirname, "../../node_modules/@vladmandic/face-api/model"), // local node_modules
-    path.resolve(__dirname, "../../../../node_modules/@vladmandic/face-api/model"), // root node_modules (pnpm hoist)
+    path.resolve(moduleDir, "../../assets/models"), // Docker baked-in via download-face-models.js --copy
+    path.resolve(moduleDir, "../../node_modules/@vladmandic/face-api/model"), // local node_modules
+    path.resolve(moduleDir, "../../../../node_modules/@vladmandic/face-api/model"), // root node_modules (pnpm hoist)
   ];
   for (const dir of candidates) {
     if (fs.existsSync(path.join(dir, "ssd_mobilenetv1_model-weights_manifest.json"))) {
@@ -64,22 +80,22 @@ const MODEL_DIR = (() => {
     }
   }
   // Fallback to local node_modules path (will error on load with a clear message)
-  return candidates[1];
+  return candidates[1]!;
 })();
 
-async function ensureFaceModel(): Promise<void> {
-  if (faceModelLoaded) return;
+async function ensureFaceModel(): Promise<FaceApi> {
   if (faceModelLoadPromise) return faceModelLoadPromise;
 
   faceModelLoadPromise = (async () => {
     try {
+      const faceapi = await import("@vladmandic/face-api");
       await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODEL_DIR);
-      faceModelLoaded = true;
       logger.info("Face detection model loaded (SSD MobileNet v1)");
+      return faceapi;
     } catch (err) {
       faceModelLoadPromise = null;
-      throw new Error(
-        `Failed to load face detection model from ${MODEL_DIR}: ${(err as Error).message}`,
+      throw new FaceDetectorUnavailableError(
+        `Face detection is unavailable (model dir ${MODEL_DIR}): ${(err as Error).message}`,
       );
     }
   })();
@@ -97,9 +113,12 @@ async function ensureFaceModel(): Promise<void> {
 async function detectFaces(
   imageBuffer: Buffer,
 ): Promise<BoundingBox[]> {
-  try {
-    await ensureFaceModel();
+  // Not inside the try below on purpose: if the detector cannot run at all we
+  // must not report "0 faces" — the caller quarantines the photo instead of
+  // publishing it unblurred.
+  const faceapi = await ensureFaceModel();
 
+  try {
     // Get original image dimensions
     const metadata = await sharp(imageBuffer).metadata();
     if (!metadata.width || !metadata.height) return [];
@@ -126,7 +145,7 @@ async function detectFaces(
 
     // Run face detection
     const detections = await faceapi.detectAllFaces(
-      tensor as unknown as faceapi.TNetInput,
+      tensor as unknown as Parameters<FaceApi["detectAllFaces"]>[0],
       new faceapi.SsdMobilenetv1Options({ minConfidence: 0.70 }),
     );
 
