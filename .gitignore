@@ -6,6 +6,13 @@ dist/
 .next/
 out/
 
+# Compiled output must never sit next to the TypeScript sources: the workspace
+# packages are resolved by directory, and a stale index.js silently shadows index.ts
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+
 # Turborepo
 .turbo/
 
