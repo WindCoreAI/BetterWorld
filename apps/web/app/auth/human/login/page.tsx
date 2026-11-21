@@ -8,6 +8,7 @@ import { Button, Card, CardBody, Input } from "../../../../src/components/ui";
 import { useHumanAuth } from "../../../../src/hooks/useHumanAuth";
 import { API_BASE } from "../../../../src/lib/api";
 import { profileApi } from "../../../../src/lib/humanApi";
+import { consumeReturnToUnder } from "../../../../src/lib/returnTo";
 
 export default function HumanLoginPage() {
   const router = useRouter();
@@ -36,6 +37,14 @@ export default function HumanLoginPage() {
     setLoading(false);
 
     if (result.ok) {
+      // An operator on their way to the admin area goes straight there: it
+      // needs no participant profile, and the area checks access itself.
+      const adminPath = consumeReturnToUnder("/admin");
+      if (adminPath) {
+        router.push(adminPath);
+        return;
+      }
+
       // Check if user has a profile — new users need to create one first
       const profileRes = await profileApi.get();
       if (profileRes.ok && profileRes.data === null) {

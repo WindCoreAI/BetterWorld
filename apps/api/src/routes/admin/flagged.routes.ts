@@ -18,6 +18,24 @@ import { logger } from "../../middleware/logger.js";
 
 export const flaggedRoutes = new Hono<AuthEnv>();
 
+const PREVIEW_MAX_CHARS = 120;
+
+/** One line describing a submission, for the review queue list. */
+export function previewTitle(submittedContent: string | null): string | null {
+  if (!submittedContent) return null;
+  const content = parseJsonWithFallback<Record<string, unknown> | null>(submittedContent, null);
+  if (!content || typeof content !== "object") return null;
+
+  // Problems, solutions and missions have a title; debates and discussion posts only have a body.
+  const text = [content.title, content.content, content.description].find(
+    (value): value is string => typeof value === "string" && value.trim().length > 0,
+  );
+  if (!text) return null;
+
+  const oneLine = text.replace(/\s+/g, " ").trim();
+  return oneLine.length > PREVIEW_MAX_CHARS ? `${oneLine.slice(0, PREVIEW_MAX_CHARS - 1)}…` : oneLine;
+}
+
 // GET /api/v1/admin/flagged — List flagged content (cursor-based pagination)
 flaggedRoutes.get("/", requireAdmin(), async (c) => {
   const db = getDb();
@@ -63,15 +81,33 @@ flaggedRoutes.get("/", requireAdmin(), async (c) => {
       claimedAt: flaggedContent.claimedAt,
       adminDecision: flaggedContent.adminDecision,
       createdAt: flaggedContent.createdAt,
+      submittedContent: guardrailEvaluations.submittedContent,
     })
     .from(flaggedContent)
+    .leftJoin(guardrailEvaluations, eq(flaggedContent.evaluationId, guardrailEvaluations.id))
     .where(whereClause)
     .orderBy(desc(flaggedContent.createdAt))
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
-  const items = hasMore ? rows.slice(0, limit) : rows;
+  // A reviewer needs to see what an item is before opening it; ids alone made
+  // the queue a list of indistinguishable rows.
+  const items = (hasMore ? rows.slice(0, limit) : rows).map(({ submittedContent, ...item }) => ({
+    ...item,
+    title: previewTitle(submittedContent),
+  }));
   const nextCursor = hasMore ? items[items.length - 1]!.createdAt.toISOString() : null;
+
+  // Total for the current filter (ignoring the cursor). The admin dashboard and
+  // the queue page read `meta.total` and `meta.cursor`; neither was returned, so
+  // "Pending Reviews" always showed 0 and "load more" never advanced.
+  const totalConditions = [];
+  if (status !== "all") totalConditions.push(eq(flaggedContent.status, status));
+  if (contentType !== "all") totalConditions.push(eq(flaggedContent.contentType, contentType));
+  const [totalRow] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(flaggedContent)
+    .where(totalConditions.length > 0 ? and(...totalConditions) : undefined);
 
   return c.json({
     ok: true,
@@ -79,7 +115,9 @@ flaggedRoutes.get("/", requireAdmin(), async (c) => {
     meta: {
       hasMore,
       nextCursor,
+      cursor: nextCursor,
       count: items.length,
+      total: totalRow?.total ?? items.length,
     },
     requestId: c.get("requestId"),
   });

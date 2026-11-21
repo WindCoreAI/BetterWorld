@@ -68,7 +68,7 @@ export const flaggedContentListParamsSchema = z.object({
   status: z
     .enum(["pending_review", "approved", "rejected", "all"])
     .default("pending_review"),
-  contentType: z.enum(["problem", "solution", "debate", "all"]).default("all"),
+  contentType: z.enum(["problem", "solution", "debate", "mission", "all"]).default("all"),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
