@@ -9,11 +9,12 @@ import crypto from "crypto";
 import { humans, humanProfiles, tokenTransactions } from "@betterworld/db";
 import { SpendTokensSchema } from "@betterworld/shared/schemas/human";
 import { zValidator } from "@hono/zod-validator";
-import { eq, and, lt, desc, sql } from "drizzle-orm";
+import { eq, and, lt, desc } from "drizzle-orm";
 import { Hono } from "hono";
 
 import type { AppEnv } from "../../app.js";
 import { getDb, getRedis } from "../../lib/container.js";
+import { getTokenTotals } from "../../lib/token-totals.js";
 import { humanAuth } from "../../middleware/humanAuth";
 import { logger } from "../../middleware/logger.js";
 
@@ -219,23 +220,19 @@ app.get("/balance", humanAuth(), async (c) => {
 
 
   try {
-    // All three queries are independent reads — run in parallel
-    const [userResult, profileResult, spentResult] = await Promise.all([
+    // Independent reads — run in parallel. Earned and spent come from the ledger.
+    const [userResult, totals] = await Promise.all([
       db.select({ tokenBalance: humans.tokenBalance }).from(humans).where(eq(humans.id, human.id)).limit(1),
-      db.select({ totalTokensEarned: humanProfiles.totalTokensEarned }).from(humanProfiles).where(eq(humanProfiles.humanId, human.id)).limit(1),
-      db.select({ total: sql<number>`COALESCE(SUM(ABS(${tokenTransactions.amount})), 0)` }).from(tokenTransactions).where(sql`${tokenTransactions.humanId} = ${human.id} AND ${tokenTransactions.amount} < 0`),
+      getTokenTotals(db, human.id),
     ]);
 
     const [userRow] = userResult;
-    const [profile] = profileResult;
 
     const balance = parseInt((userRow?.tokenBalance || "0").toString(), 10);
-    const totalEarned = profile?.totalTokensEarned || 0;
-    const totalSpent = Number(spentResult[0]?.total || 0);
 
     return c.json({
       ok: true,
-      data: { balance, totalEarned, totalSpent },
+      data: { balance, totalEarned: totals.earned, totalSpent: totals.spent },
       requestId: c.get("requestId"),
     });
   } catch (error) {

@@ -591,7 +591,7 @@ describe("Human Onboarding Flow", () => {
     });
 
     it("GET /tokens/balance returns correct totals", async () => {
-      // Route runs 3 parallel db.select() calls via Promise.all
+      // Route runs 2 parallel db.select() calls via Promise.all
       // Each needs its own mock chain (mockReturnValueOnce consumed in order)
       mockDbSelect
         // Query 1: user balance — .select().from(humans).where().limit(1)
@@ -602,18 +602,12 @@ describe("Human Onboarding Flow", () => {
             }),
           }),
         })
-        // Query 2: profile earned — .select().from(humanProfiles).where().limit(1)
+        // Query 2: earned + spent, summed from the ledger —
+        // .select({earned, spent}).from(tokenTransactions).where() (no .limit).
+        // Postgres returns SUM() as a string.
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue([{ totalTokensEarned: 50 }]),
-            }),
-          }),
-        })
-        // Query 3: spent total — .select().from(tokenTransactions).where() (no .limit)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 5 }]),
+            where: vi.fn().mockResolvedValue([{ earned: "50", spent: "5" }]),
           }),
         });
 
@@ -641,7 +635,7 @@ describe("Human Onboarding Flow", () => {
     });
 
     it("returns aggregated user data in a single request", async () => {
-      // Dashboard runs 4 parallel db.select() (Promise.all) + 1 sequential (recent activity)
+      // Dashboard runs 7 parallel db.select() (Promise.all) + 1 sequential (recent activity)
       mockDbSelect
         // Query 1: user data — .select({...}).from(humans).where().limit(1)
         .mockReturnValueOnce({
@@ -674,6 +668,8 @@ describe("Human Onboarding Flow", () => {
                 walletAddress: null,
                 certifications: [],
                 orientationCompletedAt: new Date(),
+                // Stale on purpose: these counters on the profile are not kept
+                // up to date. The dashboard must not report them.
                 totalTokensEarned: 10,
                 totalMissionsCompleted: 0,
                 streakDays: 0,
@@ -683,10 +679,10 @@ describe("Human Onboarding Flow", () => {
             }),
           }),
         })
-        // Query 3: spent total — .select({total}).from(tokenTransactions).where() (no .limit)
+        // Query 3: earned + spent from the ledger — .select({earned, spent}).from(tokenTransactions).where()
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ total: 0 }]),
+            where: vi.fn().mockResolvedValue([{ earned: "35", spent: "25" }]),
           }),
         })
         // Query 4: agent count — .select({count}).from(agents).where() (Sprint 19)
@@ -695,7 +691,43 @@ describe("Human Onboarding Flow", () => {
             where: vi.fn().mockResolvedValue([{ count: 2 }]),
           }),
         })
-        // Query 5: recent activity — .select().from(tokenTransactions).where().orderBy().limit(10)
+        // Query 5: claim counts — .select({active, completed}).from(missionClaims).where()
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            // more in progress than the handful listed below
+            where: vi.fn().mockResolvedValue([{ active: 7, completed: 4 }]),
+          }),
+        })
+        // Query 6: missions in progress — .select({...}).from(missionClaims).innerJoin().where().orderBy().limit()
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            innerJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                orderBy: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([
+                    {
+                      claimId: "claim-1",
+                      status: "active",
+                      deadlineAt: new Date("2026-12-01T00:00:00Z"),
+                      missionId: "mission-1",
+                      title: "Clear the storm drain",
+                      tokenReward: 10,
+                    },
+                  ]),
+                }),
+              }),
+            }),
+          }),
+        })
+        // Query 7: streak — .select({currentStreak}).from(streaks).where().limit(1)
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([{ currentStreak: 3 }]),
+            }),
+          }),
+        })
+        // Query 8: recent activity — .select().from(tokenTransactions).where().orderBy().limit(10)
         .mockReturnValueOnce({
           from: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
@@ -710,13 +742,39 @@ describe("Human Onboarding Flow", () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as SuccessBody<{
         user: { id: string };
-        tokens: { balance: number };
+        tokens: { balance: number; totalEarned: number; totalSpent: number };
         profile: { orientationCompleted: boolean };
+        missions: {
+          active: number;
+          completed: number;
+          streakDays: number;
+          inProgress: Array<{ claimId: string; missionId: string; title: string; status: string }>;
+        };
       }>;
       expect(body.ok).toBe(true);
       expect(body.data.user.id).toBe("user-123");
       expect(body.data.tokens.balance).toBe(10);
       expect(body.data.profile.orientationCompleted).toBe(true);
+
+      // Earned and spent are the ledger's sums, not the profile's stale counter,
+      // so earned - spent is the balance.
+      expect(body.data.tokens.totalEarned).toBe(35);
+      expect(body.data.tokens.totalSpent).toBe(25);
+
+      // Missions in progress are real (this was a hard-coded 0), and the count
+      // covers all of them, not only the few listed. Completed and streak come
+      // from claims and the streak record, not the profile's stale zeros.
+      expect(body.data.missions.active).toBe(7);
+      expect(body.data.missions.completed).toBe(4);
+      expect(body.data.missions.streakDays).toBe(3);
+      expect(body.data.missions.inProgress).toEqual([
+        expect.objectContaining({
+          claimId: "claim-1",
+          missionId: "mission-1",
+          title: "Clear the storm drain",
+          status: "active",
+        }),
+      ]);
     });
   });
 });

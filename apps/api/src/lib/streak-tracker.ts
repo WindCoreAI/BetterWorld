@@ -3,13 +3,32 @@
  *
  * Tracks consecutive-day activity streaks with freeze support.
  */
-import { streaks } from "@betterworld/db";
+import { humanProfiles, streaks } from "@betterworld/db";
 import { getStreakMultiplier, STREAK_FREEZE } from "@betterworld/shared";
 import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import pino from "pino";
 
 const logger = pino({ name: "streak-tracker" });
+
+/**
+ * Copy the current streak onto the profile.
+ *
+ * `streaks` is the record of truth, but the dashboard, contributor cards, the
+ * "streak at risk" care moments and streak milestones all read
+ * human_profiles.streak_days — which nothing ever wrote, so it stayed 0 for
+ * everyone. A failure here must not undo the streak itself.
+ */
+async function mirrorStreakToProfile(db: PostgresJsDatabase, humanId: string, streakDays: number): Promise<void> {
+  try {
+    await db.update(humanProfiles).set({ streakDays }).where(eq(humanProfiles.humanId, humanId));
+  } catch (err) {
+    logger.warn(
+      { humanId, error: err instanceof Error ? err.message : "Unknown" },
+      "Could not copy streak to profile",
+    );
+  }
+}
 
 /**
  * Format a date as YYYY-MM-DD string.
@@ -63,6 +82,8 @@ export async function recordActivity(
 
   // Same day — no change
   if (lastActive === today) {
+    // Still copy it: a profile created after the day's first activity has not seen it yet.
+    await mirrorStreakToProfile(db, humanId, streakRow.currentStreak);
     return {
       currentStreak: streakRow.currentStreak,
       multiplier: Number(streakRow.streakMultiplier),
@@ -112,6 +133,8 @@ export async function recordActivity(
       updatedAt: new Date(),
     })
     .where(eq(streaks.humanId, humanId));
+
+  await mirrorStreakToProfile(db, humanId, newStreak);
 
   logger.info(
     { humanId, currentStreak: newStreak, multiplier },
@@ -190,6 +213,8 @@ export async function breakStreak(
       updatedAt: new Date(),
     })
     .where(eq(streaks.humanId, humanId));
+
+  await mirrorStreakToProfile(db, humanId, 0);
 
   logger.info({ humanId }, "Streak broken due to inactivity");
 }
